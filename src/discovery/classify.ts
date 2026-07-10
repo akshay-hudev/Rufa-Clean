@@ -1,15 +1,56 @@
-export function classifyByMarkers(fileList: string[]): string[] {
+const DOCKER_DIRECTORIES = ["backend", "frontend", "server", "client"];
+const DEPLOYMENT_CONFIGS = ["vercel.json", "railway.toml", "netlify.toml", "Procfile", "fly.toml"];
+
+function packageJsonHasApplicationSignal(content: string): boolean {
+  try {
+    const parsed = JSON.parse(content) as {
+      scripts?: Record<string, unknown>;
+      dependencies?: Record<string, unknown>;
+      devDependencies?: Record<string, unknown>;
+    };
+    const scripts = parsed.scripts ?? {};
+    const dependencies = { ...parsed.dependencies, ...parsed.devDependencies };
+    const frameworks = ["express", "fastify", "next", "nestjs", "@nestjs/core"];
+
+    return Boolean(scripts.start || scripts.dev) || frameworks.some((name) => name in dependencies);
+  } catch {
+    return false;
+  }
+}
+
+function hasRunnableManifest(
+  fileList: string[],
+  fileContents: Readonly<Record<string, string>>,
+): boolean {
+  const packageFiles = fileList.filter((path) => path.split("/").at(-1) === "package.json");
+  if (packageFiles.some((path) => packageJsonHasApplicationSignal(fileContents[path] ?? ""))) {
+    return true;
+  }
+
+  const pythonManifests = fileList.filter((path) => {
+    const name = path.split("/").at(-1);
+    return name === "requirements.txt" || name === "pyproject.toml";
+  });
+  const pythonFramework = /(?:^|[^a-z0-9_-])(flask|fastapi|django)(?:[^a-z0-9_-]|$)/i;
+  if (pythonManifests.some((path) => pythonFramework.test(fileContents[path] ?? ""))) {
+    return true;
+  }
+
+  const hasGoModule = fileList.some((path) => path.split("/").at(-1) === "go.mod");
+  return (
+    hasGoModule &&
+    Object.entries(fileContents).some(
+      ([path, content]) => path.endsWith(".go") && /^\s*package\s+main\b/m.test(content),
+    )
+  );
+}
+
+export function classifyByMarkers(
+  fileList: string[],
+  fileContents: Readonly<Record<string, string>> = {},
+): string[] {
   const entries = new Set(fileList);
   const labels: string[] = [];
-  const commonApplicationDirectories = [
-    "backend",
-    "frontend",
-    "client",
-    "server",
-    "api",
-    "web",
-    "services",
-  ];
 
   if (entries.has("Chart.yaml")) {
     labels.push("helm_chart_repo");
@@ -38,12 +79,11 @@ export function classifyByMarkers(fileList: string[]): string[] {
     labels.push("schema_repo");
   }
 
-  const hasApplicationMarker = ["Dockerfile", "package.json"].some(
-    (marker) =>
-      entries.has(marker) ||
-      commonApplicationDirectories.some((directory) => entries.has(`${directory}/${marker}`)),
-  );
-  if (hasApplicationMarker) {
+  const hasDockerfile =
+    entries.has("Dockerfile") ||
+    DOCKER_DIRECTORIES.some((directory) => entries.has(`${directory}/Dockerfile`));
+  const hasDeploymentConfig = DEPLOYMENT_CONFIGS.some((config) => entries.has(config));
+  if (hasDockerfile || hasRunnableManifest(fileList, fileContents) || hasDeploymentConfig) {
     labels.push("application_service");
   }
 

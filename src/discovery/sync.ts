@@ -1,6 +1,7 @@
 import { pool } from "../db/client";
 import * as github from "../connectors/github";
 import { classifyByMarkers } from "./classify";
+import { detectBuildSystem, toPrimaryLanguages } from "./metadata";
 
 interface ErrorDetails {
   errorType: string;
@@ -30,6 +31,14 @@ function parseFullName(fullName: string): { orgSlug: string; repoSlug: string } 
   return { orgSlug: parts[0], repoSlug: parts[1] };
 }
 
+function classificationContentPaths(fileList: string[]): string[] {
+  const manifestNames = new Set(["package.json", "requirements.txt", "pyproject.toml", "go.mod"]);
+  return fileList.filter((path) => {
+    const name = path.split("/").at(-1);
+    return name !== undefined && (manifestNames.has(name) || name.endsWith(".go"));
+  });
+}
+
 export async function runSync(): Promise<void> {
   let cursor: string | undefined;
   let totalRepos = 0;
@@ -47,7 +56,15 @@ export async function runSync(): Promise<void> {
         const parsed = parseFullName(repo.full_name);
         repoSlug = parsed.repoSlug;
         const rootFiles = await github.listRootFiles(parsed.orgSlug, parsed.repoSlug);
-        const classification = classifyByMarkers(rootFiles);
+        const classificationFiles = await github.readFileContents(
+          parsed.orgSlug,
+          parsed.repoSlug,
+          classificationContentPaths(rootFiles),
+        );
+        const languageBytes = await github.listLanguages(parsed.orgSlug, parsed.repoSlug);
+        const classification = classifyByMarkers(rootFiles, classificationFiles);
+        const primaryLanguages = toPrimaryLanguages(languageBytes);
+        const buildSystem = detectBuildSystem(rootFiles);
 
         await pool.query(
           `INSERT INTO repositories (
@@ -59,9 +76,11 @@ export async function runSync(): Promise<void> {
              archived,
              last_commit_at,
              classification,
+             primary_languages,
+             build_system,
              last_scanned_at
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now())
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, now())
            ON CONFLICT (vcs_provider, org_slug, repo_slug)
            DO UPDATE SET
              default_branch = EXCLUDED.default_branch,
@@ -69,6 +88,8 @@ export async function runSync(): Promise<void> {
              archived = EXCLUDED.archived,
              last_commit_at = EXCLUDED.last_commit_at,
              classification = EXCLUDED.classification,
+             primary_languages = EXCLUDED.primary_languages,
+             build_system = EXCLUDED.build_system,
              last_scanned_at = now()`,
           [
             "github",
@@ -79,6 +100,8 @@ export async function runSync(): Promise<void> {
             repo.archived,
             repo.pushed_at,
             classification,
+            JSON.stringify(primaryLanguages),
+            buildSystem,
           ],
         );
         upsertedCount += 1;

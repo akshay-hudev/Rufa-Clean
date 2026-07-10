@@ -29,24 +29,83 @@ describe("classifyByMarkers", () => {
     expect(classifyByMarkers(["events.proto"])).toEqual(["schema_repo"]);
   });
 
-  it.each(["Dockerfile", "package.json"])(
-    "classifies application services with a root %s",
-    (marker) => {
-      expect(classifyByMarkers([marker])).toEqual(["application_service"]);
-    },
-  );
+  it("classifies application services with a root Dockerfile", () => {
+    expect(classifyByMarkers(["Dockerfile"])).toEqual(["application_service"]);
+  });
 
-  it.each(["backend", "frontend", "client", "server", "api", "web", "services"])(
-    "classifies application services with a marker one level inside %s",
+  it.each(["backend", "frontend", "client", "server"])(
+    "classifies application services with a Dockerfile one level inside %s",
     (directory) => {
-      expect(classifyByMarkers([directory, `${directory}/package.json`])).toEqual([
+      expect(classifyByMarkers([directory, `${directory}/Dockerfile`])).toEqual([
         "application_service",
       ]);
     },
   );
 
+  it.each(["vercel.json", "railway.toml", "netlify.toml", "Procfile", "fly.toml"])(
+    "classifies deployment config %s as an application service",
+    (config) => {
+      expect(classifyByMarkers([config])).toEqual(["application_service"]);
+    },
+  );
+
+  it.each(["start", "dev"])("uses package.json scripts.%s as an app signal", (script) => {
+    const packageJson = JSON.stringify({ scripts: { [script]: "run-server" } });
+    expect(classifyByMarkers(["package.json"], { "package.json": packageJson })).toEqual([
+      "application_service",
+    ]);
+  });
+
+  it.each(["express", "fastify", "next", "nestjs", "@nestjs/core"])(
+    "uses a %s dependency as an app signal",
+    (dependency) => {
+      const path = "backend/package.json";
+      const packageJson = JSON.stringify({ dependencies: { [dependency]: "1.0.0" } });
+      expect(classifyByMarkers(["backend", path], { [path]: packageJson })).toEqual([
+        "application_service",
+      ]);
+    },
+  );
+
+  it.each(["flask", "fastapi", "django"])(
+    "uses a %s Python dependency as an app signal",
+    (framework) => {
+      expect(
+        classifyByMarkers(["requirements.txt"], { "requirements.txt": `${framework}==1.0` }),
+      ).toEqual(["application_service"]);
+    },
+  );
+
+  it("requires a main package for Go applications", () => {
+    expect(
+      classifyByMarkers(["go.mod", "main.go"], {
+        "go.mod": "module example.com/service",
+        "main.go": "package main\nfunc main() {}",
+      }),
+    ).toEqual(["application_service"]);
+    expect(
+      classifyByMarkers(["go.mod", "library.go"], {
+        "go.mod": "module example.com/library",
+        "library.go": "package library",
+      }),
+    ).toEqual(["unknown"]);
+  });
+
+  it("does not classify a manifest without a runnable application signal", () => {
+    expect(
+      classifyByMarkers(["package.json"], {
+        "package.json": JSON.stringify({ name: "utility-library", scripts: { test: "vitest" } }),
+      }),
+    ).toEqual(["unknown"]);
+    expect(
+      classifyByMarkers(["pyproject.toml"], {
+        "pyproject.toml": 'dependencies = ["requests"]',
+      }),
+    ).toEqual(["unknown"]);
+  });
+
   it("does not inspect application markers below the supported depth", () => {
-    expect(classifyByMarkers(["backend", "backend/nested/package.json"])).toEqual(["unknown"]);
+    expect(classifyByMarkers(["backend", "backend/nested/Dockerfile"])).toEqual(["unknown"]);
   });
 
   it("classifies CI/CD repositories without source directories", () => {

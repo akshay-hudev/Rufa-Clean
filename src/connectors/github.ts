@@ -39,6 +39,12 @@ interface ContentEntry {
   type: string;
 }
 
+interface FileContent {
+  content?: string;
+  encoding?: string;
+  type: string;
+}
+
 let installationOctokit: Promise<GitHubClient> | undefined;
 
 function requiredEnv(name: string): string {
@@ -230,4 +236,68 @@ export async function listRootFiles(owner: string, repo: string): Promise<string
     }
     throw error;
   }
+}
+
+export async function listLanguages(owner: string, repo: string): Promise<Record<string, number>> {
+  try {
+    const octokit = await getOctokit();
+    const response = await octokit.request<Record<string, number>>(
+      "GET /repos/{owner}/{repo}/languages",
+      { owner, repo },
+    );
+    await respectRateLimit(response.headers);
+    return response.data;
+  } catch (error) {
+    const status = errorStatus(error);
+    if (status === 403 || status === 404) {
+      const headers = errorHeaders(error);
+      if (headers) {
+        await respectRateLimit(headers);
+      }
+      console.error(`Failed to list languages for ${owner}/${repo}: GitHub returned ${status}`);
+      return {};
+    }
+    throw error;
+  }
+}
+
+export async function readFileContents(
+  owner: string,
+  repo: string,
+  paths: string[],
+): Promise<Record<string, string>> {
+  const octokit = await getOctokit();
+  const contents: Record<string, string> = {};
+
+  for (const path of paths) {
+    try {
+      const response = await octokit.request<FileContent | ContentEntry[]>(
+        "GET /repos/{owner}/{repo}/contents/{path}",
+        { owner, repo, path },
+      );
+      await respectRateLimit(response.headers);
+
+      if (Array.isArray(response.data) || response.data.type !== "file") {
+        continue;
+      }
+      if (response.data.encoding === "base64" && response.data.content !== undefined) {
+        contents[path] = Buffer.from(response.data.content.replace(/\s/g, ""), "base64").toString(
+          "utf8",
+        );
+      }
+    } catch (error) {
+      const status = errorStatus(error);
+      if (status !== 403 && status !== 404) {
+        throw error;
+      }
+
+      const headers = errorHeaders(error);
+      if (headers) {
+        await respectRateLimit(headers);
+      }
+      console.error(`Failed to read ${owner}/${repo}/${path}: GitHub returned ${status}`);
+    }
+  }
+
+  return contents;
 }
