@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "cron": "ts-node src/cron.ts",
     "test": "vitest run",
     "start": "node dist/index.js",
     "sync": "ts-node src/index.ts"
@@ -16,6 +17,7 @@
   "type": "commonjs",
   "dependencies": {
     "dotenv": "^17.4.2",
+    "node-cron": "^4.6.0",
     "octokit": "^5.0.5",
     "pg": "^8.22.0"
   },
