@@ -29,9 +29,24 @@ describe("classifyByMarkers", () => {
     expect(classifyByMarkers(["events.proto"])).toEqual(["schema_repo"]);
   });
 
-  it("classifies application services only when both markers are present", () => {
-    expect(classifyByMarkers(["Dockerfile", "package.json"])).toEqual(["application_service"]);
-    expect(classifyByMarkers(["Dockerfile"])).toEqual(["unknown"]);
+  it.each(["Dockerfile", "package.json"])(
+    "classifies application services with a root %s",
+    (marker) => {
+      expect(classifyByMarkers([marker])).toEqual(["application_service"]);
+    },
+  );
+
+  it.each(["backend", "frontend", "client", "server", "api", "web", "services"])(
+    "classifies application services with a marker one level inside %s",
+    (directory) => {
+      expect(classifyByMarkers([directory, `${directory}/package.json`])).toEqual([
+        "application_service",
+      ]);
+    },
+  );
+
+  it("does not inspect application markers below the supported depth", () => {
+    expect(classifyByMarkers(["backend", "backend/nested/package.json"])).toEqual(["unknown"]);
   });
 
   it("classifies CI/CD repositories without source directories", () => {
@@ -39,6 +54,13 @@ describe("classifyByMarkers", () => {
     expect(classifyByMarkers([".github", "src"])).toEqual(["unknown"]);
     expect(classifyByMarkers([".github", "app"])).toEqual(["unknown"]);
   });
+
+  it.each(["backend", "frontend", "client", "server"])(
+    "does not classify repositories with .github and a %s directory as CI/CD-only",
+    (directory) => {
+      expect(classifyByMarkers([".github", directory])).toEqual(["unknown"]);
+    },
+  );
 
   it("falls back to unknown when no markers match", () => {
     expect(classifyByMarkers(["README.md", "LICENSE"])).toEqual(["unknown"]);

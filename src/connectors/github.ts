@@ -11,6 +11,15 @@ export interface RawRepo {
 const PAGE_SIZE = 100;
 const LOW_RATE_LIMIT_REMAINING = 10;
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const COMMON_APPLICATION_DIRECTORIES = new Set([
+  "backend",
+  "frontend",
+  "client",
+  "server",
+  "api",
+  "web",
+  "services",
+]);
 
 interface GitHubResponse<T> {
   data: T;
@@ -159,19 +168,56 @@ function errorHeaders(error: unknown): Record<string, string | undefined> | unde
 export async function listRootFiles(owner: string, repo: string): Promise<string[]> {
   try {
     const octokit = await getOctokit();
-    const response = await octokit.request<ContentEntry[] | ContentEntry>(
+    const rootResponse = await octokit.request<ContentEntry[] | ContentEntry>(
       "GET /repos/{owner}/{repo}/contents/{path}",
       { owner, repo, path: "" },
     );
 
-    await respectRateLimit(response.headers);
+    await respectRateLimit(rootResponse.headers);
 
-    if (!Array.isArray(response.data)) {
+    if (!Array.isArray(rootResponse.data)) {
       console.error(`GitHub contents response for ${owner}/${repo} was not a directory listing`);
       return [];
     }
 
-    return response.data.filter((entry) => entry.type === "file").map((entry) => entry.name);
+    const entries = rootResponse.data.map((entry) => entry.name);
+    const directoriesToInspect = rootResponse.data.filter(
+      (entry) => entry.type === "dir" && COMMON_APPLICATION_DIRECTORIES.has(entry.name),
+    );
+
+    for (const directory of directoriesToInspect) {
+      try {
+        const response = await octokit.request<ContentEntry[] | ContentEntry>(
+          "GET /repos/{owner}/{repo}/contents/{path}",
+          { owner, repo, path: directory.name },
+        );
+        await respectRateLimit(response.headers);
+
+        if (!Array.isArray(response.data)) {
+          console.error(
+            `GitHub contents response for ${owner}/${repo}/${directory.name} was not a directory listing`,
+          );
+          continue;
+        }
+
+        entries.push(...response.data.map((entry) => `${directory.name}/${entry.name}`));
+      } catch (error) {
+        const status = errorStatus(error);
+        if (status !== 403 && status !== 404) {
+          throw error;
+        }
+
+        const headers = errorHeaders(error);
+        if (headers) {
+          await respectRateLimit(headers);
+        }
+        console.error(
+          `Failed to list files for ${owner}/${repo}/${directory.name}: GitHub returned ${status}`,
+        );
+      }
+    }
+
+    return entries;
   } catch (error) {
     const status = errorStatus(error);
     if (status === 403 || status === 404) {

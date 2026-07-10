@@ -1,12 +1,21 @@
 export function classifyByMarkers(fileList: string[]): string[] {
   const entries = new Set(fileList);
   const labels: string[] = [];
+  const commonApplicationDirectories = [
+    "backend",
+    "frontend",
+    "client",
+    "server",
+    "api",
+    "web",
+    "services",
+  ];
 
   if (entries.has("Chart.yaml")) {
     labels.push("helm_chart_repo");
   }
 
-  if (fileList.some((entry) => entry.endsWith(".tf"))) {
+  if (fileList.some((entry) => !entry.includes("/") && entry.endsWith(".tf"))) {
     labels.push("terraform_module_repo");
   }
 
@@ -25,15 +34,28 @@ export function classifyByMarkers(fileList: string[]): string[] {
     labels.push("api_contract_repo");
   }
 
-  if (fileList.some((entry) => entry.endsWith(".proto"))) {
+  if (fileList.some((entry) => !entry.includes("/") && entry.endsWith(".proto"))) {
     labels.push("schema_repo");
   }
 
-  if (entries.has("Dockerfile") && entries.has("package.json")) {
+  const hasApplicationMarker = ["Dockerfile", "package.json"].some(
+    (marker) =>
+      entries.has(marker) ||
+      commonApplicationDirectories.some((directory) => entries.has(`${directory}/${marker}`)),
+  );
+  if (hasApplicationMarker) {
     labels.push("application_service");
   }
 
-  if (entries.has(".github") && !entries.has("src") && !entries.has("app")) {
+  const hasApplicationCodeDirectory = [
+    "src",
+    "app",
+    "backend",
+    "frontend",
+    "client",
+    "server",
+  ].some((directory) => entries.has(directory));
+  if (entries.has(".github") && !hasApplicationCodeDirectory) {
     labels.push("cicd_repo");
   }
 
