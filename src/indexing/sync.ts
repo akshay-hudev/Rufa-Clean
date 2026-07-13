@@ -6,7 +6,8 @@ import { PoolClient } from "pg";
 
 import { pool } from "../db/client";
 import { cloneRepository } from "./clone";
-import { ParseResult, typescriptParser } from "./parsers/typescript";
+import { pythonParser } from "./parsers/python";
+import { LanguageParser, ParseResult, typescriptParser } from "./parsers/typescript";
 
 interface RepositoryRow {
   vcs_provider: string | null;
@@ -68,7 +69,12 @@ function repositoryForClone(row: RepositoryRow): {
   };
 }
 
-function languageFor(filePath: string): "typescript" | "javascript" {
+const languageParsers: LanguageParser[] = [typescriptParser, pythonParser];
+
+function languageFor(filePath: string): "typescript" | "javascript" | "python" {
+  if (/\.py$/i.test(filePath)) {
+    return "python";
+  }
   return /\.tsx?$/i.test(filePath) ? "typescript" : "javascript";
 }
 
@@ -251,7 +257,8 @@ export async function runIndexing(repositoryId: string): Promise<void> {
     const files = await walkSourceFiles(clone.localPath);
     for (const absolutePath of files) {
       const filePath = relative(clone.localPath, absolutePath).split(sep).join("/");
-      if (!typescriptParser.canParse(filePath)) {
+      const languageParser = languageParsers.find((parser) => parser.canParse(filePath));
+      if (!languageParser) {
         continue;
       }
       summary.filesFound += 1;
@@ -271,7 +278,7 @@ export async function runIndexing(repositoryId: string): Promise<void> {
         continue;
       }
 
-      const parseResult = typescriptParser.parse(content, filePath);
+      const parseResult = languageParser.parse(content, filePath);
       const client = await pool.connect();
       try {
         await replaceIndexedFile(
