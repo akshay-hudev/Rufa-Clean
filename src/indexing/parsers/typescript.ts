@@ -15,11 +15,23 @@ export interface ParseResult {
     lineEnd: number;
     isExported: boolean;
   }>;
+  intraFileCalls: Array<{
+    callerQualifiedName: string;
+    calleeName: string;
+    resolved: boolean;
+  }>;
   parseStatus: "success" | "partial" | "failed";
   parseError?: string;
 }
 
 type SymbolResult = ParseResult["symbols"][number];
+type IntraFileCall = ParseResult["intraFileCalls"][number];
+
+interface CallerNode {
+  node: SyntaxNode;
+  qualifiedName: string;
+  className?: string;
+}
 
 const typescript = new Parser();
 typescript.setLanguage(TypeScript.typescript);
@@ -84,6 +96,57 @@ function descendantsOfType(node: SyntaxNode, type: string): SyntaxNode[] {
   return matches;
 }
 
+function callsWithinCaller(caller: CallerNode): string[] {
+  const calls: string[] = [];
+  const body = caller.node.childForFieldName("body");
+  if (!body) {
+    return calls;
+  }
+
+  const nestedCallableTypes = new Set([
+    "function_declaration",
+    "function_expression",
+    "arrow_function",
+    "method_definition",
+  ]);
+  const visit = (node: SyntaxNode): void => {
+    if (node !== body && nestedCallableTypes.has(node.type)) {
+      return;
+    }
+    if (node.type === "call_expression") {
+      const callee = node.childForFieldName("function")?.text;
+      if (callee) {
+        calls.push(callee);
+      }
+    }
+    node.namedChildren.forEach(visit);
+  };
+  visit(body);
+  return calls;
+}
+
+function callIsResolved(calleeName: string, caller: CallerNode, symbols: SymbolResult[]): boolean {
+  const callableSymbols = symbols.filter(
+    (symbol) => symbol.kind === "function" || symbol.kind === "method",
+  );
+  if (calleeName.startsWith("this.") && caller.className) {
+    const qualifiedName = `${caller.className}.${calleeName.slice("this.".length)}`;
+    return callableSymbols.some((symbol) => symbol.qualifiedName === qualifiedName);
+  }
+
+  const exactQualifiedMatch = callableSymbols.some(
+    (symbol) => symbol.qualifiedName === calleeName,
+  );
+  if (exactQualifiedMatch) {
+    return true;
+  }
+
+  if (calleeName.includes(".")) {
+    return false;
+  }
+  return callableSymbols.filter((symbol) => symbol.name === calleeName).length === 1;
+}
+
 function parseFile(fileContent: string, filePath: string): ParseResult {
   const parser = /\.(?:tsx|jsx)$/i.test(filePath) ? tsx : typescript;
   const tree = parser.parse(fileContent);
@@ -91,6 +154,7 @@ function parseFile(fileContent: string, filePath: string): ParseResult {
   if (tree.rootNode.hasError) {
     return {
       symbols: [],
+      intraFileCalls: [],
       parseStatus: "failed",
       parseError: `Syntax error while parsing ${filePath}`,
     };
@@ -98,6 +162,7 @@ function parseFile(fileContent: string, filePath: string): ParseResult {
 
   const symbols: SymbolResult[] = [];
   const exportStatements: SyntaxNode[] = [];
+  const callers: CallerNode[] = [];
 
   for (const node of tree.rootNode.namedChildren) {
     const isExportStatement = node.type === "export_statement";
@@ -113,8 +178,25 @@ function parseFile(fileContent: string, filePath: string): ParseResult {
     const symbol = declarationSymbol(declaration, isExportStatement);
     if (symbol) {
       symbols.push(symbol);
+      if (declaration.type === "function_declaration") {
+        callers.push({ node: declaration, qualifiedName: symbol.qualifiedName });
+      }
       if (declaration.type === "class_declaration") {
-        symbols.push(...classMethods(declaration, symbol.name));
+        const methods = classMethods(declaration, symbol.name);
+        symbols.push(...methods);
+        const methodNodes = declaration.childForFieldName("body")?.namedChildren.filter(
+          (method) => method.type === "method_definition",
+        ) ?? [];
+        for (const method of methodNodes) {
+          const methodName = method.childForFieldName("name")?.text;
+          if (methodName) {
+            callers.push({
+              node: method,
+              qualifiedName: `${symbol.name}.${methodName}`,
+              className: symbol.name,
+            });
+          }
+        }
       }
     } else if (isExportStatement) {
       symbols.push({
@@ -157,7 +239,15 @@ function parseFile(fileContent: string, filePath: string): ParseResult {
     }
   }
 
-  return { symbols, parseStatus: "success" };
+  const intraFileCalls: IntraFileCall[] = callers.flatMap((caller) =>
+    callsWithinCaller(caller).map((calleeName) => ({
+      callerQualifiedName: caller.qualifiedName,
+      calleeName,
+      resolved: callIsResolved(calleeName, caller, symbols),
+    }))
+  );
+
+  return { symbols, intraFileCalls, parseStatus: "success" };
 }
 
 export const typescriptParser: LanguageParser = {
@@ -179,6 +269,7 @@ export const typescriptParser: LanguageParser = {
     } catch (error) {
       return {
         symbols: [],
+        intraFileCalls: [],
         parseStatus: "failed",
         parseError: error instanceof Error ? error.message : String(error),
       };

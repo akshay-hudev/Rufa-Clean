@@ -23,6 +23,13 @@ interface IndexingSummary {
   symbolsExtracted: number;
 }
 
+interface InsertedSymbol {
+  id: string;
+  kind: ParseResult["symbols"][number]["kind"];
+  name: string;
+  qualifiedName: string;
+}
+
 const SKIPPED_DIRECTORIES = new Set(["node_modules", ".git", "dist", "build"]);
 
 async function walkSourceFiles(directory: string): Promise<string[]> {
@@ -63,6 +70,35 @@ function repositoryForClone(row: RepositoryRow): {
 
 function languageFor(filePath: string): "typescript" | "javascript" {
   return /\.tsx?$/i.test(filePath) ? "typescript" : "javascript";
+}
+
+function resolvedCalleeId(
+  callerQualifiedName: string,
+  calleeName: string,
+  symbols: InsertedSymbol[],
+): string | undefined {
+  const callableSymbols = symbols.filter(
+    (symbol) => symbol.kind === "function" || symbol.kind === "method",
+  );
+  if (calleeName.startsWith("this.")) {
+    const separator = callerQualifiedName.lastIndexOf(".");
+    if (separator !== -1) {
+      const className = callerQualifiedName.slice(0, separator);
+      const qualifiedName = `${className}.${calleeName.slice("this.".length)}`;
+      return callableSymbols.find((symbol) => symbol.qualifiedName === qualifiedName)?.id;
+    }
+  }
+
+  const exactMatch = callableSymbols.find((symbol) => symbol.qualifiedName === calleeName);
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+  if (calleeName.includes(".")) {
+    return undefined;
+  }
+
+  const nameMatches = callableSymbols.filter((symbol) => symbol.name === calleeName);
+  return nameMatches.length === 1 ? nameMatches[0]?.id : undefined;
 }
 
 async function replaceIndexedFile(
@@ -111,9 +147,11 @@ async function replaceIndexedFile(
       throw new Error(`Failed to upsert indexed file: ${filePath}`);
     }
 
+    await client.query("DELETE FROM call_edges WHERE file_id = $1", [fileId]);
     await client.query("DELETE FROM symbols WHERE file_id = $1", [fileId]);
+    const insertedSymbols: InsertedSymbol[] = [];
     for (const symbol of result.symbols) {
-      await client.query(
+      const inserted = await client.query<{ id: string }>(
         `INSERT INTO symbols (
            file_id,
            kind,
@@ -123,7 +161,8 @@ async function replaceIndexedFile(
            line_end,
            is_exported
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
         [
           fileId,
           symbol.kind,
@@ -132,6 +171,50 @@ async function replaceIndexedFile(
           symbol.lineStart,
           symbol.lineEnd,
           symbol.isExported,
+        ],
+      );
+      const symbolId = inserted.rows[0]?.id;
+      if (!symbolId) {
+        throw new Error(`Failed to insert symbol ${symbol.qualifiedName} from ${filePath}`);
+      }
+      insertedSymbols.push({
+        id: symbolId,
+        kind: symbol.kind,
+        name: symbol.name,
+        qualifiedName: symbol.qualifiedName,
+      });
+    }
+
+    for (const call of result.intraFileCalls) {
+      const callerSymbolId = insertedSymbols.find(
+        (symbol) => symbol.qualifiedName === call.callerQualifiedName,
+      )?.id;
+      if (!callerSymbolId) {
+        throw new Error(`Caller symbol not found: ${call.callerQualifiedName} in ${filePath}`);
+      }
+
+      const calleeSymbolId = call.resolved
+        ? resolvedCalleeId(call.callerQualifiedName, call.calleeName, insertedSymbols)
+        : undefined;
+      if (call.resolved && !calleeSymbolId) {
+        throw new Error(`Resolved callee symbol not found: ${call.calleeName} in ${filePath}`);
+      }
+
+      await client.query(
+        `INSERT INTO call_edges (
+           caller_symbol_id,
+           callee_symbol_id,
+           callee_unresolved_name,
+           resolution_method,
+           file_id
+         )
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          callerSymbolId,
+          calleeSymbolId ?? null,
+          calleeSymbolId ? null : call.calleeName,
+          calleeSymbolId ? "direct" : "unresolved",
+          fileId,
         ],
       );
     }

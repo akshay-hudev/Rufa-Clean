@@ -63,6 +63,7 @@ describe("typescriptParser", () => {
   it("parses an empty file", () => {
     expect(typescriptParser.parse("", "empty.ts")).toEqual({
       symbols: [],
+      intraFileCalls: [],
       parseStatus: "success",
     });
   });
@@ -76,5 +77,57 @@ describe("typescriptParser", () => {
     expect(typescriptParser.canParse("dist/index.js")).toBe(false);
     expect(typescriptParser.canParse("build/index.js")).toBe(false);
     expect(typescriptParser.canParse("public/app.min.js")).toBe(false);
+  });
+
+  it("resolves a call to another function in the same file", () => {
+    const result = typescriptParser.parse(
+      "function helper() {} function run() { helper(); }",
+      "calls.ts",
+    );
+
+    expect(result.intraFileCalls).toContainEqual({
+      callerQualifiedName: "run",
+      calleeName: "helper",
+      resolved: true,
+    });
+  });
+
+  it("leaves imported or external function calls unresolved", () => {
+    const result = typescriptParser.parse(
+      "import { external } from './dependency'; function run() { external(); }",
+      "calls.ts",
+    );
+
+    expect(result.intraFileCalls).toContainEqual({
+      callerQualifiedName: "run",
+      calleeName: "external",
+      resolved: false,
+    });
+  });
+
+  it("resolves this.method calls to another method in the same class", () => {
+    const result = typescriptParser.parse(
+      "class Service { run() { this.finish(); } finish() {} }",
+      "service.ts",
+    );
+
+    expect(result.intraFileCalls).toContainEqual({
+      callerQualifiedName: "Service.run",
+      calleeName: "this.finish",
+      resolved: true,
+    });
+  });
+
+  it("resolves recursive calls", () => {
+    const result = typescriptParser.parse(
+      "function recurse() { recurse(); }",
+      "recursive.ts",
+    );
+
+    expect(result.intraFileCalls).toContainEqual({
+      callerQualifiedName: "recurse",
+      calleeName: "recurse",
+      resolved: true,
+    });
   });
 });
