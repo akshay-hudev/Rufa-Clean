@@ -9,8 +9,11 @@ import { knipAnalyzer } from "./analyzers/knip";
 import type { RepoLevelAnalyzer, RepoLevelFinding } from "./analyzers/types";
 import { vultureAnalyzer } from "./analyzers/vulture";
 import { cloneRepository } from "./clone";
-import { pythonParser } from "./parsers/python";
-import { LanguageParser, ParseResult, typescriptParser } from "./parsers/typescript";
+import {
+  enumerateSymbols,
+  SymbolEnumerationResult,
+  symbolLanguage,
+} from "./symbols/tree-sitter";
 
 interface RepositoryRow {
   vcs_provider: string | null;
@@ -21,17 +24,10 @@ interface RepositoryRow {
 
 interface IndexingSummary {
   filesFound: number;
-  filesParsed: number;
+  filesEnumerated: number;
   filesSkipped: number;
   filesFailed: number;
   symbolsExtracted: number;
-}
-
-interface InsertedSymbol {
-  id: string;
-  kind: ParseResult["symbols"][number]["kind"];
-  name: string;
-  qualifiedName: string;
 }
 
 interface ExternalSignalMatch {
@@ -46,7 +42,16 @@ interface AnalyzerSummary {
   unmatchedFiles: number;
 }
 
-const SKIPPED_DIRECTORIES = new Set(["node_modules", ".git", "dist", "build"]);
+const SKIPPED_DIRECTORIES = new Set([
+  "node_modules",
+  ".git",
+  "dist",
+  "build",
+  "__pycache__",
+  "venv",
+  ".venv",
+  "site-packages",
+]);
 
 async function walkSourceFiles(directory: string): Promise<string[]> {
   const files: string[] = [];
@@ -84,7 +89,6 @@ function repositoryForClone(row: RepositoryRow): {
   };
 }
 
-const languageParsers: LanguageParser[] = [typescriptParser, pythonParser];
 const repoLevelAnalyzers: RepoLevelAnalyzer[] = [knipAnalyzer, vultureAnalyzer];
 
 async function insertExternalSignal(
@@ -140,14 +144,11 @@ async function insertExternalSignal(
 }
 
 async function runRepoLevelAnalyzers(
+  analyzers: RepoLevelAnalyzer[],
   repoRootPath: string,
   repositoryId: string,
 ): Promise<void> {
-  for (const analyzer of repoLevelAnalyzers) {
-    if (!analyzer.canAnalyze(repoRootPath)) {
-      continue;
-    }
-
+  for (const analyzer of analyzers) {
     const findings = await analyzer.analyze(repoRootPath);
     const summary: AnalyzerSummary = {
       findings: findings.length,
@@ -175,40 +176,11 @@ async function runRepoLevelAnalyzers(
   }
 }
 
-function languageFor(filePath: string): "typescript" | "javascript" | "python" {
-  if (/\.py$/i.test(filePath)) {
-    return "python";
-  }
-  return /\.tsx?$/i.test(filePath) ? "typescript" : "javascript";
-}
-
-function resolvedCalleeId(
-  callerQualifiedName: string,
-  calleeName: string,
-  symbols: InsertedSymbol[],
-): string | undefined {
-  const callableSymbols = symbols.filter(
-    (symbol) => symbol.kind === "function" || symbol.kind === "method",
-  );
-  if (calleeName.startsWith("this.")) {
-    const separator = callerQualifiedName.lastIndexOf(".");
-    if (separator !== -1) {
-      const className = callerQualifiedName.slice(0, separator);
-      const qualifiedName = `${className}.${calleeName.slice("this.".length)}`;
-      return callableSymbols.find((symbol) => symbol.qualifiedName === qualifiedName)?.id;
-    }
-  }
-
-  const exactMatch = callableSymbols.find((symbol) => symbol.qualifiedName === calleeName);
-  if (exactMatch) {
-    return exactMatch.id;
-  }
-  if (calleeName.includes(".")) {
-    return undefined;
-  }
-
-  const nameMatches = callableSymbols.filter((symbol) => symbol.name === calleeName);
-  return nameMatches.length === 1 ? nameMatches[0]?.id : undefined;
+function hasAnalyzerForLanguage(
+  language: "typescript" | "javascript" | "python",
+  analyzerNames: ReadonlySet<string>,
+): boolean {
+  return language === "python" ? analyzerNames.has("vulture") : analyzerNames.has("knip");
 }
 
 async function replaceIndexedFile(
@@ -217,7 +189,8 @@ async function replaceIndexedFile(
   filePath: string,
   commitSha: string,
   contentHash: string,
-  result: ParseResult,
+  language: "typescript" | "javascript" | "python",
+  result: SymbolEnumerationResult,
 ): Promise<void> {
   await client.query("BEGIN");
   try {
@@ -245,11 +218,11 @@ async function replaceIndexedFile(
       [
         repositoryId,
         filePath,
-        languageFor(filePath),
+        language,
         commitSha,
         contentHash,
-        result.parseStatus,
-        result.parseError ?? null,
+        result.status === "success" ? "symbols_only" : "failed",
+        result.error ?? null,
       ],
     );
     const fileId = upsert.rows[0]?.id;
@@ -263,9 +236,8 @@ async function replaceIndexedFile(
       [fileId],
     );
     await client.query("DELETE FROM symbols WHERE file_id = $1", [fileId]);
-    const insertedSymbols: InsertedSymbol[] = [];
     for (const symbol of result.symbols) {
-      const inserted = await client.query<{ id: string }>(
+      await client.query(
         `INSERT INTO symbols (
            file_id,
            kind,
@@ -275,8 +247,7 @@ async function replaceIndexedFile(
            line_end,
            is_exported
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           fileId,
           symbol.kind,
@@ -287,50 +258,6 @@ async function replaceIndexedFile(
           symbol.isExported,
         ],
       );
-      const symbolId = inserted.rows[0]?.id;
-      if (!symbolId) {
-        throw new Error(`Failed to insert symbol ${symbol.qualifiedName} from ${filePath}`);
-      }
-      insertedSymbols.push({
-        id: symbolId,
-        kind: symbol.kind,
-        name: symbol.name,
-        qualifiedName: symbol.qualifiedName,
-      });
-    }
-
-    for (const call of result.intraFileCalls) {
-      const callerSymbolId = insertedSymbols.find(
-        (symbol) => symbol.qualifiedName === call.callerQualifiedName,
-      )?.id;
-      if (!callerSymbolId) {
-        throw new Error(`Caller symbol not found: ${call.callerQualifiedName} in ${filePath}`);
-      }
-
-      const calleeSymbolId = call.resolved
-        ? resolvedCalleeId(call.callerQualifiedName, call.calleeName, insertedSymbols)
-        : undefined;
-      if (call.resolved && !calleeSymbolId) {
-        throw new Error(`Resolved callee symbol not found: ${call.calleeName} in ${filePath}`);
-      }
-
-      await client.query(
-        `INSERT INTO call_edges (
-           caller_symbol_id,
-           callee_symbol_id,
-           callee_unresolved_name,
-           resolution_method,
-           file_id
-         )
-         VALUES ($1, $2, $3, $4, $5)`,
-        [
-          callerSymbolId,
-          calleeSymbolId ?? null,
-          calleeSymbolId ? null : call.calleeName,
-          calleeSymbolId ? "direct" : "unresolved",
-          fileId,
-        ],
-      );
     }
 
     await client.query("COMMIT");
@@ -338,6 +265,28 @@ async function replaceIndexedFile(
     await client.query("ROLLBACK");
     throw error;
   }
+}
+
+async function clearRepositoryCallEdges(repositoryId: string): Promise<void> {
+  await pool.query(
+    `DELETE FROM call_edges
+      WHERE file_id IN (
+              SELECT id FROM indexed_files WHERE repository_id = $1
+            )
+         OR caller_symbol_id IN (
+              SELECT symbols.id
+                FROM symbols
+                JOIN indexed_files ON indexed_files.id = symbols.file_id
+               WHERE indexed_files.repository_id = $1
+            )
+         OR callee_symbol_id IN (
+              SELECT symbols.id
+                FROM symbols
+                JOIN indexed_files ON indexed_files.id = symbols.file_id
+               WHERE indexed_files.repository_id = $1
+            )`,
+    [repositoryId],
+  );
 }
 
 export async function runIndexing(repositoryId: string): Promise<void> {
@@ -355,20 +304,28 @@ export async function runIndexing(repositoryId: string): Promise<void> {
   const clone = await cloneRepository(repositoryForClone(repository));
   const summary: IndexingSummary = {
     filesFound: 0,
-    filesParsed: 0,
+    filesEnumerated: 0,
     filesSkipped: 0,
     filesFailed: 0,
     symbolsExtracted: 0,
   };
 
   try {
-    await runRepoLevelAnalyzers(clone.localPath, repositoryId);
+    const activeAnalyzers = repoLevelAnalyzers.filter((analyzer) =>
+      analyzer.canAnalyze(clone.localPath)
+    );
+    const activeAnalyzerNames = new Set(activeAnalyzers.map((analyzer) => analyzer.name));
+
+    // Knip's public graph exposes imports and exports, but not the full declaration
+    // population. Keep this pass limited to symbol enumeration; usage verdicts come
+    // exclusively from the repo-level analyzers below.
+    await clearRepositoryCallEdges(repositoryId);
 
     const files = await walkSourceFiles(clone.localPath);
     for (const absolutePath of files) {
       const filePath = relative(clone.localPath, absolutePath).split(sep).join("/");
-      const languageParser = languageParsers.find((parser) => parser.canParse(filePath));
-      if (!languageParser) {
+      const language = symbolLanguage(filePath);
+      if (!language || !hasAnalyzerForLanguage(language, activeAnalyzerNames)) {
         continue;
       }
       summary.filesFound += 1;
@@ -380,7 +337,8 @@ export async function runIndexing(repositoryId: string): Promise<void> {
            FROM indexed_files
           WHERE repository_id = $1
             AND file_path = $2
-            AND content_hash = $3`,
+            AND content_hash = $3
+            AND parse_status = 'symbols_only'`,
         [repositoryId, filePath, contentHash],
       );
       if (existing.rows.length > 0) {
@@ -388,7 +346,7 @@ export async function runIndexing(repositoryId: string): Promise<void> {
         continue;
       }
 
-      const parseResult = languageParser.parse(content, filePath);
+      const enumerationResult = enumerateSymbols(content, filePath);
       const client = await pool.connect();
       try {
         await replaceIndexedFile(
@@ -397,25 +355,29 @@ export async function runIndexing(repositoryId: string): Promise<void> {
           filePath,
           clone.commitSha,
           contentHash,
-          parseResult,
+          language,
+          enumerationResult,
         );
       } finally {
         client.release();
       }
 
-      summary.filesParsed += 1;
-      summary.symbolsExtracted += parseResult.symbols.length;
-      if (parseResult.parseStatus === "failed") {
+      summary.filesEnumerated += 1;
+      summary.symbolsExtracted += enumerationResult.symbols.length;
+      if (enumerationResult.status === "failed") {
         summary.filesFailed += 1;
       }
     }
+
+    await runRepoLevelAnalyzers(activeAnalyzers, clone.localPath, repositoryId);
   } finally {
     await clone.cleanup();
   }
 
   console.log(
     `Indexing complete: ${summary.filesFound} files found, ` +
-    `${summary.filesParsed} files parsed, ${summary.filesSkipped} files skipped (unchanged), ` +
+    `${summary.filesEnumerated} files symbol-enumerated, ` +
+    `${summary.filesSkipped} files skipped (unchanged), ` +
     `${summary.filesFailed} files failed, ${summary.symbolsExtracted} symbols extracted.`,
   );
 }
