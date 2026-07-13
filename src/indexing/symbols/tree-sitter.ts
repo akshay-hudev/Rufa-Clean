@@ -226,7 +226,10 @@ function enumerateJavaScript(fileContent: string, filePath: string): SymbolEnume
     : /\.(?:ts|mts|cts)$/i.test(filePath)
       ? typescriptParser
       : javascriptParser;
-  const tree = parser.parse(fileContent);
+  // node-tree-sitter 0.21's default 32 KiB UTF-16 input buffer can throw
+  // `Invalid argument` instead of continuing with another chunk. Size the
+  // buffer for the complete source so large, valid files remain enumerable.
+  const tree = parser.parse(fileContent, undefined, { bufferSize: fileContent.length + 1 });
   if (tree.rootNode.hasError) {
     return {
       symbols: [],
@@ -302,11 +305,52 @@ function pythonImportNames(node: SyntaxNode): Array<{ name: string; node: Syntax
   });
 }
 
+function pythonParameterBindings(node: SyntaxNode | null): SyntaxNode[] {
+  if (!node) {
+    return [];
+  }
+  if (node.type === "identifier") {
+    return [node];
+  }
+  if (node.type === "default_parameter" || node.type === "typed_default_parameter") {
+    return bindingIdentifiers(node.childForFieldName("name"));
+  }
+  if (node.type === "typed_parameter") {
+    const typeNode = node.childForFieldName("type");
+    return node.namedChildren
+      .filter((child) => child.id !== typeNode?.id)
+      .flatMap(pythonParameterBindings);
+  }
+  if (
+    node.type === "parameters" ||
+    node.type === "lambda_parameters" ||
+    node.type === "tuple_pattern" ||
+    node.type === "list_splat_pattern" ||
+    node.type === "dictionary_splat_pattern"
+  ) {
+    return node.namedChildren.flatMap(pythonParameterBindings);
+  }
+  return [];
+}
+
 function visitPython(
   node: SyntaxNode,
   scope: PythonScope,
   symbols: EnumeratedSymbol[],
 ): void {
+  if (node.type === "lambda") {
+    const lambdaName = [...scope.names, `<lambda@${node.startPosition.row + 1}>`].join(".");
+    for (const parameter of pythonParameterBindings(node.childForFieldName("parameters"))) {
+      symbols.push(symbol(
+        parameter,
+        "variable",
+        parameter.text,
+        `${lambdaName}.${parameter.text}`,
+        false,
+      ));
+    }
+  }
+
   const definition = unwrapPythonDefinition(node);
   if (definition) {
     const name = definition.childForFieldName("name")?.text;
@@ -317,6 +361,20 @@ function visitPython(
     const isClass = definition.type === "class_definition";
     const kind: SymbolKind = isClass ? "class" : scope.className ? "method" : "function";
     symbols.push(symbol(definition, kind, name, qualifiedName, scope.isModule && !name.startsWith("_")));
+
+    if (!isClass) {
+      for (const parameter of pythonParameterBindings(
+        definition.childForFieldName("parameters"),
+      )) {
+        symbols.push(symbol(
+          parameter,
+          "variable",
+          parameter.text,
+          `${qualifiedName}.${parameter.text}`,
+          false,
+        ));
+      }
+    }
 
     const body = definition.childForFieldName("body");
     if (body) {
@@ -340,6 +398,18 @@ function visitPython(
     }
   }
 
+  if (node.type === "for_statement" || node.type === "for_in_clause") {
+    for (const binding of pythonTargetBindings(node.childForFieldName("left"))) {
+      symbols.push(symbol(
+        node,
+        binding.kind,
+        binding.name,
+        [...scope.names, binding.name].join("."),
+        false,
+      ));
+    }
+  }
+
   if (node.type === "import_statement" || node.type === "import_from_statement") {
     for (const imported of pythonImportNames(node)) {
       symbols.push(symbol(
@@ -356,7 +426,9 @@ function visitPython(
 }
 
 function enumeratePython(fileContent: string, filePath: string): SymbolEnumerationResult {
-  const tree = pythonParser.parse(fileContent);
+  const tree = pythonParser.parse(fileContent, undefined, {
+    bufferSize: fileContent.length + 1,
+  });
   if (tree.rootNode.hasError) {
     return {
       symbols: [],

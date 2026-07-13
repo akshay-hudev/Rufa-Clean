@@ -47,10 +47,42 @@ describe("tree-sitter symbol enumeration", () => {
     ]));
   });
 
+  it("enumerates Python parameters and loop targets for Vulture matching", () => {
+    const result = enumerateSymbols(
+      "def hook(module, input, output):\n" +
+      "    for feat_idx, feat_name in enumerate(output):\n" +
+      "        callback = lambda texts, **kwargs: texts\n",
+      "hooks.py",
+    );
+
+    expect(result.symbols).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "module", qualifiedName: "hook.module" }),
+      expect.objectContaining({ name: "input", qualifiedName: "hook.input" }),
+      expect.objectContaining({ name: "output", qualifiedName: "hook.output" }),
+      expect.objectContaining({ name: "feat_idx", qualifiedName: "hook.feat_idx" }),
+      expect.objectContaining({ name: "feat_name", qualifiedName: "hook.feat_name" }),
+      expect.objectContaining({ name: "kwargs", qualifiedName: "hook.<lambda@3>.kwargs" }),
+    ]));
+  });
+
   it("returns a failed result for syntax errors", () => {
     const result = enumerateSymbols("function broken(", "broken.ts");
     expect(result.status).toBe("failed");
     expect(result.symbols).toEqual([]);
+  });
+
+  it("enumerates source files larger than tree-sitter's default input buffer", () => {
+    const declarations = Array.from(
+      { length: 4_000 },
+      (_, index) => `large_value_${index} = ${index}`,
+    ).join("\n");
+
+    const result = enumerateSymbols(declarations, "large_module.py");
+
+    expect(declarations.length).toBeGreaterThan(32 * 1024);
+    expect(result.status).toBe("success");
+    expect(result.symbols).toHaveLength(4_000);
+    expect(result.symbols.at(-1)?.name).toBe("large_value_3999");
   });
 
   it("recognizes supported source files and exclusions", () => {
