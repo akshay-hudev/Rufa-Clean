@@ -6,6 +6,7 @@ export interface RepoLevelAnalyzer {
 
 export interface RepoLevelFinding {
   filePath: string;
+  projectRoot: string;
   lineStart?: number;
   lineEnd?: number;
   symbolName?: string;
