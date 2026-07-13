@@ -5,6 +5,9 @@ import { join, relative, sep } from "node:path";
 import { PoolClient } from "pg";
 
 import { pool } from "../db/client";
+import { knipAnalyzer } from "./analyzers/knip";
+import type { RepoLevelAnalyzer, RepoLevelFinding } from "./analyzers/types";
+import { vultureAnalyzer } from "./analyzers/vulture";
 import { cloneRepository } from "./clone";
 import { pythonParser } from "./parsers/python";
 import { LanguageParser, ParseResult, typescriptParser } from "./parsers/typescript";
@@ -29,6 +32,18 @@ interface InsertedSymbol {
   kind: ParseResult["symbols"][number]["kind"];
   name: string;
   qualifiedName: string;
+}
+
+interface ExternalSignalMatch {
+  file_id: string;
+  symbol_id: string | null;
+}
+
+interface AnalyzerSummary {
+  findings: number;
+  symbolMatches: number;
+  fileOnlyMatches: number;
+  unmatchedFiles: number;
 }
 
 const SKIPPED_DIRECTORIES = new Set(["node_modules", ".git", "dist", "build"]);
@@ -70,6 +85,95 @@ function repositoryForClone(row: RepositoryRow): {
 }
 
 const languageParsers: LanguageParser[] = [typescriptParser, pythonParser];
+const repoLevelAnalyzers: RepoLevelAnalyzer[] = [knipAnalyzer, vultureAnalyzer];
+
+async function insertExternalSignal(
+  repositoryId: string,
+  finding: RepoLevelFinding,
+): Promise<"symbol" | "file" | "unmatched"> {
+  const matchResult = await pool.query<ExternalSignalMatch>(
+    `SELECT indexed_files.id AS file_id,
+            (
+              SELECT symbols.id
+                FROM symbols
+               WHERE symbols.file_id = indexed_files.id
+                 AND symbols.name = $3::text
+               ORDER BY
+                 CASE
+                   WHEN $4::int IS NOT NULL AND symbols.line_start = $4::int THEN 0
+                   ELSE 1
+                 END,
+                 symbols.line_start,
+                 symbols.id
+               LIMIT 1
+            ) AS symbol_id
+       FROM indexed_files
+      WHERE indexed_files.repository_id = $1
+        AND indexed_files.file_path = $2
+      LIMIT 1`,
+    [repositoryId, finding.filePath, finding.symbolName ?? null, finding.lineStart ?? null],
+  );
+  const match = matchResult.rows[0];
+
+  await pool.query(
+    `INSERT INTO external_signals (
+       file_id,
+       symbol_id,
+       source_tool,
+       finding_type,
+       raw_output
+     )
+     VALUES ($1, $2, $3, $4, $5::jsonb)`,
+    [
+      match?.file_id ?? null,
+      match?.symbol_id ?? null,
+      finding.sourceTool,
+      finding.findingType,
+      JSON.stringify(finding.rawOutput ?? null),
+    ],
+  );
+
+  if (match?.symbol_id) {
+    return "symbol";
+  }
+  return match?.file_id ? "file" : "unmatched";
+}
+
+async function runRepoLevelAnalyzers(
+  repoRootPath: string,
+  repositoryId: string,
+): Promise<void> {
+  for (const analyzer of repoLevelAnalyzers) {
+    if (!analyzer.canAnalyze(repoRootPath)) {
+      continue;
+    }
+
+    const findings = await analyzer.analyze(repoRootPath);
+    const summary: AnalyzerSummary = {
+      findings: findings.length,
+      symbolMatches: 0,
+      fileOnlyMatches: 0,
+      unmatchedFiles: 0,
+    };
+
+    for (const finding of findings) {
+      const match = await insertExternalSignal(repositoryId, finding);
+      if (match === "symbol") {
+        summary.symbolMatches += 1;
+      } else if (match === "file") {
+        summary.fileOnlyMatches += 1;
+      } else {
+        summary.unmatchedFiles += 1;
+      }
+    }
+
+    console.log(
+      `${analyzer.name} analysis: ${summary.findings} findings, ` +
+      `${summary.symbolMatches} symbol-matched, ${summary.fileOnlyMatches} file-only, ` +
+      `${summary.unmatchedFiles} without an indexed file.`,
+    );
+  }
+}
 
 function languageFor(filePath: string): "typescript" | "javascript" | "python" {
   if (/\.py$/i.test(filePath)) {
@@ -154,6 +258,10 @@ async function replaceIndexedFile(
     }
 
     await client.query("DELETE FROM call_edges WHERE file_id = $1", [fileId]);
+    await client.query(
+      "UPDATE external_signals SET symbol_id = NULL WHERE file_id = $1",
+      [fileId],
+    );
     await client.query("DELETE FROM symbols WHERE file_id = $1", [fileId]);
     const insertedSymbols: InsertedSymbol[] = [];
     for (const symbol of result.symbols) {
@@ -254,6 +362,8 @@ export async function runIndexing(repositoryId: string): Promise<void> {
   };
 
   try {
+    await runRepoLevelAnalyzers(clone.localPath, repositoryId);
+
     const files = await walkSourceFiles(clone.localPath);
     for (const absolutePath of files) {
       const filePath = relative(clone.localPath, absolutePath).split(sep).join("/");
