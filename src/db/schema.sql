@@ -59,6 +59,16 @@ CREATE TABLE IF NOT EXISTS symbols (
   visibility text DEFAULT 'unknown'
 );
 
+CREATE TABLE IF NOT EXISTS external_signals (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_id uuid REFERENCES indexed_files(id),
+  symbol_id uuid REFERENCES symbols(id),
+  source_tool text,
+  finding_type text,
+  raw_output jsonb,
+  detected_at timestamptz DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS call_edges (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   caller_symbol_id uuid REFERENCES symbols(id),
