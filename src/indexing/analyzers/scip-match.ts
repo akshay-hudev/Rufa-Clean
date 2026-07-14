@@ -225,6 +225,16 @@ function crossRepoTargetKey(packageCoordinate: string, symbolPath: string): stri
   return `${packageCoordinate}\0${symbolPath}`;
 }
 
+function semanticSymbolPath(symbolPath: string): string | null {
+  const sourceFileBoundary = symbolPath.indexOf("`/");
+  if (sourceFileBoundary === -1) {
+    return null;
+  }
+
+  const descriptorPath = symbolPath.slice(sourceFileBoundary + 2);
+  return descriptorPath || null;
+}
+
 export async function resolveCrossRepoReferences(
   repositoryId: string,
   scipDocuments: ScipDocument[],
@@ -233,6 +243,7 @@ export async function resolveCrossRepoReferences(
   const currentPackageCoordinates = new Set<string>();
   const otherIndexedPackageCoordinates = new Set<string>();
   const otherMatchedDefinitions = new Map<string, string>();
+  const otherSemanticDefinitions = new Map<string, Set<string>>();
 
   const orderedDefinitions = [...allRepositoryDefinitions].sort(
     (left, right) =>
@@ -257,6 +268,14 @@ export async function resolveCrossRepoReferences(
       const key = crossRepoTargetKey(parsed.packageCoordinate, parsed.symbolPath);
       if (!otherMatchedDefinitions.has(key)) {
         otherMatchedDefinitions.set(key, definition.matchedSymbolId);
+      }
+
+      const semanticPath = semanticSymbolPath(parsed.symbolPath);
+      if (semanticPath) {
+        const semanticKey = crossRepoTargetKey(parsed.packageCoordinate, semanticPath);
+        const symbolIds = otherSemanticDefinitions.get(semanticKey) ?? new Set<string>();
+        symbolIds.add(definition.matchedSymbolId);
+        otherSemanticDefinitions.set(semanticKey, symbolIds);
       }
     }
   }
@@ -289,7 +308,16 @@ export async function resolveCrossRepoReferences(
         reference.rangeStart[0],
       );
       const targetKey = crossRepoTargetKey(parsed.packageCoordinate, parsed.symbolPath);
-      const referencedSymbolId = otherMatchedDefinitions.get(targetKey);
+      let referencedSymbolId = otherMatchedDefinitions.get(targetKey);
+      if (!referencedSymbolId) {
+        const semanticPath = semanticSymbolPath(parsed.symbolPath);
+        const semanticMatches = semanticPath
+          ? otherSemanticDefinitions.get(crossRepoTargetKey(parsed.packageCoordinate, semanticPath))
+          : undefined;
+        if (semanticMatches?.size === 1) {
+          referencedSymbolId = semanticMatches.values().next().value;
+        }
+      }
 
       if (referencedSymbolId) {
         referencingSymbolIds.push(referencingSymbol?.id ?? null);

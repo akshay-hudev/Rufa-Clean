@@ -129,6 +129,47 @@ describe("resolveCrossRepoReferences", () => {
     ]);
   });
 
+  it("resolves a declaration-file reference to a unique source definition", async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    const documents: ScipDocument[] = [
+      {
+        relativePath: "src/index.ts",
+        symbols: [],
+        references: [
+          occurrence(
+            "scip-typescript npm shared-lib 1.0.0 dist/`index.d.ts`/formatCurrency().",
+          ),
+        ],
+      },
+    ];
+    const catalog: RepositoryScipDefinitionMatch[] = [
+      {
+        repositoryId: "current-repo",
+        scipSymbolString: "scip-typescript npm current-app 1.0.0 src/`index.ts`/",
+        matchedSymbolId: null,
+      },
+      {
+        repositoryId: "shared-repo",
+        scipSymbolString:
+          "scip-typescript npm shared-lib 1.0.0 src/`index.ts`/formatCurrency().",
+        matchedSymbolId: "format-currency-id",
+      },
+    ];
+
+    await expect(
+      resolveCrossRepoReferences("current-repo", documents, catalog),
+    ).resolves.toEqual({ crossRepoResolved: 1, crossRepoExternal: 0 });
+    expect(mocks.query.mock.calls[1]?.[1]).toEqual([
+      [null],
+      ["format-currency-id"],
+      ["npm shared-lib 1.0.0"],
+      ["cross_repo_resolved"],
+    ]);
+  });
+
   it("resolves a real SCIP reference between two package-linked repositories", async () => {
     const [providerScipPath, consumerScipPath] = await Promise.all([
       runScipIndex(providerRoot),
