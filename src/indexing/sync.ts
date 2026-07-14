@@ -15,6 +15,7 @@ import {
   type ScipSymbolMatch,
 } from "./analyzers/scip-match";
 import { parseScipIndex, type ScipDocument } from "./analyzers/scip-parse";
+import { classifyScipReferenceKinds } from "./analyzers/scip-reference-kind";
 import { runScipIndex } from "./analyzers/scip-typescript";
 import type { RepoLevelAnalyzer, RepoLevelFinding } from "./analyzers/types";
 import { vultureAnalyzer } from "./analyzers/vulture";
@@ -356,7 +357,10 @@ async function runScipAnalysis(
     return null;
   }
 
-  const parsedDocuments = await parseScipIndex(scipFilePath);
+  const parsedDocuments = await classifyScipReferenceKinds(
+    dirname(scipFilePath),
+    await parseScipIndex(scipFilePath),
+  );
   const documents = prefixScipDocumentPaths(repoRootPath, scipFilePath, parsedDocuments);
   const matchedDefinitions = await matchScipDefinitionsToSymbols(repositoryId, documents);
   const matchedCount = matchedDefinitions.filter((match) => match.matchedSymbolId !== null).length;

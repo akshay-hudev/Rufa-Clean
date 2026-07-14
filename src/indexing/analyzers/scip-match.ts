@@ -1,5 +1,5 @@
 import { pool } from "../../db/client";
-import type { ScipDocument } from "./scip-parse";
+import type { ScipDocument, ScipOccurrence } from "./scip-parse";
 
 export interface ScipSymbolMatch {
   scipSymbolString: string;
@@ -112,6 +112,23 @@ function targetKey(relativePath: string, symbolString: string): string {
     : symbolString;
 }
 
+function duplicateImportKey(
+  relativePath: string,
+  reference: ScipOccurrence,
+  target: string,
+): string | null {
+  if (reference.referenceKind !== "import" && reference.referenceKind !== "reexport") {
+    return null;
+  }
+  return [
+    relativePath,
+    reference.rangeStart[0],
+    reference.referenceKind,
+    reference.referenceContext,
+    target,
+  ].join("\0");
+}
+
 export function parseScipSymbol(symbolString: string): ParsedScipSymbol | null {
   if (!symbolString || symbolString.startsWith("local ")) {
     return null;
@@ -178,6 +195,9 @@ export async function resolveIntraRepoReferences(
   const symbolsByFile = await loadStoredSymbols(repositoryId);
   const referencingSymbolIds: Array<string | null> = [];
   const referencedSymbolIds: string[] = [];
+  const referenceKinds: string[] = [];
+  const referenceContexts: string[] = [];
+  const seenImports = new Set<string>();
 
   for (const document of scipDocuments) {
     for (const reference of document.references) {
@@ -188,6 +208,18 @@ export async function resolveIntraRepoReferences(
         continue;
       }
 
+      const importKey = duplicateImportKey(
+        document.relativePath,
+        reference,
+        referencedSymbolId,
+      );
+      if (importKey && seenImports.has(importKey)) {
+        continue;
+      }
+      if (importKey) {
+        seenImports.add(importKey);
+      }
+
       const referencingSymbol = containingSymbol(
         symbolsByFile,
         document.relativePath,
@@ -195,6 +227,8 @@ export async function resolveIntraRepoReferences(
       );
       referencingSymbolIds.push(referencingSymbol?.id ?? null);
       referencedSymbolIds.push(referencedSymbolId);
+      referenceKinds.push(reference.referenceKind);
+      referenceContexts.push(reference.referenceContext);
     }
   }
 
@@ -207,15 +241,24 @@ export async function resolveIntraRepoReferences(
        referencing_symbol_id,
        referenced_symbol_id,
        resolution_confidence,
+       reference_kind,
+       reference_context,
        source_tool
      )
      SELECT edge.referencing_symbol_id,
             edge.referenced_symbol_id,
             'same_repo',
+            edge.reference_kind,
+            edge.reference_context,
             'scip'
-       FROM unnest($1::uuid[], $2::uuid[])
-         AS edge(referencing_symbol_id, referenced_symbol_id)`,
-    [referencingSymbolIds, referencedSymbolIds],
+       FROM unnest($1::uuid[], $2::uuid[], $3::text[], $4::text[])
+         AS edge(
+           referencing_symbol_id,
+           referenced_symbol_id,
+           reference_kind,
+           reference_context
+         )`,
+    [referencingSymbolIds, referencedSymbolIds, referenceKinds, referenceContexts],
   );
 
   return insertResult.rowCount ?? 0;
@@ -292,6 +335,9 @@ export async function resolveCrossRepoReferences(
   const referencedSymbolIds: Array<string | null> = [];
   const packageCoordinates: string[] = [];
   const confidences: string[] = [];
+  const referenceKinds: string[] = [];
+  const referenceContexts: string[] = [];
+  const seenImports = new Set<string>();
   let crossRepoResolved = 0;
   let crossRepoExternal = 0;
 
@@ -320,19 +366,45 @@ export async function resolveCrossRepoReferences(
       }
 
       if (referencedSymbolId) {
+        const importKey = duplicateImportKey(
+          document.relativePath,
+          reference,
+          referencedSymbolId,
+        );
+        if (importKey && seenImports.has(importKey)) {
+          continue;
+        }
+        if (importKey) {
+          seenImports.add(importKey);
+        }
         referencingSymbolIds.push(referencingSymbol?.id ?? null);
         referencedSymbolIds.push(referencedSymbolId);
         packageCoordinates.push(parsed.packageCoordinate);
         confidences.push("cross_repo_resolved");
+        referenceKinds.push(reference.referenceKind);
+        referenceContexts.push(reference.referenceContext);
         crossRepoResolved += 1;
         continue;
       }
 
       if (!otherIndexedPackageCoordinates.has(parsed.packageCoordinate)) {
+        const importKey = duplicateImportKey(
+          document.relativePath,
+          reference,
+          crossRepoTargetKey(parsed.packageCoordinate, parsed.symbolPath),
+        );
+        if (importKey && seenImports.has(importKey)) {
+          continue;
+        }
+        if (importKey) {
+          seenImports.add(importKey);
+        }
         referencingSymbolIds.push(referencingSymbol?.id ?? null);
         referencedSymbolIds.push(null);
         packageCoordinates.push(parsed.packageCoordinate);
         confidences.push("cross_repo_external");
+        referenceKinds.push(reference.referenceKind);
+        referenceContexts.push(reference.referenceContext);
         crossRepoExternal += 1;
       }
     }
@@ -348,21 +420,41 @@ export async function resolveCrossRepoReferences(
        referenced_symbol_id,
        referenced_package_coordinate,
        resolution_confidence,
+       reference_kind,
+       reference_context,
        source_tool
      )
      SELECT edge.referencing_symbol_id,
             edge.referenced_symbol_id,
             edge.package_coordinate,
             edge.resolution_confidence,
+            edge.reference_kind,
+            edge.reference_context,
             'scip'
-       FROM unnest($1::uuid[], $2::uuid[], $3::text[], $4::text[])
+       FROM unnest(
+         $1::uuid[],
+         $2::uuid[],
+         $3::text[],
+         $4::text[],
+         $5::text[],
+         $6::text[]
+       )
          AS edge(
            referencing_symbol_id,
            referenced_symbol_id,
            package_coordinate,
-           resolution_confidence
+           resolution_confidence,
+           reference_kind,
+           reference_context
          )`,
-    [referencingSymbolIds, referencedSymbolIds, packageCoordinates, confidences],
+    [
+      referencingSymbolIds,
+      referencedSymbolIds,
+      packageCoordinates,
+      confidences,
+      referenceKinds,
+      referenceContexts,
+    ],
   );
 
   return { crossRepoResolved, crossRepoExternal };

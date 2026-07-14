@@ -1,0 +1,12 @@
+{
+  "name": "test-only-usage",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "node dist/helper.test.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

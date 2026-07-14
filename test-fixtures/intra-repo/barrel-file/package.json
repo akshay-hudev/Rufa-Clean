@@ -1,0 +1,13 @@
+{
+  "name": "barrel-file",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/app.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

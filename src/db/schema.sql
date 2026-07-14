@@ -92,9 +92,17 @@ CREATE TABLE IF NOT EXISTS cross_repo_references (
   referenced_symbol_id UUID REFERENCES symbols(id),
   referenced_package_coordinate TEXT,
   resolution_confidence TEXT NOT NULL,
+  reference_kind TEXT NOT NULL DEFAULT 'unknown',
+  reference_context TEXT NOT NULL DEFAULT 'unknown',
   source_tool TEXT NOT NULL DEFAULT 'scip',
   detected_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE cross_repo_references
+  ADD COLUMN IF NOT EXISTS reference_kind TEXT NOT NULL DEFAULT 'unknown';
+
+ALTER TABLE cross_repo_references
+  ADD COLUMN IF NOT EXISTS reference_context TEXT NOT NULL DEFAULT 'unknown';
 
 CREATE INDEX IF NOT EXISTS symbols_file_id_idx
   ON symbols (file_id);

@@ -20,16 +20,21 @@ import {
 import { parseScipIndex, type ScipDocument, type ScipOccurrence } from "./scip-parse";
 import { runScipIndex } from "./scip-typescript";
 
-const fixtureRoot = resolve(__dirname, "../../../test-fixtures/scip-cross-repo");
+const fixtureRoot = resolve(__dirname, "__fixtures__/scip-cross-repo");
 const providerRoot = join(fixtureRoot, "provider");
 const consumerRoot = join(fixtureRoot, "consumer");
 const consumerNodeModules = join(consumerRoot, "node_modules");
 
-function occurrence(symbolString: string): ScipOccurrence {
+function occurrence(
+  symbolString: string,
+  referenceKind: ScipOccurrence["referenceKind"] = "unknown",
+): ScipOccurrence {
   return {
     symbolString,
     kind: "unspecified",
     isDefinition: false,
+    referenceKind,
+    referenceContext: "unknown",
     rangeStart: [9, 4],
     rangeEnd: [9, 12],
   };
@@ -94,7 +99,14 @@ describe("resolveCrossRepoReferences", () => {
         symbols: [],
         references: [
           occurrence("scip-typescript npm current-app 1.0.0 src/`own.ts`/own()."),
-          occurrence("scip-typescript npm shared-lib 2.0.0 src/`lib.ts`/shared()."),
+          occurrence(
+            "scip-typescript npm shared-lib 2.0.0 src/`lib.ts`/shared().",
+            "import",
+          ),
+          occurrence(
+            "scip-typescript npm shared-lib 2.0.0 src/`lib.ts`/shared().",
+            "import",
+          ),
           occurrence("scip-typescript npm shared-lib 2.0.0 src/`lib.ts`/missing()."),
           occurrence("scip-typescript npm lodash 4.17.21 `lodash.d.ts`/map()."),
         ],
@@ -126,6 +138,8 @@ describe("resolveCrossRepoReferences", () => {
       ["shared-id", null],
       ["npm shared-lib 2.0.0", "npm lodash 4.17.21"],
       ["cross_repo_resolved", "cross_repo_external"],
+      ["import", "unknown"],
+      ["unknown", "unknown"],
     ]);
   });
 
@@ -167,6 +181,8 @@ describe("resolveCrossRepoReferences", () => {
       ["format-currency-id"],
       ["npm shared-lib 1.0.0"],
       ["cross_repo_resolved"],
+      ["unknown"],
+      ["unknown"],
     ]);
   });
 
@@ -226,5 +242,7 @@ describe("resolveCrossRepoReferences", () => {
     expect(insertParameters[1]).toContain("provider-shared-greeting-id");
     expect(insertParameters[2]).toContain("npm @fixture/shared 1.0.0");
     expect(insertParameters[3]).toContain("cross_repo_resolved");
+    expect(insertParameters[4]).toContain("unknown");
+    expect(insertParameters[5]).toContain("unknown");
   }, 15_000);
 });

@@ -4,9 +4,22 @@ export interface ScipOccurrence {
   symbolString: string;
   kind: string;
   isDefinition: boolean;
+  referenceKind: ScipReferenceKind;
+  referenceContext: ScipReferenceContext;
   rangeStart: [number, number];
   rangeEnd: [number, number];
 }
+
+export type ScipReferenceKind =
+  | "definition"
+  | "import"
+  | "reexport"
+  | "call"
+  | "construct"
+  | "read"
+  | "unknown";
+
+export type ScipReferenceContext = "production" | "test" | "unknown";
 
 export interface ScipDocument {
   relativePath: string;
@@ -126,6 +139,8 @@ export async function parseScipIndex(scipFilePath: string): Promise<ScipDocument
         symbolString: occurrence.symbol,
         kind: kindName(symbolKinds.get(occurrence.symbol)),
         isDefinition,
+        referenceKind: isDefinition ? "definition" : "unknown",
+        referenceContext: "unknown",
         ...parsedRange,
       };
       if (isDefinition) {

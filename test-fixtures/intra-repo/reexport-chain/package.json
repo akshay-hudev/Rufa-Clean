@@ -1,0 +1,13 @@
+{
+  "name": "reexport-chain",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/consumer.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/consumer.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
