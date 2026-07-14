@@ -1,11 +1,21 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
-import { join, relative, sep } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 
 import { PoolClient } from "pg";
 
 import { pool } from "../db/client";
 import { knipAnalyzer } from "./analyzers/knip";
+import {
+  catalogScipDefinitionMatches,
+  matchScipDefinitionsToSymbols,
+  resolveCrossRepoReferences,
+  resolveIntraRepoReferences,
+  type RepositoryScipDefinitionMatch,
+  type ScipSymbolMatch,
+} from "./analyzers/scip-match";
+import { parseScipIndex, type ScipDocument } from "./analyzers/scip-parse";
+import { runScipIndex } from "./analyzers/scip-typescript";
 import type { RepoLevelAnalyzer, RepoLevelFinding } from "./analyzers/types";
 import { vultureAnalyzer } from "./analyzers/vulture";
 import { cloneRepository } from "./clone";
@@ -20,6 +30,16 @@ interface RepositoryRow {
   org_slug: string | null;
   repo_slug: string | null;
   default_branch: string | null;
+}
+
+interface InventoryRepositoryRow extends RepositoryRow {
+  id: string;
+}
+
+export interface ScipRepositoryIndex {
+  repositoryId: string;
+  documents: ScipDocument[];
+  matchedDefinitions: ScipSymbolMatch[];
 }
 
 interface IndexingSummary {
@@ -289,7 +309,72 @@ async function clearRepositoryCallEdges(repositoryId: string): Promise<void> {
   );
 }
 
-export async function runIndexing(repositoryId: string): Promise<void> {
+async function clearRepositoryScipReferences(repositoryId: string): Promise<void> {
+  await pool.query(
+    `DELETE FROM cross_repo_references
+      WHERE source_tool = 'scip'
+        AND (
+          referencing_symbol_id IN (
+            SELECT symbols.id
+              FROM symbols
+              JOIN indexed_files ON indexed_files.id = symbols.file_id
+             WHERE indexed_files.repository_id = $1
+          )
+          OR referenced_symbol_id IN (
+            SELECT symbols.id
+              FROM symbols
+              JOIN indexed_files ON indexed_files.id = symbols.file_id
+             WHERE indexed_files.repository_id = $1
+          )
+        )`,
+    [repositoryId],
+  );
+}
+
+function prefixScipDocumentPaths(
+  repoRootPath: string,
+  scipFilePath: string,
+  documents: ScipDocument[],
+): ScipDocument[] {
+  const projectRoot = relative(repoRootPath, dirname(scipFilePath)).split(sep).join("/");
+  if (!projectRoot || projectRoot === ".") {
+    return documents;
+  }
+
+  return documents.map((document) => ({
+    ...document,
+    relativePath: `${projectRoot}/${document.relativePath}`,
+  }));
+}
+
+async function runScipAnalysis(
+  repositoryId: string,
+  repoRootPath: string,
+): Promise<ScipRepositoryIndex | null> {
+  const scipFilePath = await runScipIndex(repoRootPath);
+  if (!scipFilePath) {
+    return null;
+  }
+
+  const parsedDocuments = await parseScipIndex(scipFilePath);
+  const documents = prefixScipDocumentPaths(repoRootPath, scipFilePath, parsedDocuments);
+  const matchedDefinitions = await matchScipDefinitionsToSymbols(repositoryId, documents);
+  const matchedCount = matchedDefinitions.filter((match) => match.matchedSymbolId !== null).length;
+  const insertedReferences = await resolveIntraRepoReferences(
+    repositoryId,
+    documents,
+    matchedDefinitions,
+  );
+
+  console.log(
+    `SCIP analysis: ${matchedDefinitions.length} definitions, ${matchedCount} symbol-matched, ` +
+    `${insertedReferences} same-repository references inserted.`,
+  );
+
+  return { repositoryId, documents, matchedDefinitions };
+}
+
+export async function runIndexing(repositoryId: string): Promise<ScipRepositoryIndex | null> {
   const repositoryResult = await pool.query<RepositoryRow>(
     `SELECT vcs_provider, org_slug, repo_slug, default_branch
        FROM repositories
@@ -309,6 +394,7 @@ export async function runIndexing(repositoryId: string): Promise<void> {
     filesFailed: 0,
     symbolsExtracted: 0,
   };
+  let scipIndex: ScipRepositoryIndex | null = null;
 
   try {
     const activeAnalyzers = repoLevelAnalyzers.filter((analyzer) =>
@@ -320,6 +406,7 @@ export async function runIndexing(repositoryId: string): Promise<void> {
     // population. Keep this pass limited to symbol enumeration; usage verdicts come
     // exclusively from the repo-level analyzers below.
     await clearRepositoryCallEdges(repositoryId);
+    await clearRepositoryScipReferences(repositoryId);
 
     const files = await walkSourceFiles(clone.localPath);
     for (const absolutePath of files) {
@@ -370,6 +457,7 @@ export async function runIndexing(repositoryId: string): Promise<void> {
     }
 
     await runRepoLevelAnalyzers(activeAnalyzers, clone.localPath, repositoryId);
+    scipIndex = await runScipAnalysis(repositoryId, clone.localPath);
   } finally {
     await clone.cleanup();
   }
@@ -379,5 +467,66 @@ export async function runIndexing(repositoryId: string): Promise<void> {
     `${summary.filesEnumerated} files symbol-enumerated, ` +
     `${summary.filesSkipped} files skipped (unchanged), ` +
     `${summary.filesFailed} files failed, ${summary.symbolsExtracted} symbols extracted.`,
+  );
+
+  return scipIndex;
+}
+
+export async function runAllIndexing(): Promise<void> {
+  const repositoryResult = await pool.query<InventoryRepositoryRow>(
+    `SELECT id, vcs_provider, org_slug, repo_slug, default_branch
+      FROM repositories
+      WHERE lower(vcs_provider) = 'github'
+        AND archived = false
+        AND default_branch IS NOT NULL
+      ORDER BY repo_slug`,
+  );
+  const scipIndexes: ScipRepositoryIndex[] = [];
+  let failures = 0;
+
+  for (const repository of repositoryResult.rows) {
+    try {
+      const scipIndex = await runIndexing(repository.id);
+      if (scipIndex) {
+        scipIndexes.push(scipIndex);
+      }
+    } catch (error) {
+      failures += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Indexing failed for ${repository.repo_slug}: ${message}`);
+    }
+  }
+
+  if (failures > 0) {
+    console.warn(
+      `Cross-repository SCIP resolution skipped: ${failures} repositories failed indexing.`,
+    );
+    return;
+  }
+
+  const definitionCatalog: RepositoryScipDefinitionMatch[] = scipIndexes.flatMap((index) =>
+    catalogScipDefinitionMatches(index.repositoryId, index.matchedDefinitions)
+  );
+  await pool.query(
+    `DELETE FROM cross_repo_references
+      WHERE source_tool = 'scip'
+        AND resolution_confidence IN ('cross_repo_resolved', 'cross_repo_external')`,
+  );
+
+  for (const index of scipIndexes) {
+    const resolution = await resolveCrossRepoReferences(
+      index.repositoryId,
+      index.documents,
+      definitionCatalog,
+    );
+    console.log(
+      `SCIP cross-repository analysis for ${index.repositoryId}: ` +
+      `${resolution.crossRepoResolved} resolved, ${resolution.crossRepoExternal} external.`,
+    );
+  }
+
+  console.log(
+    `Inventory indexing complete: ${repositoryResult.rows.length} repositories, ` +
+    `${scipIndexes.length} SCIP-indexed, ${failures} failures.`,
   );
 }

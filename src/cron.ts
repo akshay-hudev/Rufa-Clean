@@ -5,6 +5,7 @@ import cron, { type ScheduledTask } from "node-cron";
 import { pool } from "./db/client";
 import { migrate } from "./db/migrate";
 import { runSync } from "./discovery/sync";
+import { runAllIndexing } from "./indexing/sync";
 
 const schedule = process.env.SYNC_CRON ?? "0 2 * * *";
 const timezone = process.env.SYNC_TIMEZONE ?? "UTC";
@@ -16,8 +17,9 @@ async function runScheduledSync(): Promise<void> {
   console.log(`Starting scheduled discovery sync at ${new Date().toISOString()}`);
   try {
     await runSync();
+    await runAllIndexing();
   } catch (error) {
-    console.error("Scheduled discovery sync failed.", error);
+    console.error("Scheduled discovery and indexing sync failed.", error);
   }
 }
 

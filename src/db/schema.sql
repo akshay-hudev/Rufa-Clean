@@ -86,6 +86,16 @@ CREATE TABLE IF NOT EXISTS import_edges (
   import_kind text
 );
 
+CREATE TABLE IF NOT EXISTS cross_repo_references (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  referencing_symbol_id UUID REFERENCES symbols(id),
+  referenced_symbol_id UUID REFERENCES symbols(id),
+  referenced_package_coordinate TEXT,
+  resolution_confidence TEXT NOT NULL,
+  source_tool TEXT NOT NULL DEFAULT 'scip',
+  detected_at TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS symbols_file_id_idx
   ON symbols (file_id);
 
@@ -97,3 +107,9 @@ CREATE INDEX IF NOT EXISTS call_edges_callee_symbol_id_idx
 
 CREATE INDEX IF NOT EXISTS import_edges_importing_file_id_idx
   ON import_edges (importing_file_id);
+
+CREATE INDEX IF NOT EXISTS idx_crr_referencing
+  ON cross_repo_references(referencing_symbol_id);
+
+CREATE INDEX IF NOT EXISTS idx_crr_referenced
+  ON cross_repo_references(referenced_symbol_id);
