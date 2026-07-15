@@ -90,7 +90,7 @@ export async function collectEvidenceForSymbol(symbolId: string): Promise<void> 
          FROM external_signals
         WHERE symbol_id = $1
           AND source_tool IN ('knip', 'vulture')
-          AND finding_type IN ('unused_export', 'unreachable')
+          AND finding_type IN ('unused_export', 'unused_exported_type', 'unreachable')
         ORDER BY detected_at, id`,
       [symbolId],
     );
@@ -134,9 +134,12 @@ export async function collectEvidenceForSymbol(symbolId: string): Promise<void> 
     const language = context.language?.toLowerCase() ?? "";
     const coveredByKnipOrVulture = ["typescript", "javascript", "python"].includes(language);
     const externalFindings = externalFindingsResult.rows;
+    const deadDeclarationFindings = externalFindings.filter(
+      (finding) => ["unused_export", "unreachable"].includes(finding.finding_type),
+    );
     const knipVultureStatus: SignalStatus = !coveredByKnipOrVulture
       ? "not_available"
-      : externalFindings.length > 0
+      : deadDeclarationFindings.length > 0
         ? "available_unused"
         : "available_used";
 
@@ -158,10 +161,11 @@ export async function collectEvidenceForSymbol(symbolId: string): Promise<void> 
       language: context.language,
       call_graph_status: context.call_graph_status,
       analyzer: language === "python" ? "vulture" : coveredByKnipOrVulture ? "knip" : null,
-      matching_finding_count: externalFindings.length,
+      matching_finding_count: deadDeclarationFindings.length,
       matching_findings: externalFindings,
+      unused_exported_type_count: externalFindings.length - deadDeclarationFindings.length,
       interpretation_note:
-        "A Knip available_used result may mean only that the symbol was imported somewhere; it does not prove the symbol was actually called or otherwise executed.",
+        "Knip unused exported types are export-surface findings, not proof that an internally-used declaration is dead. They are retained in evidence but do not mark the declaration unused.",
     });
 
     await insertEvidence(

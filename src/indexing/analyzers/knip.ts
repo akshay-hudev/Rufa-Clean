@@ -17,7 +17,12 @@ interface KnipReportEntry {
   file: string;
   files?: unknown[];
   exports?: unknown[];
+  types?: unknown[];
   dependencies?: unknown[];
+  devDependencies?: unknown[];
+  optionalPeerDependencies?: unknown[];
+  binaries?: unknown[];
+  unlisted?: unknown[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -95,6 +100,23 @@ function mapEntry(entry: KnipReportEntry, projectRoot: string): RepoLevelFinding
     });
   }
 
+  // Knip's `types` category means the type's export is unused, not necessarily
+  // that the declaration is unused within its own module. Keep it distinct from
+  // unused_export so Confidence cannot recommend deleting an internally-used type.
+  for (const finding of entry.types ?? []) {
+    const line = lineFromFinding(finding);
+    const symbolName = nameFromFinding(finding);
+    findings.push({
+      filePath,
+      projectRoot,
+      ...(line === undefined ? {} : { lineStart: line }),
+      ...(symbolName === undefined ? {} : { symbolName }),
+      findingType: "unused_exported_type",
+      sourceTool: "knip",
+      rawOutput: finding,
+    });
+  }
+
   for (const finding of entry.dependencies ?? []) {
     findings.push({
       filePath,
@@ -105,7 +127,54 @@ function mapEntry(entry: KnipReportEntry, projectRoot: string): RepoLevelFinding
     });
   }
 
+  for (const finding of entry.devDependencies ?? []) {
+    findings.push({
+      filePath,
+      projectRoot,
+      findingType: "unused_dev_dependency",
+      sourceTool: "knip",
+      rawOutput: finding,
+    });
+  }
+
+  for (const finding of entry.optionalPeerDependencies ?? []) {
+    findings.push({
+      filePath,
+      projectRoot,
+      findingType: "unused_optional_peer_dependency",
+      sourceTool: "knip",
+      rawOutput: finding,
+    });
+  }
+
+  for (const finding of entry.binaries ?? []) {
+    findings.push({
+      filePath,
+      projectRoot,
+      findingType: "unlisted_binary",
+      sourceTool: "knip",
+      rawOutput: finding,
+    });
+  }
+
+  for (const finding of entry.unlisted ?? []) {
+    findings.push({
+      filePath,
+      projectRoot,
+      findingType: "unlisted_dependency",
+      sourceTool: "knip",
+      rawOutput: finding,
+    });
+  }
+
   return findings;
+}
+
+export function parseKnipOutput(
+  output: string,
+  projectRoot: string,
+): RepoLevelFinding[] {
+  return parseReport(output).flatMap((entry) => mapEntry(entry, projectRoot));
 }
 
 async function analyzeProject(projectRoot: KnipProjectRoot): Promise<RepoLevelFinding[]> {
@@ -120,11 +189,11 @@ async function analyzeProject(projectRoot: KnipProjectRoot): Promise<RepoLevelFi
       },
     );
 
-    return parseReport(stdout).flatMap((entry) => mapEntry(entry, projectRoot.relativePath));
+    return parseKnipOutput(stdout, projectRoot.relativePath);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`Knip analysis failed for ${projectRoot.absolutePath}: ${message}`);
-    return [];
+    console.error(`Knip analysis failed for ${projectRoot.absolutePath}: ${message}`);
+    throw new Error(`Knip analysis failed for ${projectRoot.absolutePath}: ${message}`);
   }
 }
 

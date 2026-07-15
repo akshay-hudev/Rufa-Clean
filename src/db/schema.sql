@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS symbols (
 
 CREATE TABLE IF NOT EXISTS external_signals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  repository_id uuid REFERENCES repositories(id),
   file_id uuid REFERENCES indexed_files(id),
   symbol_id uuid REFERENCES symbols(id),
   source_tool text,
@@ -105,6 +106,18 @@ CREATE TABLE IF NOT EXISTS external_signals (
   raw_output jsonb,
   detected_at timestamptz DEFAULT now()
 );
+
+ALTER TABLE external_signals
+  ADD COLUMN IF NOT EXISTS repository_id UUID REFERENCES repositories(id);
+
+UPDATE external_signals AS signal
+   SET repository_id = file.repository_id
+  FROM indexed_files AS file
+ WHERE signal.file_id = file.id
+   AND signal.repository_id IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_external_signals_repository
+  ON external_signals(repository_id, source_tool, finding_type);
 
 CREATE TABLE IF NOT EXISTS call_edges (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

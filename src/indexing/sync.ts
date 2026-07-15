@@ -141,15 +141,17 @@ async function insertExternalSignal(
   const match = matchResult.rows[0];
 
   await pool.query(
-    `INSERT INTO external_signals (
+     `INSERT INTO external_signals (
+       repository_id,
        file_id,
        symbol_id,
        source_tool,
        finding_type,
        raw_output
      )
-     VALUES ($1, $2, $3, $4, $5::jsonb)`,
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
     [
+      repositoryId,
       match?.file_id ?? null,
       match?.symbol_id ?? null,
       finding.sourceTool,
@@ -171,6 +173,14 @@ async function runRepoLevelAnalyzers(
 ): Promise<void> {
   for (const analyzer of analyzers) {
     const findings = await analyzer.analyze(repoRootPath);
+    // Treat each successful analyzer invocation as the current snapshot. Analyze
+    // first so an exception preserves the last known-good rows.
+    await pool.query(
+      `DELETE FROM external_signals
+        WHERE repository_id = $1
+          AND source_tool = $2`,
+      [repositoryId, analyzer.name],
+    );
     const summary: AnalyzerSummary = {
       findings: findings.length,
       symbolMatches: 0,
@@ -195,6 +205,41 @@ async function runRepoLevelAnalyzers(
       `${summary.unmatchedFiles} without an indexed file.`,
     );
   }
+}
+
+async function warnIfRepositoryHasSymbolsWithoutExternalSignals(
+  repositoryId: string,
+  repositorySlug: string,
+): Promise<void> {
+  const result = await pool.query<{ symbol_count: string; signal_count: string }>(
+    `SELECT (SELECT count(*)
+               FROM symbols
+               JOIN indexed_files ON indexed_files.id = symbols.file_id
+              WHERE indexed_files.repository_id = $1)::text AS symbol_count,
+            (SELECT count(*)
+               FROM external_signals
+              WHERE external_signals.repository_id = $1)::text AS signal_count`,
+    [repositoryId],
+  );
+  const counts = result.rows[0];
+  const symbolCount = Number(counts?.symbol_count ?? 0);
+  const signalCount = Number(counts?.signal_count ?? 0);
+  const warning = zeroExternalSignalsWarning(repositorySlug, symbolCount, signalCount);
+  if (warning) {
+    console.warn(warning);
+  }
+}
+
+export function zeroExternalSignalsWarning(
+  repositorySlug: string,
+  symbolCount: number,
+  signalCount: number,
+): string | undefined {
+  if (symbolCount <= 0 || signalCount > 0) {
+    return undefined;
+  }
+  return `Indexing warning for ${repositorySlug}: ${symbolCount} symbols were stored but ` +
+    "zero repository-attributed external_signals were produced. Check analyzer output and persistence.";
 }
 
 function hasAnalyzerForLanguage(
@@ -461,6 +506,10 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
     }
 
     await runRepoLevelAnalyzers(activeAnalyzers, clone.localPath, repositoryId);
+    await warnIfRepositoryHasSymbolsWithoutExternalSignals(
+      repositoryId,
+      repository.repo_slug ?? repositoryId,
+    );
     scipIndex = await runScipAnalysis(repositoryId, clone.localPath);
   } finally {
     await clone.cleanup();
