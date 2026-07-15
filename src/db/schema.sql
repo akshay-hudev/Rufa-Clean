@@ -44,8 +44,45 @@ CREATE TABLE IF NOT EXISTS indexed_files (
   indexed_at timestamptz DEFAULT now(),
   parse_status text,
   parse_error text,
+  call_graph_status text NOT NULL DEFAULT 'not_produced',
+  scip_status text NOT NULL DEFAULT 'not_attempted',
   UNIQUE (repository_id, file_path)
 );
+
+ALTER TABLE indexed_files
+  ADD COLUMN IF NOT EXISTS call_graph_status TEXT NOT NULL DEFAULT 'not_produced';
+
+ALTER TABLE indexed_files
+  ADD COLUMN IF NOT EXISTS scip_status TEXT NOT NULL DEFAULT 'not_attempted';
+
+DO $$
+BEGIN
+  ALTER TABLE indexed_files
+    ADD CONSTRAINT indexed_files_call_graph_status_check
+    CHECK (call_graph_status IN (
+      'not_produced',
+      'tree_sitter_resolved',
+      'deprecated_superseded_by_scip'
+    ));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
+
+DO $$
+BEGIN
+  ALTER TABLE indexed_files
+    ADD CONSTRAINT indexed_files_scip_status_check
+    CHECK (scip_status IN (
+      'not_attempted',
+      'succeeded',
+      'failed_no_tsconfig',
+      'failed_other'
+    ));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END
+$$;
 
 CREATE TABLE IF NOT EXISTS symbols (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -121,3 +158,27 @@ CREATE INDEX IF NOT EXISTS idx_crr_referencing
 
 CREATE INDEX IF NOT EXISTS idx_crr_referenced
   ON cross_repo_references(referenced_symbol_id);
+
+CREATE TABLE IF NOT EXISTS confidence_evidence (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  symbol_id UUID REFERENCES symbols(id),
+  signal_source TEXT NOT NULL,
+  signal_status TEXT NOT NULL,
+  raw_value JSONB,
+  detected_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ce_symbol
+  ON confidence_evidence(symbol_id);
+
+CREATE TABLE IF NOT EXISTS confidence_verdicts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  symbol_id UUID REFERENCES symbols(id) UNIQUE,
+  confidence_score FLOAT,
+  verdict TEXT NOT NULL,
+  evidence_summary JSONB,
+  computed_at TIMESTAMPTZ DEFAULT now(),
+  review_status TEXT NOT NULL DEFAULT 'unreviewed',
+  reviewed_by TEXT,
+  reviewed_at TIMESTAMPTZ
+);
