@@ -182,3 +182,112 @@ CREATE TABLE IF NOT EXISTS confidence_verdicts (
   reviewed_by TEXT,
   reviewed_at TIMESTAMPTZ
 );
+
+DO $$
+BEGIN
+  ALTER TABLE confidence_verdicts
+    ADD CONSTRAINT confidence_verdicts_id_symbol_unique
+    UNIQUE (id, symbol_id);
+EXCEPTION
+  WHEN duplicate_object OR duplicate_table THEN NULL;
+END
+$$;
+
+CREATE TABLE IF NOT EXISTS removal_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  confidence_verdict_id UUID NOT NULL,
+  symbol_id UUID NOT NULL,
+  attempt_number INTEGER NOT NULL CHECK (attempt_number > 0),
+  source_verdict TEXT NOT NULL,
+  source_confidence_score FLOAT,
+  source_review_status TEXT NOT NULL
+    CHECK (source_review_status = 'confirmed_dead'),
+  confirmed_by TEXT NOT NULL CHECK (btrim(confirmed_by) <> ''),
+  confirmed_at TIMESTAMPTZ NOT NULL,
+  base_commit_sha TEXT NOT NULL CHECK (btrim(base_commit_sha) <> ''),
+  generator_name TEXT NOT NULL,
+  generator_version TEXT NOT NULL,
+  rule_set_version TEXT NOT NULL,
+  generated_patch TEXT,
+  patch_sha256 TEXT,
+  generated_at TIMESTAMPTZ,
+  gate_status TEXT NOT NULL DEFAULT 'not_run'
+    CHECK (gate_status IN ('not_run', 'running', 'passed', 'failed', 'error')),
+  gate_result JSONB,
+  gate_started_at TIMESTAMPTZ,
+  gate_completed_at TIMESTAMPTZ,
+  pr_url TEXT,
+  pr_opened_at TIMESTAMPTZ,
+  outcome_status TEXT NOT NULL DEFAULT 'pending_generation'
+    CHECK (outcome_status IN (
+      'pending_generation',
+      'generation_failed',
+      'patch_generated',
+      'gate_running',
+      'gate_failed',
+      'human_review_required',
+      'ready_for_pr',
+      'pr_creation_failed',
+      'pr_opened',
+      'rejected',
+      'closed',
+      'merged',
+      'superseded'
+    )),
+  outcome_summary TEXT,
+  finalized_by TEXT,
+  finalized_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT removal_actions_verdict_symbol_fk
+    FOREIGN KEY (confidence_verdict_id, symbol_id)
+    REFERENCES confidence_verdicts (id, symbol_id)
+    ON DELETE RESTRICT,
+  CONSTRAINT removal_actions_attempt_unique
+    UNIQUE (confidence_verdict_id, attempt_number),
+  CONSTRAINT removal_actions_pr_requires_passed_gate
+    CHECK (pr_url IS NULL OR gate_status = 'passed'),
+  CONSTRAINT removal_actions_pr_state_requires_url
+    CHECK (
+      outcome_status NOT IN ('pr_opened', 'rejected', 'closed', 'merged')
+      OR pr_url IS NOT NULL
+    ),
+  CONSTRAINT removal_actions_patch_hash_pair
+    CHECK (
+      (generated_patch IS NULL AND patch_sha256 IS NULL)
+      OR (generated_patch IS NOT NULL AND patch_sha256 IS NOT NULL)
+    )
+);
+
+DO $$
+BEGIN
+  ALTER TABLE removal_actions
+    DROP CONSTRAINT IF EXISTS removal_actions_outcome_status_check;
+  ALTER TABLE removal_actions
+    ADD CONSTRAINT removal_actions_outcome_status_check
+    CHECK (outcome_status IN (
+      'pending_generation',
+      'generation_failed',
+      'patch_generated',
+      'gate_running',
+      'gate_failed',
+      'human_review_required',
+      'ready_for_pr',
+      'pr_creation_failed',
+      'pr_opened',
+      'rejected',
+      'closed',
+      'merged',
+      'superseded'
+    ));
+END
+$$;
+
+CREATE INDEX IF NOT EXISTS idx_removal_actions_verdict
+  ON removal_actions(confidence_verdict_id, attempt_number);
+
+CREATE INDEX IF NOT EXISTS idx_removal_actions_symbol
+  ON removal_actions(symbol_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_removal_actions_outcome
+  ON removal_actions(outcome_status, updated_at);

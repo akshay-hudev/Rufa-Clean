@@ -15,5 +15,5 @@
     "declaration": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "src/indexing/scratch"]
+  "exclude": ["node_modules", "dist", "src/indexing/scratch", "src/**/__fixtures__"]
 }

@@ -45,6 +45,10 @@ interface FileContent {
   type: string;
 }
 
+interface PullRequestResponse {
+  html_url: string;
+}
+
 let installationOctokit: Promise<GitHubClient> | undefined;
 
 function requiredEnv(name: string): string {
@@ -300,4 +304,24 @@ export async function readFileContents(
   }
 
   return contents;
+}
+
+export async function createPullRequest(input: {
+  owner: string;
+  repo: string;
+  title: string;
+  body: string;
+  head: string;
+  base: string;
+}): Promise<string> {
+  const octokit = await getOctokit();
+  const response = await octokit.request<PullRequestResponse>(
+    "POST /repos/{owner}/{repo}/pulls",
+    input,
+  );
+  await respectRateLimit(response.headers);
+  if (!response.data.html_url) {
+    throw new Error(`GitHub created a pull request without an html_url for ${input.owner}/${input.repo}`);
+  }
+  return response.data.html_url;
 }

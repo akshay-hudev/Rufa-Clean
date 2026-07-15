@@ -43,6 +43,7 @@ async function installationToken(): Promise<string> {
 export async function cloneRepository(repo: RepositoryToClone): Promise<{
   localPath: string;
   commitSha: string;
+  pushBranch: (branch: string) => Promise<void>;
   cleanup: () => Promise<void>;
 }> {
   if (repo.vcs_provider.toLowerCase() !== "github") {
@@ -69,6 +70,16 @@ export async function cloneRepository(repo: RepositoryToClone): Promise<{
     return {
       localPath,
       commitSha: commitSha.trim(),
+      pushBranch: async (branch: string) => {
+        try {
+          await simpleGit(localPath).push(["--set-upstream", "origin", branch]);
+        } catch (error) {
+          if (error instanceof Error) {
+            throw new Error(error.message.replaceAll(token, "[REDACTED]"));
+          }
+          throw error;
+        }
+      },
       cleanup: () => rm(localPath, { recursive: true, force: true }),
     };
   } catch (error) {

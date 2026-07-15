@@ -11,7 +11,7 @@ repository.
 
 | Fixture | Pattern | Verdict | Proven behavior | Remaining limitation |
 | --- | --- | --- | --- | --- |
-| [Rufa basic](cross-repo/rufa-basic/EXPECTATION.md) | Direct cross-repository imports and calls | **Pass** | `formatCurrency` and `slugify` each resolve one import and one call; unreferenced `parseDateRange` and `debounce` receive no cross-repository evidence. | Confidence verdicts have not been implemented. |
+| [Rufa basic](cross-repo/rufa-basic/EXPECTATION.md) | Direct cross-repository imports and calls | **Pass** | `formatCurrency` and `slugify` each resolve one import and one call; unreferenced `parseDateRange` and `debounce` receive no cross-repository evidence. | This fixture result predates the Confidence Engine and does not validate its verdicts. |
 | [Re-export chain](intra-repo/reexport-chain/EXPECTATION.md) | Intra-repository named re-export | **Pass** | A consumer import and call through `src/index.ts` resolve to the implementation of `realWork`. | One of five SCIP definitions did not match a stored symbol; this did not lose the implementation references under test. Module-level references may lack an enclosing referencing symbol. |
 | [Barrel file](intra-repo/barrel-file/EXPECTATION.md) | `export *` with one executed and one unexecuted function | **Behavioral pass; Knip limitation** | SCIP syntax classification distinguishes the executed `formatDate` call from import/re-export-only evidence for `formatName`. | Knip emits no `unused_export` for `formatName` because an imported binding counts as usage even when application code never executes it. Do not use Knip alone to decide this pattern. |
 | [Test-only usage](intra-repo/test-only-usage/EXPECTATION.md) | Symbol called only by its test | **Signal pass; verdict deferred** | The call to `computeThing` resolves with test context, with zero production executable references and one test executable reference. | The Confidence & Review module does not yet turn `test_only` evidence into a review verdict. Knip treats the test entrypoint as usage. |
@@ -22,12 +22,25 @@ Detailed observed rows and counts are recorded in each fixture's `RESULT.md`.
 
 ## Cross-cutting limitations
 
-### Confidence output is unavailable
+### Confidence output is not covered by these fixtures
 
 The fixture suite currently verifies signals, not final dead-code decisions. The
-`confidence_verdicts` table and Confidence & Review module do not exist yet. In
-particular, the suite proves production-versus-test evidence separation but does not
-prove how that evidence will be scored or presented for review.
+Confidence Engine now persists `verdict`, `confidence_score`, `evidence_summary`,
+and `review_status` in `confidence_verdicts`, but these fixture results do not prove
+how their evidence is scored or presented for review.
+
+The suite now validates the narrow barrel-file removal diff. Deleting a symbol
+re-exported through a barrel requires updating the barrel's `export *` or named
+re-export list as well as deleting the declaration. A
+[manual PolyglotPiranha spike](../docs/piranha-spike.md) showed that a custom TSX
+declaration-deletion seed leaves a same-file named export behind. The follow-up
+barrel-file run also left `export * from "./formatName"` and the consumer import
+unchanged, producing a failing TypeScript build. The narrow AST extension now
+cleans the fixture's re-export and unused import and passes its real `tsc` build,
+but namespace exports, non-relative modules, non-empty target modules, and used
+consumer imports remain out of scope. Do not trust Piranha's templates for broad
+automated remediation. See
+[Human-gated dead-code removal](../docs/human-gated-removal.md).
 
 ### Reference provenance depends on an enclosing symbol
 
