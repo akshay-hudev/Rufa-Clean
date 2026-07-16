@@ -209,5 +209,3 @@ export const knipAnalyzer: RepoLevelAnalyzer = {
     return findings.flat();
   },
 };
-
-export default knipAnalyzer;

@@ -39,7 +39,7 @@ async function findRootContaining(
   throw new Error(`No ${marker} found for ${sourceFilePath}`);
 }
 
-export async function findPackageRoot(
+async function findPackageRoot(
   repositoryPath: string,
   sourceFilePath: string,
 ): Promise<string> {

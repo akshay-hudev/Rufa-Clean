@@ -204,7 +204,7 @@ export async function recordPullRequestFailure(
   );
 }
 
-export async function recordRemovalMerged(
+async function recordRemovalMerged(
   actionId: string,
   finalizedBy: string,
 ): Promise<void> {

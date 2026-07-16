@@ -11,6 +11,24 @@
     "start": "node dist/index.js",
     "sync": "ts-node src/index.ts"
   },
+  "knip": {
+    "entry": [
+      "src/index.ts",
+      "src/cron.ts",
+      "src/confidence/run-all.ts",
+      "src/confidence/review.ts",
+      "src/remediation/barrel-removal.ts",
+      "scripts/*.ts",
+      "src/**/*.test.ts",
+      "src/indexing/analyzers/__fixtures__/**/*.ts",
+      "test-fixtures/**/*.ts"
+    ],
+    "project": [
+      "src/**/*.ts",
+      "scripts/**/*.ts",
+      "test-fixtures/**/*.ts"
+    ]
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
