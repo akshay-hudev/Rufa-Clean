@@ -1,8 +1,8 @@
 import type { PoolClient } from "pg";
 
 import { pool } from "../db/client";
-import { EXPECTED_PIRANHA_VERSION, SIMPLE_RULE_SET_VERSION } from "./piranha";
-import type { GateResult, RemovalCandidate } from "./types";
+import { EXPECTED_PIRANHA_VERSION, ruleSetVersionForLanguage } from "./piranha";
+import type { GateResult, PiranhaLanguage, RemovalCandidate } from "./types";
 
 interface LockedVerdictRow {
   symbol_id: string;
@@ -41,6 +41,7 @@ async function lockVerdict(
 export async function createRemovalAction(
   candidate: RemovalCandidate,
   baseCommitSha: string,
+  language: PiranhaLanguage,
 ): Promise<string> {
   const client = await pool.connect();
   try {
@@ -80,7 +81,7 @@ export async function createRemovalAction(
         verdict.reviewed_at,
         baseCommitSha,
         EXPECTED_PIRANHA_VERSION,
-        SIMPLE_RULE_SET_VERSION,
+        ruleSetVersionForLanguage(language),
       ],
     );
     const actionId = insertResult.rows[0]?.id;

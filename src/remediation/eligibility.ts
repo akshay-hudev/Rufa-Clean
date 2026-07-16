@@ -135,18 +135,19 @@ export function validateSimpleCandidate(candidate: RemovalCandidate): PiranhaLan
   if (!candidate.indexedContentHash?.trim()) {
     throw new Error("Candidate has no indexed content hash");
   }
-  if (candidate.language.toLowerCase() !== "typescript") {
-    throw new Error("Simple removal currently supports TypeScript and TSX only");
-  }
+  const language = candidate.language.toLowerCase();
   if (candidate.filePath.endsWith(".d.ts")) {
     throw new Error("Simple removal rejects declaration files");
   }
   const extension = extname(candidate.filePath).toLowerCase();
-  if (extension === ".tsx") {
+  if (language === "python" && extension === ".py") {
+    return "python";
+  }
+  if (language === "typescript" && extension === ".tsx") {
     return "tsx";
   }
-  if (extension === ".ts") {
+  if (language === "typescript" && extension === ".ts") {
     return "typescript";
   }
-  throw new Error(`Unsupported TypeScript file extension: ${extension}`);
+  throw new Error(`Unsupported remediation language/file combination: ${language}/${extension}`);
 }

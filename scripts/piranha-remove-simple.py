@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Delete one top-level TypeScript/TSX function with PolyglotPiranha."""
+"""Delete one top-level TypeScript, TSX, or Python function with PolyglotPiranha."""
 
 import argparse
 import json
@@ -12,6 +12,7 @@ from polyglot_piranha import PiranhaArguments, Rule, RuleGraph, execute_piranha
 
 SIMPLE_RULE_SET_VERSION = "simple-top-level-function-v1"
 EXPORTED_RULE_SET_VERSION = "barrel-exported-function-v1"
+PYTHON_RULE_SET_VERSION = "simple-top-level-python-function-v1"
 IDENTIFIER = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
 
 
@@ -19,7 +20,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", required=True)
     parser.add_argument("--symbol", required=True)
-    parser.add_argument("--language", choices=("typescript", "tsx"), required=True)
+    parser.add_argument("--language", choices=("typescript", "tsx", "python"), required=True)
     parser.add_argument("--allow-exported", action="store_true")
     args = parser.parse_args()
 
@@ -29,7 +30,15 @@ def main() -> None:
     if not IDENTIFIER.fullmatch(args.symbol):
         raise ValueError(f"Unsupported symbol identifier: {args.symbol}")
 
-    if args.allow_exported:
+    if args.language == "python" and args.allow_exported:
+        raise ValueError("Exported Python removal is outside the simple remediation scope")
+
+    if args.language == "python":
+        query = f'''(module
+          (function_definition
+            name: (identifier) @name
+            (#eq? @name "{args.symbol}")) @declaration)'''
+    elif args.allow_exported:
         query = f'''(program
           (export_statement
             declaration: (function_declaration
@@ -53,7 +62,7 @@ def main() -> None:
             paths_to_codebase=[str(source_path)],
             rule_graph=RuleGraph(rules=[rule], edges=[]),
             dry_run=False,
-            delete_consecutive_new_lines=True,
+            delete_consecutive_new_lines=args.language != "python",
             delete_file_if_empty=False,
         )
     )
@@ -66,9 +75,13 @@ def main() -> None:
                 "changed_paths": changed_paths,
                 "generator_version": version("polyglot-piranha"),
                 "rule_set_version": (
-                    EXPORTED_RULE_SET_VERSION
-                    if args.allow_exported
-                    else SIMPLE_RULE_SET_VERSION
+                    PYTHON_RULE_SET_VERSION
+                    if args.language == "python"
+                    else (
+                        EXPORTED_RULE_SET_VERSION
+                        if args.allow_exported
+                        else SIMPLE_RULE_SET_VERSION
+                    )
                 ),
             }
         )

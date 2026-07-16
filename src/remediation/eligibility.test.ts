@@ -38,6 +38,13 @@ describe("validateSimpleCandidate", () => {
     expect(validateSimpleCandidate(candidate({ filePath: "src/helper.tsx" }))).toBe("tsx");
   });
 
+  it("accepts a human-confirmed non-exported top-level Python function", () => {
+    expect(validateSimpleCandidate(candidate({
+      language: "python",
+      filePath: "training/helper.py",
+    }))).toBe("python");
+  });
+
   it.each([
     [{ reviewStatus: "unreviewed" }, "confirmed_dead"],
     [{ reviewedBy: null }, "human reviewer"],
@@ -48,7 +55,8 @@ describe("validateSimpleCandidate", () => {
     [{ qualifiedName: "Thing.unusedHelper" }, "top-level"],
     [{ symbolKind: "class" }, "top-level"],
     [{ filePath: "src/helper.d.ts" }, "declaration files"],
-    [{ language: "python", filePath: "src/helper.py" }, "TypeScript and TSX"],
+    [{ language: "python", filePath: "src/helper.ts" }, "language/file combination"],
+    [{ language: "javascript", filePath: "src/helper.js" }, "language/file combination"],
   ] as const)("rejects an unsafe candidate %#", (overrides, message) => {
     expect(() => validateSimpleCandidate(candidate(overrides))).toThrow(message);
   });

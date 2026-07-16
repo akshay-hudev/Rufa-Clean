@@ -14,6 +14,20 @@ interface RunnerOutput {
 export const EXPECTED_PIRANHA_VERSION = "0.4.8";
 export const SIMPLE_RULE_SET_VERSION = "simple-top-level-function-v1";
 export const EXPORTED_RULE_SET_VERSION = "barrel-exported-function-v1";
+export const PYTHON_RULE_SET_VERSION = "simple-top-level-python-function-v1";
+
+export function ruleSetVersionForLanguage(
+  language: PiranhaLanguage,
+  allowExported = false,
+): string {
+  if (language === "python") {
+    if (allowExported) {
+      throw new Error("Exported Python removal is outside the simple remediation scope");
+    }
+    return PYTHON_RULE_SET_VERSION;
+  }
+  return allowExported ? EXPORTED_RULE_SET_VERSION : SIMPLE_RULE_SET_VERSION;
+}
 
 function runnerPath(): string {
   const configured = process.env.PIRANHA_RUNNER_PATH;
@@ -75,9 +89,10 @@ export async function runSimplePiranhaRemoval(
   }
 
   const output = parseRunnerOutput(result.stdout);
-  const expectedRuleSetVersion = options.allowExported
-    ? EXPORTED_RULE_SET_VERSION
-    : SIMPLE_RULE_SET_VERSION;
+  const expectedRuleSetVersion = ruleSetVersionForLanguage(
+    language,
+    options.allowExported ?? false,
+  );
   if (
     output.generator_version !== EXPECTED_PIRANHA_VERSION ||
     output.rule_set_version !== expectedRuleSetVersion

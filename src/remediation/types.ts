@@ -1,4 +1,4 @@
-export type PiranhaLanguage = "typescript" | "tsx";
+export type PiranhaLanguage = "typescript" | "tsx" | "python";
 
 export interface RemovalCandidate {
   verdictId: string;
@@ -41,7 +41,7 @@ export interface ProcessResult {
 }
 
 export interface GateCommandResult extends ProcessResult {
-  kind: "install" | "typecheck" | "build" | "test";
+  kind: "install" | "service" | "typecheck" | "compile" | "build" | "test";
 }
 
 export interface GateResult {

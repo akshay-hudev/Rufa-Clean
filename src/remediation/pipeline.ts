@@ -8,7 +8,7 @@ import { createPullRequest } from "../connectors/github";
 import { cloneRepository } from "../indexing/clone";
 import { loadRemovalCandidate, validateSimpleCandidate } from "./eligibility";
 import { humanReviewFallback } from "./fallback";
-import { runNodeBuildTestGate } from "./gate";
+import { runRemovalGate } from "./gate";
 import { runSimplePiranhaRemoval } from "./piranha";
 import {
   createRemovalAction,
@@ -77,7 +77,13 @@ export async function runSimpleRemovalPipeline(
       repo_slug: candidate.repoSlug,
       default_branch: candidate.defaultBranch,
     });
-    actionId = await createRemovalAction(candidate, clone.commitSha);
+    actionId = await createRemovalAction(candidate, clone.commitSha, piranhaLanguage);
+    if (clone.commitSha !== candidate.indexedCommitSha) {
+      throw new Error(
+        `Stale verdict: indexed commit ${candidate.indexedCommitSha}, ` +
+          `cloned commit ${clone.commitSha}`,
+      );
+    }
     const absoluteSourcePath = resolve(clone.localPath, candidate.filePath);
     const relativeSourcePath = relative(clone.localPath, absoluteSourcePath);
     if (relativeSourcePath.startsWith("..") || relativeSourcePath === "") {
@@ -113,7 +119,7 @@ export async function runSimpleRemovalPipeline(
     generationRecorded = true;
 
     await recordGateStarted(actionId);
-    gate = await runNodeBuildTestGate(clone.localPath, candidate.filePath);
+    gate = await runRemovalGate(clone.localPath, candidate.filePath, piranhaLanguage);
     if (gate.status === "passed") {
       try {
         requireOnlyExpectedFile(await changedFiles(clone.localPath), candidate.filePath);

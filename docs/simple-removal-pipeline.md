@@ -1,21 +1,23 @@
 # Simple human-gated removal pipeline
 
-Status: implemented and locally verified; live PR acceptance is waiting for a real
-human-confirmed candidate.
+Status: TypeScript/TSX and narrow top-level Python removal are implemented and
+locally verified. Live PR acceptance remains gated on a candidate repository whose
+baseline build/test gate passes.
 
 ## Supported scope
 
-The first integration intentionally accepts only:
+The production integration intentionally accepts only:
 
 - a `confidence_verdicts` row with `review_status = 'confirmed_dead'`, a non-empty
   human reviewer, and a review timestamp;
-- a top-level TypeScript or TSX function declaration;
+- a top-level TypeScript, TSX, or Python function declaration;
 - a non-exported symbol with no recorded imports, re-exports, calls, constructions,
   or reads;
 - a cloned source file whose SHA-256 still matches the indexed content; and
-- an npm workspace with a lockfile and real `build` and `test` scripts.
+- either an npm workspace with a lockfile and real `build` and `test` scripts,
+  or a Python repository with `requirements.txt` and real pytest suites.
 
-Exported symbols, class members, JavaScript, Python, declaration files, barrel
+Exported symbols, class members, JavaScript, declaration files, barrel
 involvement, multiple rewrites, and multi-file diffs are rejected before a PR can
 be opened.
 
@@ -35,9 +37,15 @@ production eligibility rules.
    `simple-top-level-function-v1` rule.
 5. Require exactly one rewrite and exactly one changed file, then persist the full
    patch and its SHA-256.
-6. Run `npm ci`, a local TypeScript `tsc --noEmit` when TypeScript is present,
-   `npm run build`, and `npm test`. Every command records its arguments, exit code,
-   bounded stdout/stderr, timestamps, and duration in `gate_result`.
+6. For TypeScript/TSX, run `npm ci`, a local `tsc --noEmit` when TypeScript is
+   present, `npm run build`, and `npm test`. For Python, create a temporary isolated
+   virtual environment, install `requirements.txt`, compile the target with
+   `py_compile`, and run `pytest training/tests tests -v --tb=short`. When configured,
+   the Python gate also starts a repository API module, waits for its health
+   endpoint, isolates its `DEBUG` setting (defaulting it to `false`), records the
+   managed service command, and always stops it after tests.
+   Every command records its arguments, exit code, bounded stdout/stderr,
+   timestamps, and duration in `gate_result`.
 7. Re-check that the gate changed neither the file set nor patch hash.
 8. Only after a passed gate, commit and push a dedicated branch and open a GitHub
    pull request. The PR body includes the verdict, action, reviewer, base commit,
@@ -69,8 +77,19 @@ branch or opens a PR.
 ## Verification completed
 
 - TypeScript build passes.
-- Vitest: 103 tests pass, including a gate test whose build and test scripts create
+- Vitest: 117 tests pass, including gate tests whose build and test commands create
   independent marker files, proving the runner executes rather than simulates them.
+- The pinned Piranha runner made exactly one rewrite against a temporary copy of
+  Fraud-Guard's real `training/train_real_world.py`, removing only the top-level
+  `_load_synthetic_fallback` function.
+- Fraud-Guard's Python 3.12 baseline gate installed `requirements.txt`, started
+  `backend.main:app`, received HTTP 200 from `/health`, and passed `py_compile`.
+  The exact `pytest training/tests tests -v --tb=short` command then collected 64
+  tests but failed on the repository's checked-in training-data/model
+  preconditions (for example, generated row-count and missing-model assertions).
+  The unmodified baseline is therefore not green. Its verdict remains
+  `unreviewed`, no removal action was created, and no branch or pull request was
+  opened.
 - A deliberately bad removal with an indirect barrel dependency makes the real
   build command fail. The pipeline returns `human_review_required` with the build
   diagnostic and proves that neither branch push nor PR creation was called.
@@ -82,6 +101,7 @@ branch or opens a PR.
 
 ## Remaining acceptance step
 
-A human reviewer must identify and mark a real eligible symbol `confirmed_dead` in
-the database. After that explicit decision, the pipeline can run, open the real PR,
-and the PR diff plus stored gate evidence can be manually verified.
+Choose a real eligible candidate whose unmodified repository passes its configured
+gate. Only after that baseline succeeds may a human reviewer mark the verdict
+`confirmed_dead` and allow the pipeline to generate a patch and potentially open a
+non-auto-merged pull request.

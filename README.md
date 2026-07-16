@@ -160,6 +160,15 @@ python3 -m venv .venv-piranha
 ```
 
 Then set `PIRANHA_PYTHON` to that environment's Python executable.
+For Python removal gates, set `REMEDIATION_PYTHON` to the base interpreter used
+to create an isolated temporary virtual environment (Python 3.12 is recommended).
+Repositories whose tests require a live API can also set
+`REMEDIATION_PYTHON_SERVICE_MODULE` (for example, `backend.main:app`) and
+`REMEDIATION_PYTHON_HEALTH_URL`. The gate starts the service, waits for health,
+records its command and output, and always stops it after testing.
+`REMEDIATION_PYTHON_SERVICE_DEBUG` defaults to `false`, preventing a parent
+process's unrelated `DEBUG` value from leaking into repositories that parse it as
+a boolean.
 
 ## Commands
 

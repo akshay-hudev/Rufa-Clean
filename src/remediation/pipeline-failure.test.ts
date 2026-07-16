@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   } | undefined,
   createPullRequest: vi.fn(),
   recordGateResult: vi.fn(),
+  recordGenerationFailure: vi.fn(),
 }));
 
 vi.mock("../connectors/github", () => ({
@@ -48,7 +49,7 @@ vi.mock("./piranha", () => ({
 vi.mock("./store", () => ({
   createRemovalAction: vi.fn(async () => "11111111-1111-4111-8111-111111111111"),
   recordGenerationSuccess: vi.fn(async () => undefined),
-  recordGenerationFailure: vi.fn(async () => undefined),
+  recordGenerationFailure: mocks.recordGenerationFailure,
   recordGateStarted: vi.fn(async () => undefined),
   recordGateResult: mocks.recordGateResult,
   recordPullRequest: vi.fn(async () => undefined),
@@ -159,4 +160,56 @@ describe("runSimpleRemovalPipeline gate failure", () => {
     );
     expect(cleanup).toHaveBeenCalledOnce();
   }, 30_000);
+
+  it("rejects a candidate when the repository commit is newer than the indexed snapshot", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-stale-removal-"));
+    await mkdir(join(root, "src"), { recursive: true });
+    const source = "function unusedHelper() { return 1; }\n";
+    await writeFile(join(root, "src/helper.ts"), source);
+    const pushBranch = vi.fn(async () => undefined);
+    const cleanup = vi.fn(async () => undefined);
+    mocks.clone = {
+      localPath: root,
+      commitSha: "current-commit",
+      pushBranch,
+      cleanup,
+    };
+    mocks.candidate = {
+      verdictId: "verdict-stale",
+      symbolId: "symbol-stale",
+      symbolName: "unusedHelper",
+      qualifiedName: "unusedHelper",
+      symbolKind: "function",
+      isExported: false,
+      filePath: "src/helper.ts",
+      language: "typescript",
+      indexedCommitSha: "indexed-commit",
+      indexedContentHash: createHash("sha256").update(source).digest("hex"),
+      repositoryId: "repository-fixture",
+      vcsProvider: "github",
+      orgSlug: "fixture-owner",
+      repoSlug: "fixture-repo",
+      defaultBranch: "main",
+      automatedVerdict: "likely_dead",
+      confidenceScore: 0.99,
+      reviewStatus: "confirmed_dead",
+      reviewedBy: "human@example.com",
+      reviewedAt: new Date("2026-07-15T00:00:00Z"),
+      importOrReexportReferences: 0,
+      executableReferences: 0,
+      importEdges: 0,
+    };
+
+    await expect(runSimpleRemovalPipeline("verdict-stale")).rejects.toThrow(
+      "Stale verdict: indexed commit indexed-commit, cloned commit current-commit",
+    );
+
+    expect(mocks.recordGenerationFailure).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+      expect.stringContaining("Stale verdict"),
+    );
+    expect(pushBranch).not.toHaveBeenCalled();
+    expect(mocks.createPullRequest).not.toHaveBeenCalled();
+    expect(cleanup).toHaveBeenCalledOnce();
+  });
 });

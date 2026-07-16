@@ -1,8 +1,9 @@
-import { access, readFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 
-import { runProcess } from "./process";
-import type { GateCommandResult, GateResult } from "./types";
+import { runProcess, startManagedProcess, type ManagedProcess } from "./process";
+import type { GateCommandResult, GateResult, PiranhaLanguage } from "./types";
 
 interface PackageManifest {
   scripts?: Record<string, string>;
@@ -19,14 +20,15 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-export async function findPackageRoot(
+async function findRootContaining(
   repositoryPath: string,
   sourceFilePath: string,
+  marker: string,
 ): Promise<string> {
   const repositoryRoot = resolve(repositoryPath);
   let current = dirname(resolve(repositoryPath, sourceFilePath));
   while (current.startsWith(repositoryRoot)) {
-    if (await exists(join(current, "package.json"))) {
+    if (await exists(join(current, marker))) {
       return current;
     }
     if (current === repositoryRoot) {
@@ -34,7 +36,14 @@ export async function findPackageRoot(
     }
     current = dirname(current);
   }
-  throw new Error(`No package.json found for ${sourceFilePath}`);
+  throw new Error(`No ${marker} found for ${sourceFilePath}`);
+}
+
+export async function findPackageRoot(
+  repositoryPath: string,
+  sourceFilePath: string,
+): Promise<string> {
+  return findRootContaining(repositoryPath, sourceFilePath, "package.json");
 }
 
 function isPlaceholderTest(script: string): boolean {
@@ -140,4 +149,177 @@ export async function runNodeBuildTestGate(
       failure,
     };
   }
+}
+
+function failedGateResult(
+  packageRoot: string,
+  commands: GateCommandResult[],
+  startedAt: string,
+  error: unknown,
+): GateResult {
+  const failure = error instanceof Error ? error.message : String(error);
+  const commandFailed = commands.some(
+    (command) => command.exitCode !== 0 || command.timedOut,
+  );
+  return {
+    status: commandFailed ? "failed" : "error",
+    packageRoot,
+    commands,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    failure,
+  };
+}
+
+function requirePassed(command: GateCommandResult, failure: string): void {
+  if (command.exitCode !== 0 || command.timedOut) {
+    throw new Error(failure);
+  }
+}
+
+async function waitForService(
+  service: ManagedProcess,
+  healthUrl: string,
+  timeoutMs = 2 * 60 * 1_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastFailure = "service did not become ready";
+  while (Date.now() < deadline) {
+    const exited = service.currentResult();
+    if (exited) {
+      const diagnostic = (exited.stderr || exited.stdout).trim();
+      throw new Error(
+        `Python test service exited before readiness` +
+          (diagnostic ? `: ${diagnostic.slice(0, 1_000)}` : ""),
+      );
+    }
+    try {
+      const response = await fetch(healthUrl, { signal: AbortSignal.timeout(2_000) });
+      if (response.ok) {
+        return;
+      }
+      lastFailure = `health endpoint returned ${response.status}`;
+    } catch (error) {
+      lastFailure = error instanceof Error ? error.message : String(error);
+    }
+    await new Promise<void>((resolveDelay) => setTimeout(resolveDelay, 500));
+  }
+  throw new Error(`Python test service readiness timed out: ${lastFailure}`);
+}
+
+export async function runPythonBuildTestGate(
+  repositoryPath: string,
+  sourceFilePath: string,
+): Promise<GateResult> {
+  const startedAt = new Date().toISOString();
+  const commands: GateCommandResult[] = [];
+  let packageRoot = resolve(repositoryPath);
+  let scratchRoot: string | undefined;
+  let service: ManagedProcess | undefined;
+  let serviceCommandIndex = -1;
+
+  try {
+    packageRoot = await findRootContaining(repositoryPath, sourceFilePath, "requirements.txt");
+    scratchRoot = await mkdtemp(join(tmpdir(), "dca-python-gate-"));
+    const venvPath = join(scratchRoot, "venv");
+    const basePython = process.env.REMEDIATION_PYTHON ?? "python3";
+
+    const createEnvironment = await runGateCommand(
+      "install",
+      basePython,
+      ["-m", "venv", venvPath],
+      packageRoot,
+    );
+    commands.push(createEnvironment);
+    requirePassed(createEnvironment, "Python virtual environment creation failed");
+
+    const python = join(venvPath, "bin", "python");
+    const install = await runGateCommand(
+      "install",
+      python,
+      ["-m", "pip", "install", "-r", "requirements.txt"],
+      packageRoot,
+    );
+    commands.push(install);
+    requirePassed(install, "Python dependency installation failed");
+
+    const serviceModule = process.env.REMEDIATION_PYTHON_SERVICE_MODULE?.trim();
+    const healthUrl = process.env.REMEDIATION_PYTHON_HEALTH_URL?.trim();
+    if (Boolean(serviceModule) !== Boolean(healthUrl)) {
+      throw new Error(
+        "Python service gate requires both REMEDIATION_PYTHON_SERVICE_MODULE and " +
+          "REMEDIATION_PYTHON_HEALTH_URL",
+      );
+    }
+    if (serviceModule && healthUrl) {
+      const parsedHealthUrl = new URL(healthUrl);
+      const host = parsedHealthUrl.hostname;
+      const port = parsedHealthUrl.port ||
+        (parsedHealthUrl.protocol === "https:" ? "443" : "80");
+      serviceCommandIndex = commands.length;
+      service = startManagedProcess(
+        python,
+        ["-m", "uvicorn", serviceModule, "--host", host, "--port", port],
+        {
+          cwd: packageRoot,
+          env: {
+            ...process.env,
+            CI: "true",
+            DATABASE_URL: `sqlite:///${join(scratchRoot, "service.db")}`,
+            DEBUG: process.env.REMEDIATION_PYTHON_SERVICE_DEBUG ?? "false",
+            PYTHONPATH: packageRoot,
+            USE_INDUCTIVE_MODE: "false",
+          },
+        },
+      );
+      await waitForService(service, healthUrl);
+    }
+
+    const sourcePath = relative(packageRoot, resolve(repositoryPath, sourceFilePath));
+    const compile = await runGateCommand(
+      "compile",
+      python,
+      ["-m", "py_compile", sourcePath],
+      packageRoot,
+    );
+    commands.push(compile);
+    requirePassed(compile, "Python syntax compilation failed");
+
+    const test = await runGateCommand(
+      "test",
+      python,
+      ["-m", "pytest", "training/tests", "tests", "-v", "--tb=short"],
+      packageRoot,
+    );
+    commands.push(test);
+    requirePassed(test, "Python test command failed");
+
+    return {
+      status: "passed",
+      packageRoot,
+      commands,
+      startedAt,
+      completedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    return failedGateResult(packageRoot, commands, startedAt, error);
+  } finally {
+    if (service) {
+      const serviceResult = await service.stop();
+      commands.splice(serviceCommandIndex, 0, { ...serviceResult, kind: "service" });
+    }
+    if (scratchRoot) {
+      await rm(scratchRoot, { recursive: true, force: true });
+    }
+  }
+}
+
+export function runRemovalGate(
+  repositoryPath: string,
+  sourceFilePath: string,
+  language: PiranhaLanguage,
+): Promise<GateResult> {
+  return language === "python"
+    ? runPythonBuildTestGate(repositoryPath, sourceFilePath)
+    : runNodeBuildTestGate(repositoryPath, sourceFilePath);
 }

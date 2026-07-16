@@ -22,10 +22,11 @@ interface SymbolContextRow {
   repository_id: string | null;
 }
 
-interface ExternalFindingRow {
+export interface ExternalFindingRow {
   source_tool: string;
   finding_type: string;
   raw_output: unknown;
+  evidence_scope: "symbol" | "file";
 }
 
 interface ScipEvidenceRow {
@@ -62,6 +63,26 @@ function executableStatus(scipStatus: string, count: number): SignalStatus {
   return count > 0 ? "available_used" : "available_unused";
 }
 
+export function classifyExternalFindings(findings: ExternalFindingRow[]): {
+  deadDeclarationFindings: ExternalFindingRow[];
+  unusedExportedTypeCount: number;
+  inheritedUnusedFileCount: number;
+} {
+  return {
+    deadDeclarationFindings: findings.filter(
+      (finding) =>
+        ["unused_export", "unused_file", "unreachable"].includes(finding.finding_type),
+    ),
+    unusedExportedTypeCount: findings.filter(
+      (finding) => finding.finding_type === "unused_exported_type",
+    ).length,
+    inheritedUnusedFileCount: findings.filter(
+      (finding) =>
+        finding.finding_type === "unused_file" && finding.evidence_scope === "file",
+    ).length,
+  };
+}
+
 export async function collectEvidenceForSymbol(symbolId: string): Promise<void> {
   const client = await pool.connect();
   try {
@@ -86,13 +107,27 @@ export async function collectEvidenceForSymbol(symbolId: string): Promise<void> 
     }
 
     const externalFindingsResult = await client.query<ExternalFindingRow>(
-      `SELECT source_tool, finding_type, raw_output
+      `SELECT source_tool,
+              finding_type,
+              raw_output,
+              CASE
+                WHEN finding_type = 'unused_file' THEN 'file'
+                ELSE 'symbol'
+              END AS evidence_scope
          FROM external_signals
-        WHERE symbol_id = $1
-          AND source_tool IN ('knip', 'vulture')
-          AND finding_type IN ('unused_export', 'unused_exported_type', 'unreachable')
+        WHERE source_tool IN ('knip', 'vulture')
+          AND (
+            (
+              symbol_id = $1
+              AND finding_type IN ('unused_export', 'unused_exported_type', 'unreachable')
+            )
+            OR (
+              file_id = $2
+              AND finding_type = 'unused_file'
+            )
+          )
         ORDER BY detected_at, id`,
-      [symbolId],
+      [symbolId, context.file_id],
     );
 
     const scipResult = await client.query<ScipEvidenceRow>(
@@ -134,9 +169,11 @@ export async function collectEvidenceForSymbol(symbolId: string): Promise<void> 
     const language = context.language?.toLowerCase() ?? "";
     const coveredByKnipOrVulture = ["typescript", "javascript", "python"].includes(language);
     const externalFindings = externalFindingsResult.rows;
-    const deadDeclarationFindings = externalFindings.filter(
-      (finding) => ["unused_export", "unreachable"].includes(finding.finding_type),
-    );
+    const {
+      deadDeclarationFindings,
+      unusedExportedTypeCount,
+      inheritedUnusedFileCount,
+    } = classifyExternalFindings(externalFindings);
     const knipVultureStatus: SignalStatus = !coveredByKnipOrVulture
       ? "not_available"
       : deadDeclarationFindings.length > 0
@@ -163,9 +200,10 @@ export async function collectEvidenceForSymbol(symbolId: string): Promise<void> 
       analyzer: language === "python" ? "vulture" : coveredByKnipOrVulture ? "knip" : null,
       matching_finding_count: deadDeclarationFindings.length,
       matching_findings: externalFindings,
-      unused_exported_type_count: externalFindings.length - deadDeclarationFindings.length,
+      unused_exported_type_count: unusedExportedTypeCount,
+      inherited_unused_file_count: inheritedUnusedFileCount,
       interpretation_note:
-        "Knip unused exported types are export-surface findings, not proof that an internally-used declaration is dead. They are retained in evidence but do not mark the declaration unused.",
+        "A Knip unused_file finding is inherited by every symbol in that file and counts as strong unused evidence. Knip unused exported types remain export-surface findings and do not by themselves mark an internally-used declaration dead.",
     });
 
     await insertEvidence(
