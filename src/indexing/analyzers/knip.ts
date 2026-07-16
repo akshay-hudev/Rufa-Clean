@@ -210,4 +210,3 @@ export const knipAnalyzer: RepoLevelAnalyzer = {
   },
 };
 
-export default knipAnalyzer;
