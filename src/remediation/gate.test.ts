@@ -41,6 +41,50 @@ describe("runNodeBuildTestGate", () => {
     expect(result.commands.every((command) => command.durationMs >= 0)).toBe(true);
   }, 30_000);
 
+  it("does not inherit an outer npm allow-scripts setting", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-gate-npm-config-"));
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "npm-config-fixture",
+        version: "1.0.0",
+        scripts: {
+          build: "node -e \"process.exit(0)\"",
+          test: "node -e \"process.exit(0)\"",
+        },
+      }),
+    );
+    await writeFile(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        name: "npm-config-fixture",
+        version: "1.0.0",
+        lockfileVersion: 3,
+        requires: true,
+        packages: { "": { name: "npm-config-fixture", version: "1.0.0" } },
+      }),
+    );
+    await writeFile(join(root, "helper.ts"), "function unusedHelper() {}\n");
+
+    const previousAllowScripts = process.env.npm_config_allow_scripts;
+    process.env.npm_config_allow_scripts = "win-ca";
+    try {
+      const result = await runNodeBuildTestGate(root, "helper.ts");
+      expect(result.status).toBe("passed");
+      expect(result.commands.map((command) => command.kind)).toEqual([
+        "install",
+        "build",
+        "test",
+      ]);
+    } finally {
+      if (previousAllowScripts === undefined) {
+        delete process.env.npm_config_allow_scripts;
+      } else {
+        process.env.npm_config_allow_scripts = previousAllowScripts;
+      }
+    }
+  }, 30_000);
+
   it("rejects a placeholder test script without reporting a pass", async () => {
     const root = await mkdtemp(join(tmpdir(), "dca-gate-placeholder-"));
     await writeFile(

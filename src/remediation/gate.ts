@@ -57,9 +57,15 @@ async function runGateCommand(
   args: string[],
   cwd: string,
 ): Promise<GateCommandResult> {
+  const env: NodeJS.ProcessEnv = { ...process.env, CI: "true" };
+  // npm exposes user configuration as npm_config_* variables to scripts that it
+  // launches. Do not let an outer project's legacy allow-scripts setting alter
+  // npm behavior inside the independently cloned remediation candidate.
+  delete env.npm_config_allow_scripts;
+  delete env.NPM_CONFIG_ALLOW_SCRIPTS;
   const result = await runProcess(command, args, {
     cwd,
-    env: { ...process.env, CI: "true" },
+    env,
   });
   return { ...result, kind };
 }
