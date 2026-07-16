@@ -63,6 +63,8 @@ interface AnalyzerSummary {
   unmatchedFiles: number;
 }
 
+type IndexingQueryClient = Pick<PoolClient, "query">;
+
 const SKIPPED_DIRECTORIES = new Set([
   "node_modules",
   ".git",
@@ -296,12 +298,7 @@ async function replaceIndexedFile(
       throw new Error(`Failed to upsert indexed file: ${filePath}`);
     }
 
-    await client.query("DELETE FROM call_edges WHERE file_id = $1", [fileId]);
-    await client.query(
-      "UPDATE external_signals SET symbol_id = NULL WHERE file_id = $1",
-      [fileId],
-    );
-    await client.query("DELETE FROM symbols WHERE file_id = $1", [fileId]);
+    await clearIndexedFileSymbolState(client, fileId);
     for (const symbol of result.symbols) {
       await client.query(
         `INSERT INTO symbols (
@@ -331,6 +328,107 @@ async function replaceIndexedFile(
     await client.query("ROLLBACK");
     throw error;
   }
+}
+
+export async function refreshUnchangedIndexedFile(
+  client: IndexingQueryClient,
+  fileId: string,
+  commitSha: string,
+): Promise<void> {
+  await client.query(
+    `UPDATE indexed_files
+        SET commit_sha = $2,
+            indexed_at = now()
+      WHERE id = $1`,
+    [fileId, commitSha],
+  );
+}
+
+export async function clearIndexedFileSymbolState(
+  client: IndexingQueryClient,
+  fileId: string,
+): Promise<void> {
+  await client.query(
+    `DELETE FROM call_edges
+      WHERE file_id = $1
+         OR caller_symbol_id IN (SELECT id FROM symbols WHERE file_id = $1)
+         OR callee_symbol_id IN (SELECT id FROM symbols WHERE file_id = $1)`,
+    [fileId],
+  );
+  await client.query(
+    `DELETE FROM cross_repo_references
+      WHERE referencing_symbol_id IN (SELECT id FROM symbols WHERE file_id = $1)
+         OR referenced_symbol_id IN (SELECT id FROM symbols WHERE file_id = $1)`,
+    [fileId],
+  );
+  await client.query(
+    `DELETE FROM import_edges
+      WHERE importing_file_id = $1
+         OR imported_symbol_id IN (SELECT id FROM symbols WHERE file_id = $1)`,
+    [fileId],
+  );
+  await client.query(
+    `UPDATE external_signals
+        SET symbol_id = NULL
+      WHERE symbol_id IN (SELECT id FROM symbols WHERE file_id = $1)`,
+    [fileId],
+  );
+  await client.query(
+    `DELETE FROM confidence_evidence
+      WHERE symbol_id IN (
+        SELECT symbols.id
+          FROM symbols
+         WHERE symbols.file_id = $1
+           AND NOT EXISTS (
+             SELECT 1
+               FROM confidence_verdicts
+              WHERE confidence_verdicts.symbol_id = symbols.id
+                AND confidence_verdicts.review_status <> 'unreviewed'
+           )
+           AND NOT EXISTS (
+             SELECT 1
+               FROM removal_actions
+              WHERE removal_actions.symbol_id = symbols.id
+           )
+      )`,
+    [fileId],
+  );
+  await client.query(
+    `DELETE FROM confidence_verdicts
+      WHERE symbol_id IN (
+        SELECT symbols.id
+          FROM symbols
+         WHERE symbols.file_id = $1
+           AND confidence_verdicts.review_status = 'unreviewed'
+           AND NOT EXISTS (
+             SELECT 1
+               FROM removal_actions
+              WHERE removal_actions.symbol_id = symbols.id
+           )
+      )`,
+    [fileId],
+  );
+  await client.query(
+    `DELETE FROM symbols
+      WHERE file_id = $1
+        AND NOT EXISTS (
+          SELECT 1
+            FROM confidence_verdicts
+           WHERE confidence_verdicts.symbol_id = symbols.id
+        )
+        AND NOT EXISTS (
+          SELECT 1
+            FROM removal_actions
+           WHERE removal_actions.symbol_id = symbols.id
+        )`,
+    [fileId],
+  );
+  await client.query(
+    `UPDATE symbols
+        SET file_id = NULL
+      WHERE file_id = $1`,
+    [fileId],
+  );
 }
 
 async function clearRepositoryCallEdges(repositoryId: string): Promise<void> {
@@ -477,7 +575,13 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
             AND parse_status = 'symbols_only'`,
         [repositoryId, filePath, contentHash],
       );
-      if (existing.rows.length > 0) {
+      const existingFile = existing.rows[0];
+      if (existingFile) {
+        await refreshUnchangedIndexedFile(
+          pool,
+          existingFile.id,
+          clone.commitSha,
+        );
         summary.filesSkipped += 1;
         continue;
       }
