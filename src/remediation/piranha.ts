@@ -12,8 +12,8 @@ interface RunnerOutput {
 }
 
 export const EXPECTED_PIRANHA_VERSION = "0.4.8";
-export const SIMPLE_RULE_SET_VERSION = "simple-top-level-function-v1";
-export const EXPORTED_RULE_SET_VERSION = "barrel-exported-function-v1";
+const SIMPLE_RULE_SET_VERSION = "simple-top-level-function-v1";
+const EXPORTED_RULE_SET_VERSION = "barrel-exported-function-v1";
 export const PYTHON_RULE_SET_VERSION = "simple-top-level-python-function-v1";
 
 export function ruleSetVersionForLanguage(

@@ -3,7 +3,7 @@ import JavaScript from "tree-sitter-javascript";
 import Python from "tree-sitter-python";
 import TypeScript from "tree-sitter-typescript";
 
-export type SymbolKind =
+type SymbolKind =
   | "function"
   | "method"
   | "class"
@@ -15,7 +15,7 @@ export type SymbolKind =
   | "attribute"
   | "export";
 
-export interface EnumeratedSymbol {
+interface EnumeratedSymbol {
   kind: SymbolKind;
   name: string;
   qualifiedName: string;
