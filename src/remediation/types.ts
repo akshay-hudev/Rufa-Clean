@@ -2,7 +2,8 @@ export type PiranhaLanguage = "javascript" | "typescript" | "tsx" | "python";
 export type RemovalShape =
   | "top_level_function"
   | "default_export_alias"
-  | "exported_variable_function";
+  | "exported_variable_function"
+  | "export_modifier_only";
 export type RemediationReviewMode = "confirmed_dead" | "draft_pr_review";
 export type VerificationTier = "A" | "B" | "C";
 export type GatePhase = "baseline" | "post_removal";
@@ -38,6 +39,7 @@ export interface RemovalCandidate {
   executableReferences: number;
   importEdges: number;
   directUnusedExportFindings: number;
+  directUnusedTypeFindings: number;
   scoreBeforeExportCap: number | null;
 }
 

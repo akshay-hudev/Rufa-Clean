@@ -15,6 +15,7 @@ EXPORTED_RULE_SET_VERSION = "barrel-exported-function-v1"
 PYTHON_RULE_SET_VERSION = "simple-top-level-python-function-v1"
 DEFAULT_EXPORT_ALIAS_RULE_SET_VERSION = "default-export-alias-v1"
 EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION = "exported-variable-function-v1"
+EXPORT_MODIFIER_ONLY_RULE_SET_VERSION = "export-modifier-only-v1"
 IDENTIFIER = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
 
 
@@ -33,6 +34,7 @@ def main() -> None:
             "top_level_function",
             "default_export_alias",
             "exported_variable_function",
+            "export_modifier_only",
         ),
         default="top_level_function",
     )
@@ -51,6 +53,8 @@ def main() -> None:
         raise ValueError("Python has no supported default-export alias removal")
     if args.language == "python" and args.shape == "exported_variable_function":
         raise ValueError("Python has no supported exported-variable function removal")
+    if args.shape == "export_modifier_only" and args.language not in ("typescript", "tsx"):
+        raise ValueError("Export-modifier cleanup supports TypeScript/TSX only")
 
     if args.shape == "default_export_alias":
         query = """(program
@@ -63,6 +67,17 @@ def main() -> None:
               (variable_declarator
                 name: (identifier) @name
                 (#eq? @name "{args.symbol}")))) @declaration)'''
+    elif args.shape == "export_modifier_only":
+        query = f'''(program
+          (export_statement
+            declaration: [
+              (type_alias_declaration
+                name: (type_identifier) @name
+                (#eq? @name "{args.symbol}")) @inner
+              (interface_declaration
+                name: (type_identifier) @name
+                (#eq? @name "{args.symbol}")) @inner
+            ]) @declaration)'''
     elif args.language == "python":
         query = f'''(module
           (function_definition
@@ -79,11 +94,12 @@ def main() -> None:
           (function_declaration
             name: (identifier) @name
             (#eq? @name "{args.symbol}")) @declaration)'''
+    replacement = "@inner" if args.shape == "export_modifier_only" else ""
     rule = Rule(
         name="delete_dead_code_candidate",
         query=query,
         replace_node="declaration",
-        replace="",
+        replace=replacement,
         is_seed_rule=True,
     )
     # PolyglotPiranha 0.4.8 does not expose a separate JavaScript language and
@@ -130,6 +146,8 @@ def main() -> None:
                     if args.shape == "default_export_alias"
                     else EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION
                     if args.shape == "exported_variable_function"
+                    else EXPORT_MODIFIER_ONLY_RULE_SET_VERSION
+                    if args.shape == "export_modifier_only"
                     else (
                         PYTHON_RULE_SET_VERSION
                         if args.language == "python"

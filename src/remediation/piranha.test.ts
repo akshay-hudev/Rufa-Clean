@@ -10,6 +10,7 @@ vi.mock("./process", () => ({ runProcess }));
 
 import {
   DEFAULT_EXPORT_ALIAS_RULE_SET_VERSION,
+  EXPORT_MODIFIER_ONLY_RULE_SET_VERSION,
   EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION,
   PYTHON_RULE_SET_VERSION,
   ruleSetVersionForLanguage,
@@ -141,6 +142,46 @@ describe("Python Piranha removal", () => {
       expect.arrayContaining([
         "--language", "javascript", "--shape", "exported_variable_function",
       ]),
+      expect.objectContaining({ cwd: root }),
+    );
+  });
+
+  it("uses the narrow TypeScript export-modifier rule", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-type-export-piranha-"));
+    const filePath = "types.ts";
+    const absolutePath = join(root, filePath);
+    await writeFile(absolutePath, "export interface Internal { id: string }\n");
+    runProcess.mockResolvedValue({
+      command: "python",
+      args: [],
+      cwd: root,
+      exitCode: 0,
+      signal: null,
+      stdout: JSON.stringify({
+        rewrite_count: 1,
+        changed_paths: [absolutePath],
+        generator_version: "0.4.8",
+        rule_set_version: EXPORT_MODIFIER_ONLY_RULE_SET_VERSION,
+      }),
+      stderr: "",
+      startedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      durationMs: 1,
+      timedOut: false,
+    });
+
+    const result = await runSimplePiranhaRemoval(
+      root,
+      filePath,
+      "Internal",
+      "typescript",
+      { shape: "export_modifier_only" },
+    );
+
+    expect(result.ruleSetVersion).toBe(EXPORT_MODIFIER_ONLY_RULE_SET_VERSION);
+    expect(runProcess).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.arrayContaining(["--shape", "export_modifier_only"]),
       expect.objectContaining({ cwd: root }),
     );
   });

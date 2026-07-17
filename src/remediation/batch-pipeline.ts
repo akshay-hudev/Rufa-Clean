@@ -112,7 +112,8 @@ function knipFindings(stdout: string): Array<{ file: string; name: string }> {
   };
   const findings: Array<{ file: string; name: string }> = [];
   for (const issue of parsed.issues ?? []) {
-    for (const finding of issue.exports ?? []) {
+    const typedIssue = issue as typeof issue & { types?: Array<{ name?: string }> };
+    for (const finding of [...(issue.exports ?? []), ...(typedIssue.types ?? [])]) {
       if (issue.file && finding.name) {
         findings.push({ file: issue.file, name: finding.name });
       }
@@ -132,7 +133,7 @@ async function runKnipVerification(
   delete env.NPM_CONFIG_ALLOW_SCRIPTS;
   const processResult = await runProcess(
     process.execPath,
-    [KNIP_RUNNER, "--reporter", "json", "--include", "exports", "--no-exit-code"],
+    [KNIP_RUNNER, "--reporter", "json", "--include", "exports,types", "--no-exit-code"],
     { cwd: packageRoot, env },
   );
   const command: GateCommandResult = {
@@ -362,7 +363,7 @@ export async function runAdaptiveBatchRemovalPipeline(
       process.env.REMEDIATION_GIT_EMAIL ?? "rufa-clean[bot]@users.noreply.github.com",
     );
     await git.add(sourceFiles);
-    await git.commit(`Remove ${validated.length} Knip-confirmed unused exports`);
+    await git.commit(`Clean up ${validated.length} Knip-confirmed unused exports`);
     await clone.pushBranch(branch);
 
     const auditLines = validated.map(({ candidate, actionId, audit }) =>
@@ -373,11 +374,11 @@ export async function runAdaptiveBatchRemovalPipeline(
       const prUrl = await createPullRequest({
         owner: first.orgSlug,
         repo: first.repoSlug,
-        title: `Draft: remove ${validated.length} Knip-confirmed unused exports`,
+        title: `Draft: clean up ${validated.length} Knip-confirmed unused exports`,
         body: [
           "## Summary",
           "",
-          `Removes ${validated.length} exports directly reported unused by Knip and corroborated by the repository graph and source audit.`,
+          `Cleans up ${validated.length} exports directly reported unused by Knip and corroborated by the repository graph and source audit. Function candidates are deleted; internally used types keep their declarations and lose only the unused public export modifier.`,
           "",
           "## Safety evidence",
           "",

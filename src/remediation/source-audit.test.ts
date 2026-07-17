@@ -33,6 +33,7 @@ function candidate(overrides: Partial<RemovalCandidate> = {}): RemovalCandidate 
     executableReferences: 0,
     importEdges: 0,
     directUnusedExportFindings: 1,
+    directUnusedTypeFindings: 0,
     scoreBeforeExportCap: 0.625,
     ...overrides,
   };
@@ -76,5 +77,33 @@ describe("auditCandidateSourceReferences", () => {
       candidate({ symbolName: "default", qualifiedName: "default", symbolKind: "export" }),
       { ...namedValidation, shape: "default_export_alias" },
     )).rejects.toThrow("default-import consumers");
+  });
+
+  it("accepts an internally used type when only its export modifier is unused", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-source-audit-type-"));
+    await mkdir(join(root, "src"));
+    await writeFile(
+      join(root, "src/client.ts"),
+      "export interface Internal { id: string }\ninterface Holder { value: Internal }\n",
+    );
+    const result = await auditCandidateSourceReferences(
+      root,
+      candidate({
+        symbolName: "Internal",
+        qualifiedName: "Internal",
+        symbolKind: "interface",
+        filePath: "src/client.ts",
+        language: "typescript",
+        directUnusedExportFindings: 0,
+        directUnusedTypeFindings: 1,
+      }),
+      {
+        language: "typescript",
+        shape: "export_modifier_only",
+        reviewMode: "draft_pr_review",
+      },
+    );
+    expect(result.sourceOccurrences).toBe(2);
+    expect(result.importConsumers).toEqual([]);
   });
 });

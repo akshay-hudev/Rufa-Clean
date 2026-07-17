@@ -18,6 +18,7 @@ export const PYTHON_RULE_SET_VERSION = "simple-top-level-python-function-v1";
 export const DEFAULT_EXPORT_ALIAS_RULE_SET_VERSION = "default-export-alias-v1";
 export const EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION =
   "exported-variable-function-v1";
+export const EXPORT_MODIFIER_ONLY_RULE_SET_VERSION = "export-modifier-only-v1";
 
 export function ruleSetVersionForLanguage(
   language: PiranhaLanguage,
@@ -35,6 +36,12 @@ export function ruleSetVersionForLanguage(
       throw new Error("Python has no supported exported-variable function removal");
     }
     return EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION;
+  }
+  if (shape === "export_modifier_only") {
+    if (language === "python" || language === "javascript") {
+      throw new Error("Export-modifier cleanup supports TypeScript/TSX only");
+    }
+    return EXPORT_MODIFIER_ONLY_RULE_SET_VERSION;
   }
   if (language === "python") {
     if (allowExported) {

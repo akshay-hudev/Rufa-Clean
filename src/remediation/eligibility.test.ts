@@ -33,6 +33,7 @@ function candidate(overrides: Partial<RemovalCandidate> = {}): RemovalCandidate 
     executableReferences: 0,
     importEdges: 0,
     directUnusedExportFindings: 0,
+    directUnusedTypeFindings: 0,
     scoreBeforeExportCap: null,
     ...overrides,
   };
@@ -112,6 +113,25 @@ describe("validateAdaptiveDraftCandidate", () => {
       scoreBeforeExportCap: 0.625,
       executableReferences: 1,
     }))).toThrow("resolved references");
+  });
+
+  it("internalizes a directly reported unused TypeScript type export", () => {
+    expect(validateAdaptiveDraftCandidate(candidate({
+      symbolName: "Organization",
+      qualifiedName: "Organization",
+      symbolKind: "interface",
+      isExported: true,
+      automatedVerdict: "likely_alive",
+      confidenceScore: 0,
+      reviewStatus: "unreviewed",
+      reviewedBy: null,
+      reviewedAt: null,
+      directUnusedTypeFindings: 1,
+    }))).toEqual({
+      language: "typescript",
+      shape: "export_modifier_only",
+      reviewMode: "draft_pr_review",
+    });
   });
 });
 

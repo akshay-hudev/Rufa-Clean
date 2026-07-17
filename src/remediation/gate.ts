@@ -57,6 +57,22 @@ function isPlaceholderTest(script: string): boolean {
   return normalized.includes("no test specified") || normalized.trim() === "";
 }
 
+async function hasEslintConfiguration(packageRoot: string): Promise<boolean> {
+  const names = [
+    ".eslintrc",
+    ".eslintrc.js",
+    ".eslintrc.cjs",
+    ".eslintrc.json",
+    ".eslintrc.yml",
+    ".eslintrc.yaml",
+    "eslint.config.js",
+    "eslint.config.mjs",
+    "eslint.config.cjs",
+  ];
+  return (await Promise.all(names.map((name) => exists(join(packageRoot, name)))))
+    .some(Boolean);
+}
+
 async function runGateCommand(
   kind: GateCommandResult["kind"],
   command: string,
@@ -194,13 +210,19 @@ export async function runAdaptiveNodeGate(
       skippedChecks.push("build script unavailable");
     }
 
-    if (manifest.scripts?.lint?.trim()) {
+    const lintScript = manifest.scripts?.lint?.trim();
+    const lintNeedsInteractiveSetup = Boolean(
+      lintScript?.includes("next lint") && !(await hasEslintConfiguration(packageRoot)),
+    );
+    if (lintScript && !lintNeedsInteractiveSetup) {
       const lint = withPhase(
         await runGateCommand("lint", "npm", ["run", "lint"], packageRoot),
         phase,
       );
       commands.push(lint);
       requirePassed(lint, "Lint command failed");
+    } else if (lintNeedsInteractiveSetup) {
+      skippedChecks.push("lint unavailable: Next.js requires interactive ESLint setup");
     } else {
       skippedChecks.push("lint script unavailable");
     }

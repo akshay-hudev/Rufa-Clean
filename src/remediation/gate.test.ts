@@ -53,6 +53,40 @@ describe("runAdaptiveNodeGate", () => {
     ]);
     expect(await readFile(join(root, "build-ran"), "utf8")).toBe("xx");
   }, 30_000);
+
+  it("does not report an interactive unconfigured Next lint prompt as a passed lint", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-adaptive-next-lint-"));
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "next-lint-fixture",
+        version: "1.0.0",
+        scripts: {
+          build: "node -e \"process.exit(0)\"",
+          lint: "next lint",
+        },
+      }),
+    );
+    await writeFile(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        name: "next-lint-fixture",
+        version: "1.0.0",
+        lockfileVersion: 3,
+        requires: true,
+        packages: { "": { name: "next-lint-fixture", version: "1.0.0" } },
+      }),
+    );
+    await writeFile(join(root, "helper.ts"), "export interface Internal {}\n");
+
+    const result = await runAdaptiveNodeGate(root, ["helper.ts"], "baseline");
+
+    expect(result.status).toBe("passed");
+    expect(result.commands.some((command) => command.kind === "lint")).toBe(false);
+    expect(result.skippedChecks).toContain(
+      "lint unavailable: Next.js requires interactive ESLint setup",
+    );
+  }, 30_000);
 });
 
 describe("runNodeBuildTestGate", () => {

@@ -142,6 +142,7 @@ describe("runSimpleRemovalPipeline gate failure", () => {
       executableReferences: 0,
       importEdges: 0,
       directUnusedExportFindings: 0,
+      directUnusedTypeFindings: 0,
       scoreBeforeExportCap: null,
     };
 
@@ -201,6 +202,7 @@ describe("runSimpleRemovalPipeline gate failure", () => {
       executableReferences: 0,
       importEdges: 0,
       directUnusedExportFindings: 0,
+      directUnusedTypeFindings: 0,
       scoreBeforeExportCap: null,
     };
 

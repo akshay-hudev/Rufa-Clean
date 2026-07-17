@@ -17,7 +17,7 @@ const IGNORED_DIRECTORIES = new Set([
 export interface SourceAuditResult {
   symbol: string;
   sourceOccurrences: number;
-  defaultImportConsumers: string[];
+  importConsumers: string[];
   checkedFiles: number;
 }
 
@@ -65,6 +65,27 @@ function importsCandidateAsDefault(
   return false;
 }
 
+function importsCandidateNamed(
+  importerPath: string,
+  source: string,
+  candidatePath: string,
+  symbolName: string,
+): boolean {
+  const importPattern = /\b(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s+from\s+['"]([^'"]+)['"]/g;
+  for (const match of source.matchAll(importPattern)) {
+    const names = match[1]?.split(",").map((part) => part.trim().split(/\s+as\s+/)[0]) ?? [];
+    const specifier = match[2];
+    if (!specifier?.startsWith(".") || !names.includes(symbolName)) {
+      continue;
+    }
+    const resolvedImport = withoutSourceExtension(resolve(dirname(importerPath), specifier));
+    if (resolvedImport === withoutSourceExtension(candidatePath)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function auditCandidateSourceReferences(
   repositoryPath: string,
   candidate: RemovalCandidate,
@@ -95,7 +116,43 @@ export async function auditCandidateSourceReferences(
     return {
       symbol: candidate.symbolName,
       sourceOccurrences,
-      defaultImportConsumers: consumers,
+      importConsumers: consumers,
+      checkedFiles: files.length,
+    };
+  }
+
+  if (validation.shape === "export_modifier_only") {
+    const consumers: string[] = [];
+    for (const file of files) {
+      if (file === candidatePath) {
+        continue;
+      }
+      const source = await readFile(file, "utf8");
+      if (importsCandidateNamed(file, source, candidatePath, candidate.symbolName)) {
+        consumers.push(relative(repositoryPath, file));
+      }
+    }
+    const candidateSource = await readFile(candidatePath, "utf8");
+    const exportedDeclaration = new RegExp(
+      `\\bexport\\s+(?:type|interface)\\s+${escapeRegex(candidate.symbolName)}\\b`,
+      "g",
+    );
+    const declarations = [...candidateSource.matchAll(exportedDeclaration)].length;
+    const identifier = new RegExp(`\\b${escapeRegex(candidate.symbolName)}\\b`, "g");
+    let sourceOccurrences = 0;
+    for (const file of files) {
+      sourceOccurrences += [...(await readFile(file, "utf8")).matchAll(identifier)].length;
+    }
+    if (declarations !== 1 || consumers.length > 0) {
+      throw new Error(
+        `Source audit rejected type export ${candidate.symbolName}: ` +
+          `${declarations} declarations, ${consumers.length} import/re-export consumers`,
+      );
+    }
+    return {
+      symbol: candidate.symbolName,
+      sourceOccurrences,
+      importConsumers: consumers,
       checkedFiles: files.length,
     };
   }
@@ -115,7 +172,7 @@ export async function auditCandidateSourceReferences(
   return {
     symbol: candidate.symbolName,
     sourceOccurrences,
-    defaultImportConsumers: [],
+    importConsumers: [],
     checkedFiles: files.length,
   };
 }

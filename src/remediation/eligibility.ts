@@ -32,6 +32,7 @@ interface CandidateRow {
   executable_references: string;
   import_edges: string;
   direct_unused_export_findings: string;
+  direct_unused_type_findings: string;
   score_before_export_cap: number | null;
 }
 
@@ -80,6 +81,12 @@ export async function loadRemovalCandidate(verdictId: string): Promise<RemovalCa
                WHERE signal.symbol_id = symbol.id
                  AND signal.finding_type = 'unused_export'
             ) AS direct_unused_export_findings,
+            (
+              SELECT count(*)::text
+                FROM external_signals AS signal
+               WHERE signal.symbol_id = symbol.id
+                 AND signal.finding_type = 'unused_exported_type'
+            ) AS direct_unused_type_findings,
             NULLIF(
               verdict.evidence_summary #>> '{normalized_score_before_export_cap}',
               ''
@@ -121,6 +128,7 @@ export async function loadRemovalCandidate(verdictId: string): Promise<RemovalCa
     executableReferences: Number(row.executable_references),
     importEdges: Number(row.import_edges),
     directUnusedExportFindings: Number(row.direct_unused_export_findings),
+    directUnusedTypeFindings: Number(row.direct_unused_type_findings),
     scoreBeforeExportCap: row.score_before_export_cap,
   };
 }
@@ -136,7 +144,7 @@ export async function loadAdaptiveRemovalCandidates(
        JOIN repositories AS repository ON repository.id = file.repository_id
        JOIN external_signals AS signal
          ON signal.symbol_id = symbol.id
-        AND signal.finding_type = 'unused_export'
+        AND signal.finding_type IN ('unused_export', 'unused_exported_type')
       WHERE (repository.id::text = $1 OR repository.repo_slug = $1)
         AND verdict.review_status NOT IN ('confirmed_alive', 'excluded')
       ORDER BY verdict.id`,
@@ -216,6 +224,20 @@ export function validateAdaptiveDraftCandidate(
   ) {
     throw new Error("Adaptive remediation rejects symbols with resolved references");
   }
+
+  const language = languageForCandidate(candidate);
+  const isUnusedPublicType =
+    candidate.directUnusedTypeFindings > 0 &&
+    candidate.isExported &&
+    (candidate.symbolKind === "type" || candidate.symbolKind === "interface") &&
+    (language === "typescript" || language === "tsx");
+  if (isUnusedPublicType) {
+    return {
+      language,
+      shape: "export_modifier_only",
+      reviewMode: "draft_pr_review",
+    };
+  }
   if (candidate.directUnusedExportFindings < 1) {
     throw new Error("Adaptive remediation requires a direct Knip unused_export finding");
   }
@@ -223,7 +245,6 @@ export function validateAdaptiveDraftCandidate(
     throw new Error("Adaptive remediation requires corroborated confidence of at least 0.6");
   }
 
-  const language = languageForCandidate(candidate);
   if (language === "python") {
     throw new Error("Adaptive export remediation currently supports JavaScript/TypeScript only");
   }
