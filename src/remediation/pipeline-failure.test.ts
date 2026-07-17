@@ -141,6 +141,8 @@ describe("runSimpleRemovalPipeline gate failure", () => {
       importOrReexportReferences: 0,
       executableReferences: 0,
       importEdges: 0,
+      directUnusedExportFindings: 0,
+      scoreBeforeExportCap: null,
     };
 
     const result = await runSimpleRemovalPipeline("verdict-bad-removal");
@@ -198,6 +200,8 @@ describe("runSimpleRemovalPipeline gate failure", () => {
       importOrReexportReferences: 0,
       executableReferences: 0,
       importEdges: 0,
+      directUnusedExportFindings: 0,
+      scoreBeforeExportCap: null,
     };
 
     await expect(runSimpleRemovalPipeline("verdict-stale")).rejects.toThrow(

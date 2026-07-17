@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   clearIndexedFileSymbolState,
+  removeMissingIndexedFiles,
   refreshUnchangedIndexedFile,
 } from "./sync";
 
@@ -70,6 +71,41 @@ describe("indexed symbol refresh", () => {
     expect(statements[6]).toContain("FROM removal_actions");
     expect(statements[7]).toBe(
       "UPDATE symbols SET file_id = NULL WHERE file_id = $1",
+    );
+  });
+
+  it("removes indexed files that are absent from the current repository snapshot", async () => {
+    const statements: string[] = [];
+    const client = queryClient((sql) => {
+      const normalized = sql.replace(/\s+/g, " ").trim();
+      statements.push(normalized);
+      if (normalized.startsWith("SELECT id, file_path FROM indexed_files")) {
+        return {
+          rows: [
+            { id: "current-file", file_path: "src/current.ts" },
+            { id: "deleted-file", file_path: "src/deleted.ts" },
+          ],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const removed = await removeMissingIndexedFiles(
+      client as never,
+      "repository-1",
+      new Set(["src/current.ts"]),
+    );
+
+    expect(removed).toBe(1);
+    expect(statements.some((sql) =>
+      sql === "DELETE FROM external_signals WHERE file_id = $1"
+    )).toBe(true);
+    expect(statements.some((sql) =>
+      sql === "DELETE FROM indexed_files WHERE id = $1"
+    )).toBe(true);
+    expect(client.query).not.toHaveBeenCalledWith(
+      expect.anything(),
+      ["current-file"],
     );
   });
 });

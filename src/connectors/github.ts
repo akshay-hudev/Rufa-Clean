@@ -313,6 +313,7 @@ export async function createPullRequest(input: {
   body: string;
   head: string;
   base: string;
+  draft?: boolean;
 }): Promise<string> {
   const octokit = await getOctokit();
   const response = await octokit.request<PullRequestResponse>(

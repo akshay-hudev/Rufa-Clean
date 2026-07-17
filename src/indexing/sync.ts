@@ -47,6 +47,7 @@ interface IndexingSummary {
   filesFound: number;
   filesEnumerated: number;
   filesSkipped: number;
+  filesRemoved: number;
   filesFailed: number;
   symbolsExtracted: number;
 }
@@ -431,6 +432,28 @@ export async function clearIndexedFileSymbolState(
   );
 }
 
+export async function removeMissingIndexedFiles(
+  client: IndexingQueryClient,
+  repositoryId: string,
+  activeFilePaths: ReadonlySet<string>,
+): Promise<number> {
+  const existing = await client.query<{ id: string; file_path: string }>(
+    `SELECT id, file_path
+       FROM indexed_files
+      WHERE repository_id = $1`,
+    [repositoryId],
+  );
+  const missing = existing.rows.filter((file) => !activeFilePaths.has(file.file_path));
+
+  for (const file of missing) {
+    await clearIndexedFileSymbolState(client, file.id);
+    await client.query("DELETE FROM external_signals WHERE file_id = $1", [file.id]);
+    await client.query("DELETE FROM indexed_files WHERE id = $1", [file.id]);
+  }
+
+  return missing.length;
+}
+
 async function clearRepositoryCallEdges(repositoryId: string): Promise<void> {
   await pool.query(
     `DELETE FROM call_edges
@@ -538,6 +561,7 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
     filesFound: 0,
     filesEnumerated: 0,
     filesSkipped: 0,
+    filesRemoved: 0,
     filesFailed: 0,
     symbolsExtracted: 0,
   };
@@ -556,12 +580,14 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
     await clearRepositoryScipReferences(repositoryId);
 
     const files = await walkSourceFiles(clone.localPath);
+    const activeFilePaths = new Set<string>();
     for (const absolutePath of files) {
       const filePath = relative(clone.localPath, absolutePath).split(sep).join("/");
       const language = symbolLanguage(filePath);
       if (!language || !hasAnalyzerForLanguage(language, activeAnalyzerNames)) {
         continue;
       }
+      activeFilePaths.add(filePath);
       summary.filesFound += 1;
 
       const content = await readFile(absolutePath, "utf8");
@@ -609,6 +635,22 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
       }
     }
 
+    const reconciliationClient = await pool.connect();
+    try {
+      await reconciliationClient.query("BEGIN");
+      summary.filesRemoved = await removeMissingIndexedFiles(
+        reconciliationClient,
+        repositoryId,
+        activeFilePaths,
+      );
+      await reconciliationClient.query("COMMIT");
+    } catch (error) {
+      await reconciliationClient.query("ROLLBACK");
+      throw error;
+    } finally {
+      reconciliationClient.release();
+    }
+
     await runRepoLevelAnalyzers(activeAnalyzers, clone.localPath, repositoryId);
     await warnIfRepositoryHasSymbolsWithoutExternalSignals(
       repositoryId,
@@ -623,6 +665,7 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
     `Indexing complete: ${summary.filesFound} files found, ` +
     `${summary.filesEnumerated} files symbol-enumerated, ` +
     `${summary.filesSkipped} files skipped (unchanged), ` +
+    `${summary.filesRemoved} missing files removed, ` +
     `${summary.filesFailed} files failed, ${summary.symbolsExtracted} symbols extracted.`,
   );
 

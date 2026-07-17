@@ -4,7 +4,56 @@ import { join } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { runNodeBuildTestGate, runPythonBuildTestGate } from "./gate";
+import {
+  combineAdaptiveGateResults,
+  runAdaptiveNodeGate,
+  runNodeBuildTestGate,
+  runPythonBuildTestGate,
+} from "./gate";
+
+describe("runAdaptiveNodeGate", () => {
+  it("records a no-test workspace as tier B and runs baseline/post build checks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-adaptive-gate-"));
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "adaptive-fixture",
+        version: "1.0.0",
+        scripts: {
+          build: "node -e \"require('fs').appendFileSync('build-ran', 'x')\"",
+        },
+      }),
+    );
+    await writeFile(
+      join(root, "package-lock.json"),
+      JSON.stringify({
+        name: "adaptive-fixture",
+        version: "1.0.0",
+        lockfileVersion: 3,
+        requires: true,
+        packages: { "": { name: "adaptive-fixture", version: "1.0.0" } },
+      }),
+    );
+    await writeFile(join(root, "helper.js"), "export const unused = () => 1\n");
+
+    const baseline = await runAdaptiveNodeGate(root, ["helper.js"], "baseline");
+    const post = await runAdaptiveNodeGate(root, ["helper.js"], "post_removal");
+    const combined = combineAdaptiveGateResults(baseline, post);
+
+    expect(combined.status).toBe("passed");
+    expect(combined.verificationTier).toBe("B");
+    expect(combined.testsAvailable).toBe(false);
+    expect(combined.skippedChecks).toContain("test script unavailable");
+    expect(combined.commands.map((command) => `${command.phase}:${command.kind}`)).toEqual([
+      "baseline:install",
+      "baseline:syntax",
+      "baseline:build",
+      "post_removal:syntax",
+      "post_removal:build",
+    ]);
+    expect(await readFile(join(root, "build-ran"), "utf8")).toBe("xx");
+  }, 30_000);
+});
 
 describe("runNodeBuildTestGate", () => {
   it("actually executes install, build, and test commands", async () => {

@@ -6,7 +6,11 @@ import { simpleGit } from "simple-git";
 
 import { createPullRequest } from "../connectors/github";
 import { cloneRepository } from "../indexing/clone";
-import { loadRemovalCandidate, validateSimpleCandidate } from "./eligibility";
+import {
+  loadRemovalCandidate,
+  validateDraftReviewCandidate,
+  validateSimpleCandidate,
+} from "./eligibility";
 import { humanReviewFallback } from "./fallback";
 import { runRemovalGate } from "./gate";
 import { runSimplePiranhaRemoval } from "./piranha";
@@ -20,6 +24,7 @@ import {
   recordPullRequestFailure,
 } from "./store";
 import type { GateResult } from "./types";
+import type { RemovalValidation } from "./types";
 
 export interface RemovalPipelineResult {
   actionId: string;
@@ -30,6 +35,10 @@ export interface RemovalPipelineResult {
   automatedRepairAttempted?: false;
   prOpened?: false;
   gate: GateResult;
+}
+
+export interface RemovalPipelineOptions {
+  draftReview?: boolean;
 }
 
 function safeBranchPart(value: string): string {
@@ -62,9 +71,17 @@ function gateSummary(gate: GateResult): string {
 
 export async function runSimpleRemovalPipeline(
   verdictId: string,
+  options: RemovalPipelineOptions = {},
 ): Promise<RemovalPipelineResult> {
   const candidate = await loadRemovalCandidate(verdictId);
-  const piranhaLanguage = validateSimpleCandidate(candidate);
+  const validation: RemovalValidation = options.draftReview
+    ? validateDraftReviewCandidate(candidate)
+    : {
+        language: validateSimpleCandidate(candidate),
+        shape: "top_level_function",
+        reviewMode: "confirmed_dead",
+      };
+  const piranhaLanguage = validation.language;
   let actionId: string | undefined;
   let clone: Awaited<ReturnType<typeof cloneRepository>> | undefined;
   let generationRecorded = false;
@@ -77,7 +94,7 @@ export async function runSimpleRemovalPipeline(
       repo_slug: candidate.repoSlug,
       default_branch: candidate.defaultBranch,
     });
-    actionId = await createRemovalAction(candidate, clone.commitSha, piranhaLanguage);
+    actionId = await createRemovalAction(candidate, clone.commitSha, validation);
     if (clone.commitSha !== candidate.indexedCommitSha) {
       throw new Error(
         `Stale verdict: indexed commit ${candidate.indexedCommitSha}, ` +
@@ -108,6 +125,7 @@ export async function runSimpleRemovalPipeline(
       candidate.filePath,
       candidate.symbolName,
       piranhaLanguage,
+      { shape: validation.shape },
     );
     requireOnlyExpectedFile(await changedFiles(clone.localPath), candidate.filePath);
     const patch = await git.raw(["diff", "--binary", "--", candidate.filePath]);
@@ -149,37 +167,62 @@ export async function runSimpleRemovalPipeline(
       process.env.REMEDIATION_GIT_EMAIL ?? "dca-remediation[bot]@users.noreply.github.com",
     );
     await git.add([candidate.filePath]);
-    await git.commit(`Remove confirmed-dead ${candidate.symbolName}`);
+    const displayName =
+      validation.shape === "default_export_alias"
+        ? `default export alias in ${candidate.filePath}`
+        : candidate.symbolName;
+    await git.commit(
+      options.draftReview
+        ? `Propose removing dead-code candidate ${displayName}`
+        : `Remove confirmed-dead ${displayName}`,
+    );
 
     try {
       await clone.pushBranch(branch);
+      const isDraft = options.draftReview ?? false;
       const prUrl = await createPullRequest({
         owner: candidate.orgSlug,
         repo: candidate.repoSlug,
-        title: `Remove confirmed-dead ${candidate.symbolName}`,
+        title: isDraft
+          ? `Draft: remove dead-code candidate ${displayName}`
+          : `Remove confirmed-dead ${displayName}`,
         body: [
           "## Summary",
           "",
-          `Removes the human-confirmed-dead \`${candidate.symbolName}\` symbol.`,
+          isDraft
+            ? `Proposes removing the automated dead-code candidate \`${displayName}\`.`
+            : `Removes the human-confirmed-dead \`${displayName}\` symbol.`,
+          ...(isDraft
+            ? [
+                "",
+                "This candidate has not been pre-confirmed by a human. The draft PR is the human review surface.",
+              ]
+            : []),
           "",
           "## Audit",
           "",
           `- confidence verdict: \`${candidate.verdictId}\``,
           `- removal action: \`${actionId}\``,
-          `- confirmed by: \`${candidate.reviewedBy}\` at ${candidate.reviewedAt?.toISOString()}`,
+          `- source verdict: \`${candidate.automatedVerdict}\` (${candidate.confidenceScore})`,
+          `- source review status: \`${candidate.reviewStatus}\``,
+          ...(candidate.reviewedBy && candidate.reviewedAt
+            ? [`- confirmed by: \`${candidate.reviewedBy}\` at ${candidate.reviewedAt.toISOString()}`]
+            : []),
           `- base commit: \`${clone.commitSha}\``,
           `- patch SHA-256: \`${patchSha256}\``,
+          `- generator rule set: \`${validation.shape}\``,
           "",
           "## Gate commands actually executed",
           "",
           gateSummary(gate),
           "",
-          "This pull request is intentionally not auto-merged. Human review is required.",
+          "This pull request is intentionally not auto-merged. Human review is required before merge.",
         ].join("\n"),
         head: branch,
         base: candidate.defaultBranch,
+        draft: isDraft,
       });
-      await recordPullRequest(actionId, prUrl);
+      await recordPullRequest(actionId, prUrl, isDraft);
       return { actionId, status: "pr_opened", patchSha256, prUrl, gate };
     } catch (error) {
       const summary = error instanceof Error ? error.message : String(error);

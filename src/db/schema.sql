@@ -214,9 +214,9 @@ CREATE TABLE IF NOT EXISTS removal_actions (
   source_verdict TEXT NOT NULL,
   source_confidence_score FLOAT,
   source_review_status TEXT NOT NULL
-    CHECK (source_review_status = 'confirmed_dead'),
-  confirmed_by TEXT NOT NULL CHECK (btrim(confirmed_by) <> ''),
-  confirmed_at TIMESTAMPTZ NOT NULL,
+    CHECK (source_review_status IN ('unreviewed', 'confirmed_dead')),
+  confirmed_by TEXT,
+  confirmed_at TIMESTAMPTZ,
   base_commit_sha TEXT NOT NULL CHECK (btrim(base_commit_sha) <> ''),
   generator_name TEXT NOT NULL,
   generator_version TEXT NOT NULL,
@@ -231,6 +231,7 @@ CREATE TABLE IF NOT EXISTS removal_actions (
   gate_completed_at TIMESTAMPTZ,
   pr_url TEXT,
   pr_opened_at TIMESTAMPTZ,
+  pr_is_draft BOOLEAN NOT NULL DEFAULT false,
   outcome_status TEXT NOT NULL DEFAULT 'pending_generation'
     CHECK (outcome_status IN (
       'pending_generation',
@@ -271,6 +272,44 @@ CREATE TABLE IF NOT EXISTS removal_actions (
       OR (generated_patch IS NOT NULL AND patch_sha256 IS NOT NULL)
     )
 );
+
+ALTER TABLE removal_actions
+  ALTER COLUMN confirmed_by DROP NOT NULL,
+  ALTER COLUMN confirmed_at DROP NOT NULL;
+
+ALTER TABLE removal_actions
+  ADD COLUMN IF NOT EXISTS pr_is_draft BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE removal_actions
+  DROP CONSTRAINT IF EXISTS removal_actions_source_review_status_check;
+
+ALTER TABLE removal_actions
+  DROP CONSTRAINT IF EXISTS removal_actions_confirmed_by_check;
+
+ALTER TABLE removal_actions
+  DROP CONSTRAINT IF EXISTS removal_actions_review_audit_check;
+
+ALTER TABLE removal_actions
+  ADD CONSTRAINT removal_actions_source_review_status_check
+  CHECK (source_review_status IN ('unreviewed', 'confirmed_dead'));
+
+ALTER TABLE removal_actions
+  ADD CONSTRAINT removal_actions_review_audit_check
+  CHECK (
+    (
+      source_review_status = 'confirmed_dead'
+      AND confirmed_by IS NOT NULL
+      AND btrim(confirmed_by) <> ''
+      AND confirmed_at IS NOT NULL
+    )
+    OR
+    (
+      source_review_status = 'unreviewed'
+      AND confirmed_by IS NULL
+      AND confirmed_at IS NULL
+      AND pr_is_draft = true
+    )
+  );
 
 DO $$
 BEGIN

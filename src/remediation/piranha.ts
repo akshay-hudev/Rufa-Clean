@@ -2,7 +2,7 @@ import { realpath } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
 
 import { runProcess } from "./process";
-import type { PiranhaLanguage, PiranhaResult } from "./types";
+import type { PiranhaLanguage, PiranhaResult, RemovalShape } from "./types";
 
 interface RunnerOutput {
   rewrite_count: number;
@@ -15,11 +15,27 @@ export const EXPECTED_PIRANHA_VERSION = "0.4.8";
 const SIMPLE_RULE_SET_VERSION = "simple-top-level-function-v1";
 const EXPORTED_RULE_SET_VERSION = "barrel-exported-function-v1";
 export const PYTHON_RULE_SET_VERSION = "simple-top-level-python-function-v1";
+export const DEFAULT_EXPORT_ALIAS_RULE_SET_VERSION = "default-export-alias-v1";
+export const EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION =
+  "exported-variable-function-v1";
 
 export function ruleSetVersionForLanguage(
   language: PiranhaLanguage,
   allowExported = false,
+  shape: RemovalShape = "top_level_function",
 ): string {
+  if (shape === "default_export_alias") {
+    if (language === "python") {
+      throw new Error("Python has no supported default-export alias removal");
+    }
+    return DEFAULT_EXPORT_ALIAS_RULE_SET_VERSION;
+  }
+  if (shape === "exported_variable_function") {
+    if (language === "python") {
+      throw new Error("Python has no supported exported-variable function removal");
+    }
+    return EXPORTED_VARIABLE_FUNCTION_RULE_SET_VERSION;
+  }
   if (language === "python") {
     if (allowExported) {
       throw new Error("Exported Python removal is outside the simple remediation scope");
@@ -60,7 +76,10 @@ export async function runSimplePiranhaRemoval(
   filePath: string,
   symbolName: string,
   language: PiranhaLanguage,
-  options: { allowExported?: boolean } = {},
+  options: {
+    allowExported?: boolean;
+    shape?: RemovalShape;
+  } = {},
 ): Promise<PiranhaResult> {
   const absoluteFilePath = resolve(repositoryPath, filePath);
   const python = process.env.PIRANHA_PYTHON ?? "python3";
@@ -72,6 +91,8 @@ export async function runSimplePiranhaRemoval(
     symbolName,
     "--language",
     language,
+    "--shape",
+    options.shape ?? "top_level_function",
   ];
   if (options.allowExported) {
     args.push("--allow-exported");
@@ -92,6 +113,7 @@ export async function runSimplePiranhaRemoval(
   const expectedRuleSetVersion = ruleSetVersionForLanguage(
     language,
     options.allowExported ?? false,
+    options.shape ?? "top_level_function",
   );
   if (
     output.generator_version !== EXPECTED_PIRANHA_VERSION ||

@@ -2,7 +2,11 @@ import type { PoolClient } from "pg";
 
 import { pool } from "../db/client";
 import { EXPECTED_PIRANHA_VERSION, ruleSetVersionForLanguage } from "./piranha";
-import type { GateResult, PiranhaLanguage, RemovalCandidate } from "./types";
+import type {
+  GateResult,
+  RemovalCandidate,
+  RemovalValidation,
+} from "./types";
 
 interface LockedVerdictRow {
   symbol_id: string;
@@ -16,6 +20,7 @@ interface LockedVerdictRow {
 async function lockVerdict(
   client: PoolClient,
   candidate: RemovalCandidate,
+  reviewMode: RemovalValidation["reviewMode"],
 ): Promise<LockedVerdictRow> {
   const result = await client.query<LockedVerdictRow>(
     `SELECT symbol_id, verdict, confidence_score, review_status, reviewed_by, reviewed_at
@@ -28,12 +33,19 @@ async function lockVerdict(
   if (!verdict || verdict.symbol_id !== candidate.symbolId) {
     throw new Error("Verdict/symbol changed before removal action creation");
   }
-  if (
-    verdict.review_status !== "confirmed_dead" ||
-    !verdict.reviewed_by?.trim() ||
-    !verdict.reviewed_at
+  if (reviewMode === "confirmed_dead") {
+    if (
+      verdict.review_status !== "confirmed_dead" ||
+      !verdict.reviewed_by?.trim() ||
+      !verdict.reviewed_at
+    ) {
+      throw new Error("Verdict is no longer human-confirmed dead");
+    }
+  } else if (
+    verdict.review_status === "confirmed_alive" ||
+    verdict.review_status === "excluded"
   ) {
-    throw new Error("Verdict is no longer human-confirmed dead");
+    throw new Error(`Verdict can no longer produce a draft PR: ${verdict.review_status}`);
   }
   return verdict;
 }
@@ -41,12 +53,12 @@ async function lockVerdict(
 export async function createRemovalAction(
   candidate: RemovalCandidate,
   baseCommitSha: string,
-  language: PiranhaLanguage,
+  validation: RemovalValidation,
 ): Promise<string> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const verdict = await lockVerdict(client, candidate);
+    const verdict = await lockVerdict(client, candidate, validation.reviewMode);
     const attemptResult = await client.query<{ attempt_number: number }>(
       `SELECT coalesce(max(attempt_number), 0) + 1 AS attempt_number
          FROM removal_actions
@@ -67,9 +79,10 @@ export async function createRemovalAction(
          base_commit_sha,
          generator_name,
          generator_version,
-         rule_set_version
-       ) VALUES ($1, $2, $3, $4, $5, 'confirmed_dead', $6, $7, $8,
-                 'PolyglotPiranha', $9, $10)
+         rule_set_version,
+         pr_is_draft
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+                 'PolyglotPiranha', $10, $11, $12)
        RETURNING id`,
       [
         candidate.verdictId,
@@ -77,11 +90,13 @@ export async function createRemovalAction(
         attemptNumber,
         verdict.verdict,
         verdict.confidence_score,
+        verdict.review_status,
         verdict.reviewed_by,
         verdict.reviewed_at,
         baseCommitSha,
         EXPECTED_PIRANHA_VERSION,
-        ruleSetVersionForLanguage(language),
+        ruleSetVersionForLanguage(validation.language, false, validation.shape),
+        validation.reviewMode === "draft_pr_review",
       ],
     );
     const actionId = insertResult.rows[0]?.id;
@@ -174,17 +189,19 @@ export async function recordGateResult(
 export async function recordPullRequest(
   actionId: string,
   prUrl: string,
+  isDraft: boolean,
 ): Promise<void> {
   await pool.query(
     `UPDATE removal_actions
         SET pr_url = $2,
             pr_opened_at = now(),
+            pr_is_draft = $3,
             outcome_status = 'pr_opened',
             outcome_summary = 'Build/test gate passed and pull request opened for human review.',
             updated_at = now()
       WHERE id = $1
         AND gate_status = 'passed'`,
-    [actionId, prUrl],
+    [actionId, prUrl, isDraft],
   );
 }
 

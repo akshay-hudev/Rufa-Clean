@@ -2,19 +2,17 @@ import "dotenv/config";
 
 import { pool } from "../src/db/client";
 import { migrate } from "../src/db/migrate";
-import { runSimpleRemovalPipeline } from "../src/remediation/pipeline";
+import { runAdaptiveBatchRemovalPipeline } from "../src/remediation/batch-pipeline";
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const draftReview = args.includes("--draft-pr");
-  const verdictId = args.find((argument) => !argument.startsWith("--"))?.trim();
-  if (!verdictId) {
+  const repository = process.argv[2]?.trim();
+  if (!repository) {
     throw new Error(
-      "Usage: npx ts-node scripts/run-removal.ts <confidence-verdict-id> [--draft-pr]",
+      "Usage: npx ts-node scripts/run-batch-removal.ts <repository-id-or-slug>",
     );
   }
   await migrate();
-  const result = await runSimpleRemovalPipeline(verdictId, { draftReview });
+  const result = await runAdaptiveBatchRemovalPipeline(repository);
   console.dir(result, { depth: null });
   if (result.status !== "pr_opened") {
     process.exitCode = 1;

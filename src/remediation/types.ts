@@ -1,4 +1,17 @@
-export type PiranhaLanguage = "typescript" | "tsx" | "python";
+export type PiranhaLanguage = "javascript" | "typescript" | "tsx" | "python";
+export type RemovalShape =
+  | "top_level_function"
+  | "default_export_alias"
+  | "exported_variable_function";
+export type RemediationReviewMode = "confirmed_dead" | "draft_pr_review";
+export type VerificationTier = "A" | "B" | "C";
+export type GatePhase = "baseline" | "post_removal";
+
+export interface RemovalValidation {
+  language: PiranhaLanguage;
+  shape: RemovalShape;
+  reviewMode: RemediationReviewMode;
+}
 
 export interface RemovalCandidate {
   verdictId: string;
@@ -24,6 +37,8 @@ export interface RemovalCandidate {
   importOrReexportReferences: number;
   executableReferences: number;
   importEdges: number;
+  directUnusedExportFindings: number;
+  scoreBeforeExportCap: number | null;
 }
 
 export interface ProcessResult {
@@ -41,7 +56,17 @@ export interface ProcessResult {
 }
 
 export interface GateCommandResult extends ProcessResult {
-  kind: "install" | "service" | "typecheck" | "compile" | "build" | "test";
+  kind:
+    | "install"
+    | "service"
+    | "typecheck"
+    | "compile"
+    | "build"
+    | "test"
+    | "lint"
+    | "syntax"
+    | "static_analysis";
+  phase?: GatePhase;
 }
 
 export interface GateResult {
@@ -51,6 +76,11 @@ export interface GateResult {
   startedAt: string;
   completedAt: string;
   failure?: string;
+  verificationTier?: VerificationTier;
+  testsAvailable?: boolean;
+  skippedChecks?: string[];
+  baseline?: GateResult;
+  postRemoval?: GateResult;
 }
 
 export interface PiranhaResult {

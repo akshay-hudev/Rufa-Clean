@@ -7,6 +7,7 @@
     "build": "tsc",
     "cron": "ts-node src/cron.ts",
     "remediate": "ts-node scripts/run-removal.ts",
+    "remediate:batch": "ts-node scripts/run-batch-removal.ts",
     "test": "vitest run",
     "start": "node dist/index.js",
     "sync": "ts-node src/index.ts"

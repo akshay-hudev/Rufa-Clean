@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 
 import { runProcess, startManagedProcess, type ManagedProcess } from "./process";
-import type { GateCommandResult, GateResult, PiranhaLanguage } from "./types";
+import type {
+  GateCommandResult,
+  GatePhase,
+  GateResult,
+  PiranhaLanguage,
+  VerificationTier,
+} from "./types";
 
 interface PackageManifest {
   scripts?: Record<string, string>;
@@ -68,6 +74,206 @@ async function runGateCommand(
     env,
   });
   return { ...result, kind };
+}
+
+function withPhase(command: GateCommandResult, phase: GatePhase): GateCommandResult {
+  return { ...command, phase };
+}
+
+function verificationTier(
+  commands: GateCommandResult[],
+  testsAvailable: boolean,
+): VerificationTier {
+  if (testsAvailable && commands.some((command) => command.kind === "test")) {
+    return "A";
+  }
+  if (
+    commands.some((command) =>
+      command.kind === "build" || command.kind === "typecheck" || command.kind === "lint"
+    )
+  ) {
+    return "B";
+  }
+  return "C";
+}
+
+/**
+ * A workspace-scoped Node gate for draft batch remediation.
+ *
+ * Missing tests are recorded, not disguised as passing tests. Every available
+ * deterministic check still has to pass. The caller runs this once before and
+ * once after the patch and stores both results.
+ */
+export async function runAdaptiveNodeGate(
+  repositoryPath: string,
+  sourceFilePaths: string[],
+  phase: GatePhase,
+): Promise<GateResult> {
+  const startedAt = new Date().toISOString();
+  const commands: GateCommandResult[] = [];
+  const skippedChecks: string[] = [];
+  let packageRoot = repositoryPath;
+
+  try {
+    if (sourceFilePaths.length === 0) {
+      throw new Error("Adaptive gate requires at least one changed source file");
+    }
+    const roots = await Promise.all(
+      sourceFilePaths.map((filePath) => findPackageRoot(repositoryPath, filePath)),
+    );
+    packageRoot = roots[0] ?? repositoryPath;
+    if (roots.some((root) => root !== packageRoot)) {
+      throw new Error("One adaptive gate batch cannot span multiple package workspaces");
+    }
+    if (!(await exists(join(packageRoot, "package-lock.json")))) {
+      throw new Error("Adaptive npm gate requires package-lock.json beside package.json");
+    }
+    const manifest = JSON.parse(
+      await readFile(join(packageRoot, "package.json"), "utf8"),
+    ) as PackageManifest;
+
+    if (phase === "baseline") {
+      const install = withPhase(
+        await runGateCommand("install", "npm", ["ci"], packageRoot),
+        phase,
+      );
+      commands.push(install);
+      requirePassed(install, "npm ci failed");
+    }
+
+    for (const filePath of [...new Set(sourceFilePaths)].sort()) {
+      if (!filePath.endsWith(".js")) {
+        continue;
+      }
+      const syntax = withPhase(
+        await runGateCommand(
+          "syntax",
+          process.execPath,
+          ["--check", relative(packageRoot, resolve(repositoryPath, filePath))],
+          packageRoot,
+        ),
+        phase,
+      );
+      commands.push(syntax);
+      requirePassed(syntax, `JavaScript syntax check failed for ${filePath}`);
+    }
+
+    const hasTypeScript = Boolean(
+      manifest.dependencies?.typescript || manifest.devDependencies?.typescript,
+    );
+    if (manifest.scripts?.typecheck?.trim()) {
+      const typecheck = withPhase(
+        await runGateCommand("typecheck", "npm", ["run", "typecheck"], packageRoot),
+        phase,
+      );
+      commands.push(typecheck);
+      requirePassed(typecheck, "Type-check command failed");
+    } else if (hasTypeScript && await exists(join(packageRoot, "tsconfig.json"))) {
+      const tscPath = join(packageRoot, "node_modules", ".bin", "tsc");
+      if (!(await exists(tscPath))) {
+        throw new Error("TypeScript is configured but the local tsc binary is unavailable");
+      }
+      const typecheck = withPhase(
+        await runGateCommand("typecheck", tscPath, ["--noEmit", "-p", "tsconfig.json"], packageRoot),
+        phase,
+      );
+      commands.push(typecheck);
+      requirePassed(typecheck, "TypeScript type-check failed");
+    } else {
+      skippedChecks.push("typecheck unavailable");
+    }
+
+    if (manifest.scripts?.build?.trim()) {
+      const build = withPhase(
+        await runGateCommand("build", "npm", ["run", "build"], packageRoot),
+        phase,
+      );
+      commands.push(build);
+      requirePassed(build, "Build command failed");
+    } else {
+      skippedChecks.push("build script unavailable");
+    }
+
+    if (manifest.scripts?.lint?.trim()) {
+      const lint = withPhase(
+        await runGateCommand("lint", "npm", ["run", "lint"], packageRoot),
+        phase,
+      );
+      commands.push(lint);
+      requirePassed(lint, "Lint command failed");
+    } else {
+      skippedChecks.push("lint script unavailable");
+    }
+
+    const testScript = manifest.scripts?.test;
+    const testsAvailable = Boolean(testScript && !isPlaceholderTest(testScript));
+    if (testsAvailable) {
+      const test = withPhase(
+        await runGateCommand("test", "npm", ["test"], packageRoot),
+        phase,
+      );
+      commands.push(test);
+      requirePassed(test, "Test command failed");
+    } else {
+      skippedChecks.push("test script unavailable");
+    }
+
+    return {
+      status: "passed",
+      packageRoot,
+      commands,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      verificationTier: verificationTier(commands, testsAvailable),
+      testsAvailable,
+      skippedChecks,
+    };
+  } catch (error) {
+    const failed = failedGateResult(packageRoot, commands, startedAt, error);
+    return {
+      ...failed,
+      verificationTier: verificationTier(commands, false),
+      testsAvailable: commands.some((command) => command.kind === "test"),
+      skippedChecks,
+    };
+  }
+}
+
+export function combineAdaptiveGateResults(
+  baseline: GateResult,
+  postRemoval: GateResult,
+): GateResult {
+  const passed = baseline.status === "passed" && postRemoval.status === "passed";
+  const failure = passed
+    ? undefined
+    : `Differential gate failed: ${baseline.failure ?? postRemoval.failure ?? "unknown failure"}`;
+  const result: GateResult = {
+    status: passed
+      ? "passed"
+      : baseline.status === "failed" || postRemoval.status === "failed"
+        ? "failed"
+        : "error",
+    packageRoot: postRemoval.packageRoot || baseline.packageRoot,
+    commands: [...baseline.commands, ...postRemoval.commands],
+    startedAt: baseline.startedAt,
+    completedAt: postRemoval.completedAt,
+    skippedChecks: [...new Set([
+      ...(baseline.skippedChecks ?? []),
+      ...(postRemoval.skippedChecks ?? []),
+    ])],
+    baseline,
+    postRemoval,
+  };
+  if (failure) {
+    result.failure = failure;
+  }
+  if (postRemoval.verificationTier) {
+    result.verificationTier = postRemoval.verificationTier;
+  }
+  if (postRemoval.testsAvailable !== undefined) {
+    result.testsAvailable = postRemoval.testsAvailable;
+  }
+  return result;
 }
 
 export async function runNodeBuildTestGate(

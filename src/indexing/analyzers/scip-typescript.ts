@@ -7,6 +7,15 @@ const execFileAsync = promisify(execFile);
 const PROJECT_SUBDIRECTORIES = ["backend", "frontend", "client", "server", "api", "web"];
 const SCIP_TYPESCRIPT_CLI = require.resolve("@sourcegraph/scip-typescript");
 
+export function scipNpmEnvironment(
+  source: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...source };
+  delete env.npm_config_allow_scripts;
+  delete env.NPM_CONFIG_ALLOW_SCRIPTS;
+  return env;
+}
+
 async function installDependencies(projectRoot: string): Promise<boolean> {
   if (existsSync(join(projectRoot, "node_modules"))) {
     return true;
@@ -45,6 +54,7 @@ async function installDependencies(projectRoot: string): Promise<boolean> {
       ],
       {
         cwd: projectRoot,
+        env: scipNpmEnvironment(),
         encoding: "utf8",
         maxBuffer: 10 * 1024 * 1024,
       },

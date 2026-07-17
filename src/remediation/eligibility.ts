@@ -1,7 +1,11 @@
 import { extname } from "node:path";
 
 import { pool } from "../db/client";
-import type { PiranhaLanguage, RemovalCandidate } from "./types";
+import type {
+  PiranhaLanguage,
+  RemovalCandidate,
+  RemovalValidation,
+} from "./types";
 
 interface CandidateRow {
   verdict_id: string;
@@ -27,6 +31,8 @@ interface CandidateRow {
   import_or_reexport_references: string;
   executable_references: string;
   import_edges: string;
+  direct_unused_export_findings: string;
+  score_before_export_cap: number | null;
 }
 
 export async function loadRemovalCandidate(verdictId: string): Promise<RemovalCandidate> {
@@ -67,7 +73,17 @@ export async function loadRemovalCandidate(verdictId: string): Promise<RemovalCa
               SELECT count(*)::text
                 FROM import_edges AS import_edge
                WHERE import_edge.imported_symbol_id = symbol.id
-            ) AS import_edges
+            ) AS import_edges,
+            (
+              SELECT count(*)::text
+                FROM external_signals AS signal
+               WHERE signal.symbol_id = symbol.id
+                 AND signal.finding_type = 'unused_export'
+            ) AS direct_unused_export_findings,
+            NULLIF(
+              verdict.evidence_summary #>> '{normalized_score_before_export_cap}',
+              ''
+            )::float8 AS score_before_export_cap
        FROM confidence_verdicts AS verdict
        JOIN symbols AS symbol ON symbol.id = verdict.symbol_id
        JOIN indexed_files AS file ON file.id = symbol.file_id
@@ -104,16 +120,32 @@ export async function loadRemovalCandidate(verdictId: string): Promise<RemovalCa
     importOrReexportReferences: Number(row.import_or_reexport_references),
     executableReferences: Number(row.executable_references),
     importEdges: Number(row.import_edges),
+    directUnusedExportFindings: Number(row.direct_unused_export_findings),
+    scoreBeforeExportCap: row.score_before_export_cap,
   };
 }
 
-export function validateSimpleCandidate(candidate: RemovalCandidate): PiranhaLanguage {
-  if (candidate.reviewStatus !== "confirmed_dead") {
-    throw new Error("Removal requires review_status = confirmed_dead");
-  }
-  if (!candidate.reviewedBy?.trim() || !candidate.reviewedAt) {
-    throw new Error("Removal requires a recorded human reviewer and review timestamp");
-  }
+export async function loadAdaptiveRemovalCandidates(
+  repositoryIdOrSlug: string,
+): Promise<RemovalCandidate[]> {
+  const result = await pool.query<{ id: string }>(
+    `SELECT DISTINCT verdict.id
+       FROM confidence_verdicts AS verdict
+       JOIN symbols AS symbol ON symbol.id = verdict.symbol_id
+       JOIN indexed_files AS file ON file.id = symbol.file_id
+       JOIN repositories AS repository ON repository.id = file.repository_id
+       JOIN external_signals AS signal
+         ON signal.symbol_id = symbol.id
+        AND signal.finding_type = 'unused_export'
+      WHERE (repository.id::text = $1 OR repository.repo_slug = $1)
+        AND verdict.review_status NOT IN ('confirmed_alive', 'excluded')
+      ORDER BY verdict.id`,
+    [repositoryIdOrSlug],
+  );
+  return Promise.all(result.rows.map((row) => loadRemovalCandidate(row.id)));
+}
+
+function validateReferenceSafety(candidate: RemovalCandidate): void {
   if (candidate.symbolKind !== "function" || candidate.qualifiedName !== candidate.symbolName) {
     throw new Error("Simple removal supports only top-level function declarations");
   }
@@ -129,6 +161,9 @@ export function validateSimpleCandidate(candidate: RemovalCandidate): PiranhaLan
   if (candidate.executableReferences > 0) {
     throw new Error("Confirmed-dead symbol has executable references; refusing simple removal");
   }
+}
+
+function validateSnapshot(candidate: RemovalCandidate): void {
   if (!candidate.indexedCommitSha?.trim()) {
     throw new Error("Candidate has no indexed commit SHA");
   }
@@ -139,7 +174,14 @@ export function validateSimpleCandidate(candidate: RemovalCandidate): PiranhaLan
   if (candidate.filePath.endsWith(".d.ts")) {
     throw new Error("Simple removal rejects declaration files");
   }
+}
+
+function languageForCandidate(candidate: RemovalCandidate): PiranhaLanguage {
   const extension = extname(candidate.filePath).toLowerCase();
+  const language = candidate.language.toLowerCase();
+  if (language === "javascript" && extension === ".js") {
+    return "javascript";
+  }
   if (language === "python" && extension === ".py") {
     return "python";
   }
@@ -150,4 +192,121 @@ export function validateSimpleCandidate(candidate: RemovalCandidate): PiranhaLan
     return "typescript";
   }
   throw new Error(`Unsupported remediation language/file combination: ${language}/${extension}`);
+}
+
+/**
+ * Eligibility for the repository-wide, human-reviewed draft workflow.
+ *
+ * This intentionally does not equate a capped `undecidable` verdict with dead
+ * code. It requires a direct Knip unused-export finding and independently
+ * requires the reference graph to contain no consumer/import/re-export edge.
+ * The batch pipeline adds a repository source audit before changing code.
+ */
+export function validateAdaptiveDraftCandidate(
+  candidate: RemovalCandidate,
+): RemovalValidation {
+  if (candidate.reviewStatus === "confirmed_alive" || candidate.reviewStatus === "excluded") {
+    throw new Error(`Adaptive remediation rejects review_status = ${candidate.reviewStatus}`);
+  }
+  validateSnapshot(candidate);
+  if (
+    candidate.importOrReexportReferences > 0 ||
+    candidate.importEdges > 0 ||
+    candidate.executableReferences > 0
+  ) {
+    throw new Error("Adaptive remediation rejects symbols with resolved references");
+  }
+  if (candidate.directUnusedExportFindings < 1) {
+    throw new Error("Adaptive remediation requires a direct Knip unused_export finding");
+  }
+  if ((candidate.scoreBeforeExportCap ?? candidate.confidenceScore ?? 0) < 0.6) {
+    throw new Error("Adaptive remediation requires corroborated confidence of at least 0.6");
+  }
+
+  const language = languageForCandidate(candidate);
+  if (language === "python") {
+    throw new Error("Adaptive export remediation currently supports JavaScript/TypeScript only");
+  }
+  if (
+    candidate.symbolKind === "export" &&
+    candidate.symbolName === "default" &&
+    candidate.isExported
+  ) {
+    return {
+      language,
+      shape: "default_export_alias",
+      reviewMode: "draft_pr_review",
+    };
+  }
+  if (
+    candidate.symbolKind === "function" &&
+    candidate.qualifiedName === candidate.symbolName &&
+    candidate.isExported
+  ) {
+    return {
+      language,
+      shape: "exported_variable_function",
+      reviewMode: "draft_pr_review",
+    };
+  }
+  throw new Error(
+    "Adaptive remediation supports only top-level exported functions and default-export aliases",
+  );
+}
+
+export function validateSimpleCandidate(candidate: RemovalCandidate): PiranhaLanguage {
+  if (candidate.reviewStatus !== "confirmed_dead") {
+    throw new Error("Removal requires review_status = confirmed_dead");
+  }
+  if (!candidate.reviewedBy?.trim() || !candidate.reviewedAt) {
+    throw new Error("Removal requires a recorded human reviewer and review timestamp");
+  }
+  validateReferenceSafety(candidate);
+  validateSnapshot(candidate);
+  return languageForCandidate(candidate);
+}
+
+export function validateDraftReviewCandidate(
+  candidate: RemovalCandidate,
+): RemovalValidation {
+  if (candidate.reviewStatus === "confirmed_alive" || candidate.reviewStatus === "excluded") {
+    throw new Error(`Draft remediation rejects review_status = ${candidate.reviewStatus}`);
+  }
+  validateSnapshot(candidate);
+  if (
+    candidate.importOrReexportReferences > 0 ||
+    candidate.importEdges > 0 ||
+    candidate.executableReferences > 0
+  ) {
+    throw new Error("Draft remediation rejects symbols with resolved references");
+  }
+
+  const language = languageForCandidate(candidate);
+  const isStrongDefaultExportCandidate =
+    (language === "typescript" || language === "tsx") &&
+    candidate.symbolKind === "export" &&
+    candidate.symbolName === "default" &&
+    candidate.isExported &&
+    candidate.directUnusedExportFindings > 0 &&
+    (candidate.scoreBeforeExportCap ?? 0) >= 0.75;
+
+  if (isStrongDefaultExportCandidate) {
+    return {
+      language,
+      shape: "default_export_alias",
+      reviewMode: "draft_pr_review",
+    };
+  }
+
+  if (candidate.automatedVerdict !== "likely_dead") {
+    throw new Error(
+      "Draft remediation requires likely_dead or a directly-reported unused default export",
+    );
+  }
+  validateReferenceSafety(candidate);
+  return {
+    language,
+    shape: "top_level_function",
+    reviewMode: "draft_pr_review",
+  };
 }
