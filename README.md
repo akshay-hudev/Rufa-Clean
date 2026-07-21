@@ -1,379 +1,144 @@
-# DCAv2 / Rufa Clean
+# DCAv2
 
-DCAv2 is an evidence-driven dead-code detection and human-gated remediation
-service. The Rufa Clean GitHub App discovers repositories, indexes supported
-source code, combines static-analysis evidence, records deterministic confidence
-verdicts, generates narrow patches, validates them, and opens reviewable GitHub
-pull requests.
+DCAv2 is a standalone, CLI-driven vertical slice for explainable and human-authorized dead-code removal. The supported path analyzes one immutable GitHub commit, identifies eligible private top-level TypeScript function declarations, records evidence and coverage, requires separate human review and remediation authorization, verifies one removal in an isolated runner, and may publish a draft pull request.
 
-The project is a working MVP, not a universal autonomous code remover. It never
-auto-merges a pull request. Human review is always the final step.
-
-## Current status
-
-Implemented and exercised:
-
-- GitHub App repository discovery, authenticated cloning, branch pushes, and
-  draft or regular pull-request creation.
-- Tree-sitter symbol extraction for TypeScript, JavaScript, TSX/JSX, and Python.
-- Knip repository analysis for JavaScript/TypeScript and Vulture analysis for
-  Python.
-- SCIP TypeScript indexing and classification of imports, re-exports, calls,
-  construction, reads, and production/test context.
-- Persistent confidence evidence and deterministic verdicts: `likely_alive`,
-  `undecidable`, `likely_dead`, and `insufficient_signal`.
-- Human review states: `confirmed_dead`, `confirmed_alive`, and `excluded`, with
-  reviewer identity and timestamp.
-- Commit and content-hash freshness checks before any patch is generated.
-- PolyglotPiranha removal rules for narrow TypeScript, JavaScript, TSX, and
-  Python declaration shapes.
-- Strict build/test gating for human-confirmed removals.
-- Adaptive, workspace-scoped baseline/post-removal verification for draft batch
-  remediation when a repository does not provide every possible check.
-- End-to-end audit records connecting a confidence verdict, generated patch,
-  patch hash, gate result, and pull-request URL.
-- Failure handling that stops without automated repair, branch push, or PR
-  creation when a required pre-PR gate fails.
-
-The normal `sync` and cron flows currently perform discovery and indexing.
-Confidence computation, review recording, and remediation remain separately
-invoked operations.
-
-## Architecture
-
-```text
-Rufa Clean GitHub App
-    |
-    v
-repository discovery and workspace classification
-    |
-    v
-symbol extraction
-    |
-    +--> Knip / Vulture findings
-    |
-    +--> SCIP and import/reference graph
-    |
-    v
-confidence evidence and deterministic verdict
-    |
-    +--> strict path: human confirmed_dead
-    |        |
-    |        v
-    |    narrow Piranha patch -> build/test gate -> PR
-    |
-    +--> adaptive path: direct Knip finding + zero consumers
-             |
-             v
-         source audit -> draft patch -> baseline/post gate -> draft PR
-
-Every PR ends at human review. No path auto-merges.
-```
+DCAv2 never merges pull requests. The new workflow contains no merge command or merge API call.
 
 ## Supported scope
 
-### Detection
+- One GitHub repository and one root npm package.
+- `package-lock.json` and one non-solution root `tsconfig.json`.
+- TypeScript `.ts` source files only; `.tsx`, JavaScript, declaration files, generated files, and vendored files are excluded.
+- Named, non-exported, top-level `function` declarations only.
+- Exactly one Tree-sitter declaration, one exact SCIP definition, zero production references, zero test references, and one repository-wide textual occurrence.
+- One finding, authorization, patch, branch, and draft PR per remediation attempt.
 
-- Symbol enumeration: TypeScript, JavaScript, TSX/JSX, and Python.
-- Unused-code tools: Knip for JavaScript/TypeScript and Vulture for Python.
-- Semantic references: TypeScript/npm projects that SCIP TypeScript can index.
-- Common monorepository layouts, including `backend`, `frontend`, `client`, and
-  `server` workspaces.
-- File-level Knip `unused_file` evidence is propagated to symbols contained in
-  that file.
+Workspaces, nested packages, cross-repository analysis, runtime evidence, multiple languages, batch remediation, private-registry credential brokering, web UI, PRPilot, and automatic merge are outside this milestone.
 
-Runtime reflection, dependency injection, HTTP/API consumers, GraphQL,
-protobuf, dynamic imports, framework conventions, and generated code can hide
-real usage. A missing reference is therefore corroborating evidence, not proof
-by itself. See [the tested limitations](test-fixtures/KNOWN-LIMITATIONS.md).
+## Safety model
 
-### Strict confirmed-dead remediation
+The controller, isolated runner, and publisher are separate boundaries:
 
-The strict path requires:
+1. Trusted acquisition obtains a repository-scoped, short-lived GitHub App credential, resolves an immutable SHA, uses an askpass helper instead of an authenticated URL, replaces Git configuration with a safe local configuration, and stages the clone under the operating-system temporary directory.
+2. The digest-pinned Docker runner executes as UID/GID `65532`, with a read-only root filesystem, no capabilities, `no-new-privileges`, no Docker socket, explicit tmpfs workspaces, CPU/memory/disk/PID/time/output limits, and an allowlisted environment. The staged repository is read-only; the mutable copy and dependency tree are unique to one session.
+3. Dependency installation permits only `npm ci --ignore-scripts`. Without a configured allowlisting registry proxy, it runs with no network and therefore fails closed if downloads are required. With a proxy, the runner connects only to a Docker `--internal` network for installation and is disconnected before analysis, transformation, build, and tests.
+4. The trusted publisher reloads persisted evidence, the latest authorization, baseline/post results, patch hash, and expected file set under a per-finding advisory lock. It uses a separately issued repository-scoped write credential and creates only a draft PR.
 
-- `review_status = 'confirmed_dead'` with a reviewer and timestamp;
-- a supported top-level function whose qualified name equals its name;
-- no import, re-export, executable, or import-edge consumers;
-- a repository commit and file hash matching the indexed snapshot; and
-- exactly one declaration rewrite in exactly one source file.
-
-Supported strict languages are TypeScript, TSX, JavaScript, and Python. The Node
-gate requires a lockfile, a real build script, and a real test script. The Python
-gate creates an isolated virtual environment, installs `requirements.txt`,
-compiles the target file, and runs pytest. Every command, output, duration, and
-exit status is stored.
-
-### Adaptive draft batch remediation
-
-The batch path exists for repositories where the PR itself is the human review
-surface. It still requires direct analyzer evidence and several independent
-safety checks:
-
-- a direct Knip `unused_export` or `unused_exported_type` finding;
-- zero resolved import, re-export, executable, and import-edge consumers;
-- a matching indexed commit and content hash;
-- a fresh repository-wide source audit;
-- a fresh baseline Knip run that reproduces every target finding;
-- a generated patch limited to the expected workspace files;
-- baseline and post-removal checks that both pass;
-- a post-removal Knip run showing every targeted finding is gone; and
-- an unchanged patch hash after validation.
-
-Currently supported batch shapes are:
-
-- exported JavaScript/TypeScript arrow or function-expression variables;
-- unused default-export aliases; and
-- TypeScript type/interface exports that are still used internally. For these,
-  the declaration is preserved and only the unused `export` modifier is removed.
-
-Multiple candidates can share one patch and draft PR while retaining one
-`removal_actions` audit row per source verdict.
-
-### Verification tiers
-
-Adaptive validation records what genuinely ran rather than reporting unavailable
-checks as successes:
-
-- **Tier A:** install plus available static/build/type/lint checks and real tests.
-- **Tier B:** install plus build, typecheck, or lint; no real test script exists.
-- **Tier C:** syntax/static verification only.
-
-Any available check that runs and fails blocks the PR. Missing tests are called
-out explicitly in the PR. A Tier B or C result is not equivalent to full
-end-to-end application verification.
-
-## Proven end-to-end runs
-
-### Fraud-Guard
-
-A human-confirmed, non-exported Python function was removed through the strict
-pipeline. The baseline and post-removal Python gates ran, the real PR was
-reviewed, and it was manually merged.
-
-### Rufa-Clean
-
-The pipeline proved narrow TypeScript/default-export removal. A separate
-repository-wide Knip cleanup also established why real entrypoint and fixture
-configuration must be declared before treating unused-file output as deletable.
-
-### career-flow
-
-[career-flow draft PR #1](https://github.com/akshay-hudev/career-flow/pull/1)
-removed five directly reported unused frontend API functions and one unused
-default export:
-
-- one file changed and 15 lines deleted;
-- baseline Knip: six targeted unused exports;
-- post-removal Knip: zero targeted unused exports;
-- baseline and post-removal JavaScript syntax/build checks passed; and
-- frontend GitHub Actions build and Vercel deployment passed.
-
-This was a Tier B result because the frontend has no test, lint, or typecheck
-scripts. The repository's unrelated backend CI currently fails during dependency
-setup because spaCy is invoked without being installed; backend tests never run.
-
-### PDM
-
-[PDM draft PR #1](https://github.com/akshay-hudev/PDM/pull/1) internalized nine
-unused public TypeScript types/interfaces across two frontend files:
-
-- all declarations and their internal use remain intact;
-- only nine unnecessary `export` modifiers changed;
-- baseline and post-removal TypeScript checks passed;
-- baseline and post-removal Next.js production builds passed; and
-- Knip `exports,types` findings went from nine to zero.
-
-This was a Tier B result because PDM has no frontend test script and its `next
-lint` command launches interactive ESLint configuration instead of performing a
-real lint. PDM currently has no GitHub Actions checks on the remediation branch.
+Legacy authenticated-URL cloning, confidence-score remediation, and adaptive unreviewed batch/draft remediation are quarantined and throw errors.
 
 ## Prerequisites
 
-- Node.js compatible with `package-lock.json`.
-- PostgreSQL with `gen_random_uuid()` available.
-- A GitHub App installation with repository read access and, for remediation,
-  contents and pull-request write access.
-- Vulture on `PATH` for Python analysis.
-- Python and the pinned PolyglotPiranha dependency for remediation.
+- Node.js and npm versions compatible with the lockfile.
+- PostgreSQL 16 or compatible PostgreSQL with `gen_random_uuid()`.
+- Docker with the isolated-runner image built locally or supplied by a trusted registry.
+- A GitHub App installed on the target repository with narrowly scoped read credentials for acquisition and contents/pull-request write credentials for publishing. Branch protection must prevent the App from pushing or merging the default branch.
 
-## Setup
+Required control-plane environment variables:
 
-Install Node dependencies:
-
-```bash
-npm ci
+```text
+DATABASE_URL
+GITHUB_APP_ID
+GITHUB_INSTALLATION_ID
+GITHUB_PRIVATE_KEY_PATH
+DCA_RUNNER_IMAGE
 ```
 
-Copy the environment template and provide real values:
+`DCA_RUNNER_IMAGE` must end in `@sha256:<64 hex characters>`; mutable tags are rejected.
 
-```bash
-cp .env.example .env
+When dependencies must be downloaded, configure both:
+
+```text
+DCA_REGISTRY_NETWORK
+DCA_REGISTRY_PROXY_URL
 ```
 
-Required discovery/indexing variables:
+`DCA_REGISTRY_NETWORK` must be a Docker internal network containing an allowlisting registry proxy. The proxy is an operational security dependency and must allow only the approved npm registry hosts.
 
-```dotenv
-GITHUB_APP_ID=
-GITHUB_PRIVATE_KEY_PATH=
-GITHUB_INSTALLATION_ID=
-DATABASE_URL=
-```
+## Build the runner
 
-Keep the GitHub private key outside version control. `.env` and
-`private-key.pem` are ignored by this repository.
-
-Install Vulture in an isolated environment or with `pipx`:
+The Dockerfile defaults to a digest-pinned Node base image and installs npm dependencies from `package-lock.json` plus PolyglotPiranha `0.4.8`.
 
 ```bash
-pipx install vulture
+npm run runner:image
+docker image inspect dcav2-runner:milestone --format '{{index .RepoDigests 0}}'
+export DCA_RUNNER_IMAGE='dcav2-runner@sha256:<resolved-digest>'
 ```
 
-Create the Piranha environment:
+Do not use repository-controlled `npx` to obtain analyzers or transformers at runtime.
+
+## CLI workflow
+
+Every command emits structured JSON.
 
 ```bash
-python3 -m venv .venv-piranha
-.venv-piranha/bin/pip install -r remediation-requirements.txt
+npm run dca -- analyze \
+  --account internal-evaluation \
+  --repo owner/repository \
+  --revision main \
+  --actor operator@example.com
+
+npm run dca -- analysis --run <analysis-run-id>
+npm run dca -- findings --account internal-evaluation
+npm run dca -- finding --finding <finding-id>
+
+npm run dca -- review \
+  --finding <finding-id> \
+  --decision confirmed_dead \
+  --actor reviewer@example.com \
+  --rationale 'Evidence and supported-scope coverage reviewed.'
+
+npm run dca -- authorize \
+  --finding <finding-id> \
+  --decision approved_for_remediation \
+  --actor authorizer@example.com \
+  --rationale 'One-file removal is approved for this exact evidence digest.'
+
+npm run dca -- remediate \
+  --finding <finding-id> \
+  --revision main \
+  --actor operator@example.com
+
+npm run dca -- gates --attempt <remediation-attempt-id>
+
+npm run dca -- publish \
+  --attempt <remediation-attempt-id> \
+  --base main \
+  --actor publisher@example.com
+
+npm run dca -- audit --account internal-evaluation
 ```
 
-Set `PIRANHA_PYTHON` to that environment's Python executable. For Python gates,
-set `REMEDIATION_PYTHON` to the interpreter used to create the temporary virtual
-environment. Python 3.12 is recommended.
+Allowed disposition values are `confirmed_dead`, `confirmed_alive`, `deferred`, `excluded`, and `inconclusive`. Allowed authorization values are `approved_for_remediation`, `rejected`, `revoked`, and `expired`.
 
-Python repositories whose tests need a live API can configure
-`REMEDIATION_PYTHON_SERVICE_MODULE` and `REMEDIATION_PYTHON_HEALTH_URL`. The gate
-starts the service, waits for health, records the process, and always stops it.
+Any changed commit, file hash, exact occurrence, evidence digest, policy version, failed/partial coverage, analyzer failure, resolved reference, extra textual occurrence, baseline failure, post-change failure, patch mutation, or unexpected file change prevents publication.
 
-## Commands
+## Database migrations
 
-Discover and index the GitHub App inventory:
+`src/db/migrate.ts` applies checksum-verified ordered migrations under a PostgreSQL advisory lock:
 
-```bash
-npm run sync
-```
+- `0001_legacy_baseline` preserves the prototype schema and data.
+- `0002_milestone_ledger` adds immutable analysis, evidence, review, authorization, remediation, verification, patch, publication, and audit records.
+- `0003_publication_attempts` allows append-only failed publication attempts followed by one idempotent successful draft-PR publication.
 
-Run the scheduler:
+The legacy symbol/reference tables remain replaceable caches. The immutable finding bundle and milestone ledger are the remediation audit source.
+
+## Validation
 
 ```bash
-npm run cron
-```
-
-Build and test DCAv2:
-
-```bash
-npm run build
 npm test
+npx tsc --noEmit
+
+DCA_RUNNER_IMAGE='dcav2-runner@sha256:<digest>' \
+  npx vitest run src/security/hostile-repository.test.ts
+
+DCA_RUNNER_IMAGE='dcav2-runner@sha256:<digest>' \
+  npx vitest run \
+    src/milestone/isolated-analysis.integration.test.ts \
+    src/milestone/remediation.integration.test.ts
+
+DATABASE_URL='postgresql:///temporary_test_database' \
+DCA_TEST_DATABASE_URL='postgresql:///temporary_test_database' \
+  npx vitest run src/db/milestone.integration.test.ts
 ```
 
-Run strict remediation for a human-confirmed verdict:
-
-```bash
-npm run remediate -- <confidence-verdict-id>
-```
-
-Open a narrow single-candidate draft PR for review:
-
-```bash
-npm run remediate -- <confidence-verdict-id> --draft-pr
-```
-
-Run adaptive batch remediation for a repository UUID or slug:
-
-```bash
-npm run remediate:batch -- <repository-id-or-slug>
-```
-
-For example:
-
-```bash
-npm run remediate:batch -- career-flow
-npm run remediate:batch -- PDM
-```
-
-Remediation commands exit unsuccessfully when eligibility, freshness,
-generation, or a required gate fails. They do not attempt automated repair.
-
-Additional diagnostic scripts live in `scripts/`. They are development tools,
-not stable public commands, and may require a populated local database.
-
-## Database model
-
-The schema is defined in `src/db/schema.sql`:
-
-- `repositories`, `workspaces`, and `discovery_errors`;
-- `indexed_files` and `symbols`;
-- `external_signals`, `call_edges`, `import_edges`, and
-  `cross_repo_references`;
-- `confidence_evidence` and `confidence_verdicts`; and
-- `removal_actions` for patch, gate, PR, and final-outcome auditing.
-
-The schema is currently applied idempotently at startup. There is no versioned
-migration history yet.
-
-## Confidence model
-
-Confidence scoring is deterministic and does not use an LLM. It combines:
-
-- same-repository executable SCIP references;
-- resolved cross-repository references;
-- direct Knip/Vulture unused findings;
-- containing-file `unused_file` findings;
-- import-only ambiguity; and
-- export visibility.
-
-Export visibility currently caps a dead score at `0.6`; the uncapped and capped
-scores are retained in `evidence_summary` for review. Automated verdicts remain
-review aids. The strict pipeline requires `confirmed_dead`; the adaptive path can
-open only a draft PR from direct Knip evidence, and that draft still requires a
-human to decide whether it should ever merge.
-
-## Verification
-
-At the time of this update (2026-07-17):
-
-- `npm run build` passes.
-- `npm test` passes 138 tests across 17 test files.
-- `git diff --check` passes.
-- Regression fixtures cover direct and aliased imports, calls, construction,
-  reads, JSX patterns, re-export chains, barrel files, test-only use, and
-  multi-hop re-exports.
-- Failure-path tests prove that build/test failures fall back to human review
-  and never push or open a PR; generation failures are recorded and also stop
-  before any push or PR.
-- Adaptive-gate tests prove that unavailable tests and interactive lint setup are
-  recorded as unavailable rather than falsely reported as passing.
-
-Fixture results apply only to their tested shapes and are not a guarantee for
-every repository or framework.
-
-## Known limitations and next work
-
-1. Confidence computation and human review are not yet integrated into the
-   normal sync/cron workflow or a review UI.
-2. Adaptive batch remediation currently supports one npm workspace with a
-   `package-lock.json`; pnpm, Yarn, and multi-workspace patches need dedicated
-   gate dispatch.
-3. Automated package dependency removal and arbitrary unused-file deletion are
-   intentionally unsupported. Framework and path-loaded entrypoints make raw
-   Knip output unsafe to apply blindly.
-4. Barrel/re-export cleanup is separately tested but not broadly enabled in the
-   batch pipeline. Piranha rules must continue to be checked against dangling
-   `export *` and named re-export cases before expansion.
-5. Methods, class members, nested functions, decorators outside the supported
-   Python shape, complex declarations, and generated sources are rejected.
-6. A successful Tier B/C gate proves only the checks that actually ran; browser,
-   API, and full-system behavior still require repository-provided tests or
-   manual review.
-7. GitHub Actions and external deployment checks run after PR creation and are
-   not yet synchronized back into `removal_actions` automatically.
-8. Durable job orchestration, deployment, metrics, alerting, and a remediation
-   dashboard are not included.
-
-## Design and evidence notes
-
-- [Human-gated dead-code removal](docs/human-gated-removal.md)
-- [Simple removal pipeline](docs/simple-removal-pipeline.md)
-- [PolyglotPiranha manual spike](docs/piranha-spike.md)
-- [Removal action schema](docs/removal-action-schema.md)
-- [PDM indexing diagnosis](docs/pdm-indexing-diagnosis.md)
-- [Detection regression fixtures](test-fixtures/README.md)
-- [Proven behavior and known limitations](test-fixtures/KNOWN-LIMITATIONS.md)
+Docker and PostgreSQL integration tests skip unless their explicit environment variables are present. Unit and hermetic analyzer fixture tests always run.

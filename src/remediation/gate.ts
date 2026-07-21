@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 
 import { runProcess, startManagedProcess, type ManagedProcess } from "./process";
+import { allowlistedEnvironment } from "../security/environment";
 import type {
   GateCommandResult,
   GatePhase,
@@ -79,7 +80,7 @@ async function runGateCommand(
   args: string[],
   cwd: string,
 ): Promise<GateCommandResult> {
-  const env: NodeJS.ProcessEnv = { ...process.env, CI: "true" };
+  const env: NodeJS.ProcessEnv = allowlistedEnvironment({ CI: "true" });
   // npm exposes user configuration as npm_config_* variables to scripts that it
   // launches. Do not let an outer project's legacy allow-scripts setting alter
   // npm behavior inside the independently cloned remediation candidate.
@@ -496,14 +497,13 @@ export async function runPythonBuildTestGate(
         ["-m", "uvicorn", serviceModule, "--host", host, "--port", port],
         {
           cwd: packageRoot,
-          env: {
-            ...process.env,
+          env: allowlistedEnvironment({
             CI: "true",
             DATABASE_URL: `sqlite:///${join(scratchRoot, "service.db")}`,
             DEBUG: process.env.REMEDIATION_PYTHON_SERVICE_DEBUG ?? "false",
             PYTHONPATH: packageRoot,
             USE_INDUCTIVE_MODE: "false",
-          },
+          }),
         },
       );
       await waitForService(service, healthUrl);

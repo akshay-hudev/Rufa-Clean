@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { allowlistedEnvironment } from "../../security/environment";
 
 const execFileAsync = promisify(execFile);
 const PROJECT_SUBDIRECTORIES = ["backend", "frontend", "client", "server", "api", "web"];
@@ -10,10 +11,7 @@ const SCIP_TYPESCRIPT_CLI = require.resolve("@sourcegraph/scip-typescript");
 export function scipNpmEnvironment(
   source: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...source };
-  delete env.npm_config_allow_scripts;
-  delete env.NPM_CONFIG_ALLOW_SCRIPTS;
-  return env;
+  return allowlistedEnvironment({ CI: "true" }, source);
 }
 
 async function installDependencies(projectRoot: string): Promise<boolean> {
@@ -107,6 +105,7 @@ export async function runScipIndex(repoRootPath: string): Promise<string | null>
       [SCIP_TYPESCRIPT_CLI, "index", "--output", outputPath, "--no-progress-bar"],
       {
         cwd: projectRoot,
+        env: scipNpmEnvironment(),
         encoding: "utf8",
         maxBuffer: 10 * 1024 * 1024,
       },

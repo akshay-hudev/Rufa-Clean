@@ -1,0 +1,9 @@
+.git
+node_modules
+dist
+coverage
+src/indexing/scratch
+test-fixtures
+whitepapers
+files
+docs

@@ -15,12 +15,14 @@ type SymbolKind =
   | "attribute"
   | "export";
 
-interface EnumeratedSymbol {
+export interface EnumeratedSymbol {
   kind: SymbolKind;
   name: string;
   qualifiedName: string;
   lineStart: number;
   lineEnd: number;
+  columnStart: number;
+  columnEnd: number;
   isExported: boolean;
 }
 
@@ -42,10 +44,14 @@ tsxParser.setLanguage(TypeScript.tsx);
 const pythonParser = new Parser();
 pythonParser.setLanguage(Python);
 
-function position(node: SyntaxNode): Pick<EnumeratedSymbol, "lineStart" | "lineEnd"> {
+function position(
+  node: SyntaxNode,
+): Pick<EnumeratedSymbol, "lineStart" | "lineEnd" | "columnStart" | "columnEnd"> {
   return {
     lineStart: node.startPosition.row + 1,
     lineEnd: node.endPosition.row + 1,
+    columnStart: node.startPosition.column + 1,
+    columnEnd: node.endPosition.column + 1,
   };
 }
 

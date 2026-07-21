@@ -220,29 +220,3 @@ export async function recordPullRequestFailure(
     [actionId, summary],
   );
 }
-
-async function recordRemovalMerged(
-  actionId: string,
-  finalizedBy: string,
-): Promise<void> {
-  const reviewer = finalizedBy.trim();
-  if (!reviewer) {
-    throw new Error("finalizedBy is required");
-  }
-  const result = await pool.query(
-    `UPDATE removal_actions
-        SET outcome_status = 'merged',
-            outcome_summary = 'Pull request was manually reviewed and merged.',
-            finalized_by = $2,
-            finalized_at = now(),
-            updated_at = now()
-      WHERE id = $1
-        AND gate_status = 'passed'
-        AND pr_url IS NOT NULL
-        AND outcome_status = 'pr_opened'`,
-    [actionId, reviewer],
-  );
-  if (result.rowCount === 0) {
-    throw new Error(`Open, passed removal action not found: ${actionId}`);
-  }
-}

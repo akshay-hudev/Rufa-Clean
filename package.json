@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "Repository discovery and classification service",
   "main": "dist/index.js",
+  "bin": {
+    "dcav2": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "cron": "ts-node src/cron.ts",
-    "remediate": "ts-node scripts/run-removal.ts",
-    "remediate:batch": "ts-node scripts/run-batch-removal.ts",
+    "dca": "ts-node src/cli.ts",
+    "runner:image": "docker build -t dcav2-runner:milestone -f Dockerfile.runner .",
     "test": "vitest run",
     "start": "node dist/index.js",
     "sync": "ts-node src/index.ts"

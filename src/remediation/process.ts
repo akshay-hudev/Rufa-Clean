@@ -1,17 +1,37 @@
 import { spawn } from "node:child_process";
 
 import type { ProcessResult } from "./types";
+import { allowlistedEnvironment } from "../security/environment";
 
 const DEFAULT_TIMEOUT_MS = 15 * 60 * 1_000;
 const DEFAULT_OUTPUT_LIMIT_BYTES = 256 * 1_024;
 const STOP_GRACE_MS = 5_000;
 
 function appendBounded(current: string, chunk: Buffer, limit: number): string {
-  if (current.length >= limit) {
+  const currentBytes = Buffer.byteLength(current);
+  if (currentBytes >= limit) {
     return current;
   }
-  const remaining = limit - current.length;
+  const remaining = limit - currentBytes;
   return current + chunk.toString("utf8", 0, remaining);
+}
+
+function signalProcessTree(childPid: number | undefined, signal: NodeJS.Signals): void {
+  if (childPid === undefined) {
+    return;
+  }
+  try {
+    if (process.platform === "win32") {
+      process.kill(childPid, signal);
+    } else {
+      process.kill(-childPid, signal);
+    }
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ESRCH") {
+      throw error;
+    }
+  }
 }
 
 export async function runProcess(
@@ -31,16 +51,20 @@ export async function runProcess(
   return await new Promise<ProcessResult>((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      env: options.env ?? process.env,
+      env: options.env ?? allowlistedEnvironment(),
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
+      detached: process.platform !== "win32",
     });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let forceTimer: NodeJS.Timeout | undefined;
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGTERM");
+      signalProcessTree(child.pid, "SIGTERM");
+      forceTimer = setTimeout(() => signalProcessTree(child.pid, "SIGKILL"), STOP_GRACE_MS);
+      forceTimer.unref();
     }, timeoutMs);
 
     child.stdout.on("data", (chunk: Buffer) => {
@@ -51,10 +75,16 @@ export async function runProcess(
     });
     child.once("error", (error) => {
       clearTimeout(timer);
+      if (forceTimer) {
+        clearTimeout(forceTimer);
+      }
       reject(error);
     });
     child.once("close", (exitCode, signal) => {
       clearTimeout(timer);
+      if (forceTimer) {
+        clearTimeout(forceTimer);
+      }
       const completed = new Date();
       resolve({
         command,
@@ -91,9 +121,10 @@ export function startManagedProcess(
   const outputLimit = options.outputLimitBytes ?? DEFAULT_OUTPUT_LIMIT_BYTES;
   const child = spawn(command, args, {
     cwd: options.cwd,
-    env: options.env ?? process.env,
+    env: options.env ?? allowlistedEnvironment(),
     shell: false,
     stdio: ["ignore", "pipe", "pipe"],
+    detached: process.platform !== "win32",
   });
   let stdout = "";
   let stderr = "";
@@ -136,10 +167,10 @@ export function startManagedProcess(
       if (result) {
         return result;
       }
-      child.kill("SIGTERM");
+      signalProcessTree(child.pid, "SIGTERM");
       const forceTimer = setTimeout(() => {
         if (!result) {
-          child.kill("SIGKILL");
+          signalProcessTree(child.pid, "SIGKILL");
         }
       }, STOP_GRACE_MS);
       try {
