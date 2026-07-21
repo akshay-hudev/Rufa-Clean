@@ -48,9 +48,19 @@ describeDatabase("PostgreSQL milestone ledger", () => {
       findings: [value],
     };
     const runId = await store.recordAnalysis(analysis, "integration-operator");
-    const firstReview = await store.recordDisposition({ findingId: value.findingId, decision: "confirmed_dead", actorIdentity: "reviewer", rationale: "fixture evidence reviewed" });
-    const secondReview = await store.recordDisposition({ findingId: value.findingId, decision: "confirmed_dead", actorIdentity: "reviewer", rationale: "independent append-only reaffirmation" });
+    const [firstReview, secondReview] = await Promise.all([
+      store.recordDisposition({ findingId: value.findingId, decision: "confirmed_dead", actorIdentity: "reviewer", rationale: "fixture evidence reviewed" }),
+      store.recordDisposition({ findingId: value.findingId, decision: "confirmed_dead", actorIdentity: "reviewer", rationale: "concurrent append-only reaffirmation" }),
+    ]);
     expect(secondReview).not.toBe(firstReview);
+    await Promise.all(Array.from({ length: 8 }, (_, index) =>
+      store.recordDisposition({
+        findingId: value.findingId,
+        decision: "confirmed_dead",
+        actorIdentity: "reviewer",
+        rationale: `sequence boundary reaffirmation ${index + 1}`,
+      })
+    ));
     const authorizationId = await store.recordAuthorization({ findingId: value.findingId, decision: "approved_for_remediation", actorIdentity: "authorizer", rationale: "narrow fixture removal approved" });
     const patch = "diff --git a/src/dead.ts b/src/dead.ts\n";
     const verified = {
@@ -73,7 +83,7 @@ describeDatabase("PostgreSQL milestone ledger", () => {
 
     await expect(pool.query("UPDATE milestone_findings SET classification = 'failed' WHERE finding_id = $1", [value.findingId])).rejects.toThrow(/immutable milestone ledger/);
     const reviewCount = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM human_review_decisions WHERE finding_id = $1", [value.findingId]);
-    expect(reviewCount.rows[0]?.count).toBe("2");
+    expect(reviewCount.rows[0]?.count).toBe("10");
     await store.recordAuthorization({ findingId: value.findingId, decision: "revoked", actorIdentity: "authorizer", rationale: "integration revocation" });
     expect((await store.latestAuthorization(value.findingId)).decision).toBe("revoked");
     const audit = await store.auditChain(value.accountScopeId) as Array<{ sequence: string | number; previous_event_hash: string | null; event_hash: string }>;

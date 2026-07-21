@@ -15,7 +15,7 @@ export async function runIsolatedAnalysis(input: {
 }): Promise<CanonicalAnalysisResult> {
   try {
     const install = await input.session.runInstall("npm", [
-      "ci", "--ignore-scripts", "--no-audit", "--no-fund",
+      "ci", "--ignore-scripts", "--include=dev", "--no-audit", "--no-fund",
     ]);
     requirePassed("Dependency installation", install);
     await input.session.sealNetwork();

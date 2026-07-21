@@ -1,6 +1,6 @@
 import type { ScipDocument } from "../indexing/analyzers/scip-parse";
 
-export const MILESTONE_POLICY_VERSION = "typescript-private-function-v1";
+export const MILESTONE_POLICY_VERSION = "typescript-private-function-v3";
 
 export type FindingClassification =
   | "candidate_dead"

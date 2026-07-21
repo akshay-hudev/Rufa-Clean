@@ -16,6 +16,5 @@ COPY scripts/piranha-remove-simple.py ./scripts/piranha-remove-simple.py
 RUN npm run build \
  && npm rebuild tree-sitter tree-sitter-javascript tree-sitter-python tree-sitter-typescript
 
-ENV NODE_ENV=production
 USER 65532:65532
 WORKDIR /workspace

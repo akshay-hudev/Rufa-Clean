@@ -100,10 +100,19 @@ export class DockerIsolatedRunner {
       return result;
     };
 
+    if (this.registryEgress) {
+      const network = await docker([
+        "network", "inspect", "--format", "{{.Internal}}", this.registryEgress.networkName,
+      ], 30_000);
+      if (network.stdout.trim() !== "true") {
+        throw new Error("DCA registry network must be a Docker internal network");
+      }
+    }
+
     const createArgs = [
       "create",
       "--name", containerName,
-      "--network", "none",
+      "--network", this.registryEgress?.networkName ?? "none",
       "--read-only",
       "--user", "65532:65532",
       "--cap-drop", "ALL",
@@ -175,22 +184,15 @@ export class DockerIsolatedRunner {
         }
         if (
           command !== "npm" || args[0] !== "ci" ||
-          !args.includes("--ignore-scripts")
+          !args.includes("--ignore-scripts") || !args.includes("--include=dev")
         ) {
-          throw new Error("Install phase permits only npm ci --ignore-scripts");
+          throw new Error("Install phase requires npm ci --ignore-scripts --include=dev");
         }
         if (!this.registryEgress) {
           // No network is safer than silently granting broad egress. This can
           // succeed only when the lockfile requires no uncached downloads.
           return exec(command, args, "none");
         }
-        const network = await docker([
-          "network", "inspect", "--format", "{{.Internal}}", this.registryEgress.networkName,
-        ], 30_000);
-        if (network.stdout.trim() !== "true") {
-          throw new Error("DCA registry network must be a Docker internal network");
-        }
-        await docker(["network", "connect", this.registryEgress.networkName, containerName], 30_000);
         try {
           return await exec(command, args, "registry_proxy", {
             HTTPS_PROXY: this.registryEgress.proxyUrl,

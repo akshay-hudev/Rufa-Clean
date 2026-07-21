@@ -51,12 +51,18 @@ async function appendAudit(
     actorIdentity: string;
   },
 ): Promise<void> {
-  await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [input.accountScopeId]);
+  const scope = await client.query<{ id: string }>(
+    "SELECT id FROM account_scopes WHERE id = $1 FOR UPDATE",
+    [input.accountScopeId],
+  );
+  if (!scope.rows[0]) {
+    throw new Error(`Audit account scope does not exist: ${input.accountScopeId}`);
+  }
   const prior = await client.query<{ sequence: string; event_hash: string }>(
     `SELECT sequence::text, event_hash
        FROM milestone_audit_events
       WHERE account_scope_id = $1
-      ORDER BY sequence DESC
+      ORDER BY milestone_audit_events.sequence DESC
       LIMIT 1`,
     [input.accountScopeId],
   );

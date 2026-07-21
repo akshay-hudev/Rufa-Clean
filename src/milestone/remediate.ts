@@ -148,7 +148,9 @@ export async function remediateInIsolation(input: {
     if (sha256(originalContent) !== input.finding.occurrence.sourceSha256) {
       throw new Error("stale authorization: source hash changed before baseline");
     }
-    const install = await input.session.runInstall("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"]);
+    const install = await input.session.runInstall("npm", [
+      "ci", "--ignore-scripts", "--include=dev", "--no-audit", "--no-fund",
+    ]);
     if (install.exitCode !== 0 || install.timedOut) {
       baseline = {
         status: "failed", packageRoot: "/workspace",

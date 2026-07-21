@@ -33,7 +33,9 @@ afterAll(async () => {
 
 async function session() {
   const value = await new DockerIsolatedRunner(image!, limits).createSession(root);
-  const install = await value.runInstall("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"]);
+  const install = await value.runInstall("npm", [
+    "ci", "--ignore-scripts", "--include=dev", "--no-audit", "--no-fund",
+  ]);
   expect(install.exitCode).toBe(0);
   expect(install.timedOut).toBe(false);
   await value.sealNetwork();
