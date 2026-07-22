@@ -1,0 +1,2673 @@
+$schema: ./phase-test-manifest.schema.json
+schema_version: "1.0.0"
+manifest_id: phase-1-tests
+phase_id: phase-1-typescript-vertical-slice
+title: Phase 1 TypeScript Vertical Slice Test Manifest
+purpose: >-
+  Defines the required governance, qualification, TypeScript analysis, evidence, coverage, classification, disposition, remediation, verification, publication, persistence, security, reporting, and handoff tests for the bounded Phase 1 TypeScript vertical slice. This manifest does not authorize implementation, repository access, credential use, dependency installation, remediation, publication, or destructive operations.
+document_status: active
+implementation_authorized_by_manifest: false
+capability_ids:
+  - repository.typescript.qualify.v1
+  - runtime.node.resolve.v1
+  - package-manager.npm.resolve.v1
+  - inventory.typescript.module.v1
+  - inventory.typescript.function.v1
+  - analysis.typescript.imports.v1
+  - analysis.typescript.references.v1
+  - evidence.typescript.normalize.v1
+  - coverage.typescript.single-package.v1
+  - classification.typescript.private-function.v1
+  - disposition.finding.record.v1
+  - remediation.authorization.validate.v1
+  - reproduction.typescript.private-function.v1
+  - remediation.typescript.private-function-delete.v1
+  - verification.typescript.gates.v1
+  - patch.deterministic.generate.v1
+  - publisher.trusted-draft-pr.v1
+  - audit.phase-1-events.v1
+  - reporting.phase-1-completion.v1
+references:
+  - path: AGENTS.md
+    purpose: Defines repository-level operating instructions.
+  - path: codex/core/01-instruction-precedence.md
+    purpose: Defines instruction precedence and conflict handling.
+  - path: codex/core/03-safety-invariants.md
+    purpose: Defines permanent safety invariants.
+  - path: codex/core/04-accuracy-and-evidence-policy.md
+    purpose: Defines evidence-backed accuracy requirements.
+  - path: codex/core/05-phase-authorization-protocol.md
+    purpose: Defines phase authorization requirements.
+  - path: codex/core/06-autonomy-and-stop-conditions.md
+    purpose: Defines bounded autonomy and mandatory stop behavior.
+  - path: codex/core/07-source-control-policy.md
+    purpose: Defines source-control and draft-publication boundaries.
+  - path: codex/core/08-secret-handling-policy.md
+    purpose: Defines secret-handling requirements.
+  - path: codex/core/09-prompt-injection-policy.md
+    purpose: Defines handling of untrusted repository content.
+  - path: codex/core/10-reporting-and-state-policy.md
+    purpose: Defines truthful reporting and execution-state requirements.
+  - path: codex/access/github-repository-policy.yaml
+    purpose: Defines repository-operation access policy.
+  - path: codex/access/prohibited-repositories.yaml
+    purpose: Defines repositories that must never receive content access.
+  - path: codex/architecture/evidence-model.md
+    purpose: Defines normalized evidence and provenance.
+  - path: codex/architecture/coverage-model.md
+    purpose: Defines open-world coverage semantics.
+  - path: codex/architecture/classification-policy.md
+    purpose: Defines deterministic classification behavior.
+  - path: codex/architecture/remediation-policy.md
+    purpose: Defines remediation prerequisites and boundaries.
+  - path: codex/architecture/trusted-publisher-policy.md
+    purpose: Defines trusted publisher separation and draft-only behavior.
+  - path: codex/architecture/audit-policy.md
+    purpose: Defines audit-event requirements.
+  - path: codex/engineering/structured-command-policy.md
+    purpose: Defines trusted structured-command execution.
+  - path: codex/engineering/runner-security-controls.md
+    purpose: Defines untrusted runner security controls.
+  - path: codex/engineering/database-evolution-policy.md
+    purpose: Defines additive migration requirements.
+  - path: codex/engineering/testing-policy.md
+    purpose: Defines test execution and reporting policy.
+  - path: codex/roadmap/phase-1-typescript-vertical-slice.md
+    purpose: Defines Phase 1 scope and completion criteria.
+  - path: codex/authorizations/current-phase-authorization.yaml
+    purpose: Identifies whether Phase 1 execution is currently authorized.
+defaults:
+  default_runner_profile: isolated-typescript-runner
+  default_network_profile: network-disabled
+  default_timeout_seconds: 1200
+  default_output_limit_bytes: 2097152
+  default_retry_policy: no_retry
+  unavailable_test_result: not_passed
+  skipped_test_result: not_passed
+  unexpected_error_result: failed
+  cleanup_required: true
+fixtures:
+  - fixture_id: phase-1-local-dcav2
+    fixture_type: local_repository
+    description: >-
+      The local DCAv2 repository at the exact source revision and worktree state recorded for the authorized Phase 1 execution.
+    source_identity: local-dcav2-repository
+    authorization_required: true
+    cleanup_required: false
+  - fixture_id: phase-1-typescript-private-function
+    fixture_type: synthetic_repository
+    description: >-
+      A synthetic npm TypeScript repository containing one private module-level function with no supported references and several similarly named live functions used to verify exact identity and transformation behavior.
+    source_identity: synthetic-typescript-private-function-fixture
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-1-tenant
+    cleanup_required: true
+  - fixture_id: phase-1-typescript-live-function
+    fixture_type: synthetic_repository
+    description: >-
+      A synthetic npm TypeScript repository containing direct calls, imported references, value references, callbacks, re-exports, tests, and dynamic uncertainty that must prevent an unsafe dead-code conclusion.
+    source_identity: synthetic-typescript-live-function-fixture
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-1-tenant
+    cleanup_required: true
+  - fixture_id: phase-1-typescript-broken-runner
+    fixture_type: synthetic_repository
+    description: >-
+      A synthetic TypeScript repository whose declared compiler exists as a development dependency but is intentionally unavailable through the isolated runner configuration.
+    source_identity: synthetic-typescript-broken-runner-fixture
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-1-tenant
+    cleanup_required: true
+  - fixture_id: phase-1-hostile-typescript-content
+    fixture_type: synthetic_repository
+    description: >-
+      A synthetic TypeScript repository containing prompt-injection attempts, command-like text, path traversal attempts, symbolic links, malicious package scripts, oversized output, and synthetic secret canaries.
+    source_identity: synthetic-phase-1-hostile-content
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    contains_synthetic_secrets: true
+    tenant_scope: synthetic-phase-1-tenant
+    cleanup_required: true
+  - fixture_id: phase-1-external-rufa-test-lib
+    fixture_type: external_repository
+    description: >-
+      The separately authorized external fixture repository akshay-hudev/rufa-test-lib at an exact immutable commit. The intended finding target is the deliberately private function normalizeLegacyReference. Historical access does not activate this fixture.
+    source_identity: akshay-hudev/rufa-test-lib
+    authorization_required: true
+    tenant_scope: authorized-phase-1-tenant
+    cleanup_required: true
+  - fixture_id: phase-1-provider-emulator
+    fixture_type: provider_emulator
+    description: >-
+      An isolated source-provider emulator used to verify branch, draft pull request, idempotency, partial-state, and publisher-policy behavior without live provider access.
+    source_identity: phase-1-source-provider-emulator
+    immutable_revision: emulator-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-1-tenant
+    cleanup_required: true
+  - fixture_id: phase-1-database
+    fixture_type: database
+    description: >-
+      An isolated PostgreSQL-compatible Phase 1 database fixture containing Phase 0 state and synthetic tenants, findings, evidence, coverage, disposition, authorization, remediation, and audit records.
+    source_identity: phase-1-postgresql-fixture
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    contains_synthetic_secrets: false
+    tenant_scope: synthetic-phase-1-tenant
+    cleanup_required: true
+test_groups:
+  - group_id: phase-1-authorization
+    title: Phase authorization and scope
+    purpose: >-
+      Verify that Phase 1 work executes only under a current explicit authorization and that repository, finding, remediation, and publication permissions remain separate.
+    execution_order: 10
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-current-phase-authorization
+        title: Validate current Phase 1 authorization
+        objective: >-
+          Confirm that execution proceeds only when the current authorization explicitly activates phase-1-typescript-vertical-slice and identifies the permitted repository, revision, operations, commands, credentials, tests, and stop conditions.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.typescript.qualify.v1
+        requirement_references:
+          - path: codex/core/05-phase-authorization-protocol.md
+          - path: codex/authorizations/current-phase-authorization.yaml
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - authorization.validate-phase-1
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-local-dcav2
+        expected_results:
+          - result_id: phase-1-authorization-valid
+            description: >-
+              The authorization is either a valid current Phase 1 authorization or execution is denied without running implementation commands.
+            status: passed
+            machine_assertion: unauthorized_phase_1_execution_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Validated current authorization with secret-free capability metadata.
+            schema_or_format: phase-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: policy_decision
+            description: Phase activation decision and denied operation set.
+            schema_or_format: phase-policy-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - authorization
+          - phase-1
+          - default-deny
+      - test_id: p1-operation-permission-separation
+        title: Validate operation-permission separation
+        objective: >-
+          Confirm that analysis permission does not imply dependency installation, remediation, branch creation, publication, merge, infrastructure access, or destructive-operation permission.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - remediation.authorization.validate.v1
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - authorization.test-operation-separation
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-local-dcav2
+        expected_results:
+          - result_id: permissions-remain-independent
+            description: >-
+              Every tested operation requires its own matching permission and no permission is inferred from analysis access.
+            status: passed
+            machine_assertion: implicit_permission_escalation_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Operation-specific authorization decision matrix.
+            schema_or_format: operation-permission-matrix-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - authorization
+          - least-privilege
+      - test_id: p1-prohibited-repository-preflight
+        title: Validate prohibited-repository denial before content access
+        objective: >-
+          Confirm that akshay-hudev/Rufa-Clean is rejected using canonical repository identity before any branch, commit, tree, source, qualification, analysis, remediation, or publication request occurs.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.typescript.qualify.v1
+          - publisher.trusted-draft-pr.v1
+        requirement_references:
+          - path: codex/access/prohibited-repositories.yaml
+          - path: codex/access/github-repository-policy.yaml
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - access-policy.test-prohibited-preflight
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-local-dcav2
+        expected_results:
+          - result_id: prohibited-repository-denied
+            description: >-
+              The prohibited decision is produced using minimum canonical identity metadata and no repository content request is emitted.
+            status: passed
+            machine_assertion: prohibited_repository_content_request_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Repository preflight denial record.
+            schema_or_format: repository-access-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Secret-free prohibited-repository denial event.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - prohibited-repository
+          - preflight
+  - group_id: phase-1-qualification
+    title: TypeScript repository qualification
+    purpose: >-
+      Verify deterministic repository, Node.js, npm, source-root, configuration, command, and baseline qualification for the bounded Phase 1 profile.
+    execution_order: 20
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-supported-repository-qualification
+        title: Qualify the supported npm TypeScript profile
+        objective: >-
+          Confirm that a single-package npm TypeScript repository with a supported Node.js version, supported compiler configuration, current dependency metadata, discoverable source root, and available required gates receives the ready status.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.typescript.qualify.v1
+          - runtime.node.resolve.v1
+          - package-manager.npm.resolve.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - qualification.typescript-single-package
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: supported-profile-ready
+            description: >-
+              The repository receives ready status with exact source, Node.js, npm, compiler, package, configuration, and command identities.
+            status: passed
+            machine_assertion: qualification_status == 'ready'
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Complete TypeScript qualification record.
+            schema_or_format: typescript-qualification-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: coverage_record
+            description: Qualification-dimension completion record.
+            schema_or_format: qualification-coverage-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Qualification runner workspace and processes were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - qualification
+          - typescript
+          - npm
+      - test_id: p1-node-resolution
+        title: Validate deterministic Node.js resolution
+        objective: >-
+          Confirm that the selected Node.js executable comes from an approved runner or explicitly supported project toolchain and that a conflicting or missing version does not fall back silently to a host-global binary.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - runtime.node.resolve.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - runtime.test-node-resolution
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-typescript-broken-runner
+        expected_results:
+          - result_id: node-resolution-deterministic
+            description: >-
+              Supported Node.js resolution is exact and unsupported or missing versions produce explicit non-ready statuses.
+            status: passed
+            machine_assertion: host_global_node_fallback_count == 0
+        evidence_requirements:
+          - evidence_type: command_record
+            description: Node.js version and executable-resolution records.
+            schema_or_format: tool-resolution-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Tool-resolution runner state was removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - node
+          - tool-resolution
+      - test_id: p1-npm-profile-resolution
+        title: Validate npm manifest and lockfile resolution
+        objective: >-
+          Confirm that package.json and the supported npm lockfile are bound to exact content identities and that missing, conflicting, stale, or unexpectedly modified dependency inputs prevent ready status.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - package-manager.npm.resolve.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - package-manager.test-npm-profile
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: npm-inputs-exact
+            description: >-
+              Manifest and lockfile identities are exact and no silent dependency-input selection or mutation occurs.
+            status: passed
+            machine_assertion: npm_dependency_input_error_count == 0
+        evidence_requirements:
+          - evidence_type: artifact_digest
+            description: Manifest and lockfile content digests.
+            schema_or_format: dependency-input-digest-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: npm profile resolution and conflict report.
+            schema_or_format: npm-profile-resolution-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: npm profile test workspace was cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - npm
+          - lockfile
+          - qualification
+      - test_id: p1-typescript-compiler-resolution
+        title: Validate project TypeScript compiler resolution
+        objective: >-
+          Confirm that the isolated runner resolves the exact approved project-local TypeScript compiler and that the known missing-tsc configuration defect produces an unavailable or blocked result rather than a passing gate.
+        category: failure
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - verification.typescript.gates.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - runtime.test-typescript-compiler-resolution
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-typescript-broken-runner
+        expected_results:
+          - result_id: compiler-resolved-for-supported-profile
+            description: >-
+              The supported fixture resolves the exact approved project compiler.
+            status: passed
+            machine_assertion: supported_fixture_compiler_status == 'resolved'
+          - result_id: unavailable-compiler-remains-nonpassing
+            description: >-
+              The broken runner fixture records the compiler as unavailable or blocked and never reports type checking as passed.
+            status: passed
+            machine_assertion: unavailable_compiler_false_pass_count == 0
+        evidence_requirements:
+          - evidence_type: command_record
+            description: Compiler resolution and execution records for both fixtures.
+            schema_or_format: structured-command-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: Compiler path, version, provenance, and failure classification.
+            schema_or_format: typescript-compiler-resolution-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Compiler-resolution workspaces and processes were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - typescript
+          - compiler
+          - runner-defect
+      - test_id: p1-unsupported-profile-statuses
+        title: Validate unsupported and ambiguous qualification outcomes
+        objective: >-
+          Confirm that unsupported package managers, conflicting project roots, unsupported compiler settings, missing lockfiles, malformed configuration, and inaccessible source roots produce explicit safe statuses.
+        category: failure
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.typescript.qualify.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - qualification.test-safe-failure-statuses
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: unsupported-scope-not-ready
+            description: >-
+              Every unsupported, ambiguous, inaccessible, or malformed profile receives a non-ready status with a bounded reason.
+            status: passed
+            machine_assertion: unsafe_ready_status_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Qualification failure cases and resulting statuses.
+            schema_or_format: qualification-failure-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Failure-case workspaces and processes were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - qualification
+          - unsupported
+          - failure-semantics
+  - group_id: phase-1-inventory-and-evidence
+    title: TypeScript inventory and evidence
+    purpose: >-
+      Verify deterministic module and function identity, semantic reference evidence, import evidence, provenance, freshness, and failure semantics.
+    execution_order: 30
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-module-inventory
+        title: Inventory TypeScript modules deterministically
+        objective: >-
+          Confirm that authored TypeScript modules are identified by repository, commit, package, source root, file path, module identity, and content digest while generated, test, vendored, and unsupported files remain distinguishable.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - inventory.typescript.module.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - inventory.typescript-modules
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-typescript-live-function
+        expected_results:
+          - result_id: module-identities-deterministic
+            description: >-
+              Repeated inventory produces identical module identities and source-kind classifications.
+            status: passed
+            machine_assertion: nondeterministic_module_identity_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: TypeScript module inventory with source-kind metadata.
+            schema_or_format: typescript-module-inventory-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Module-inventory runners and workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - inventory
+          - modules
+          - determinism
+      - test_id: p1-function-identity
+        title: Identify private functions exactly
+        objective: >-
+          Confirm that function identity includes repository, commit, package, module, file, source occurrence, qualified name, syntax shape, export state, and content digest.
+        category: determinism
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - inventory.typescript.function.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - inventory.test-typescript-function-identity
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-typescript-live-function
+        expected_results:
+          - result_id: same-name-functions-remain-distinct
+            description: >-
+              Functions with the same name in different files, modules, scopes, or source occurrences receive distinct identities.
+            status: passed
+            machine_assertion: function_identity_collision_count == 0
+          - result_id: repeated-inventory-stable
+            description: >-
+              Repeated inventory over identical source produces identical function identities.
+            status: passed
+            machine_assertion: repeated_function_identity_difference_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Function inventory and identity comparison.
+            schema_or_format: typescript-function-inventory-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Function-identity test runners and workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - functions
+          - identity
+          - determinism
+      - test_id: p1-import-and-reference-evidence
+        title: Resolve supported imports and references
+        objective: >-
+          Confirm that direct calls, value references, imported references, aliases, callbacks, exports, re-exports, and test references produce positive attributable evidence for the exact target symbol.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - analysis.typescript.imports.v1
+          - analysis.typescript.references.v1
+          - evidence.typescript.normalize.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - analysis.test-typescript-references
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-live-function
+        expected_results:
+          - result_id: supported-references-resolved
+            description: >-
+              Every supported reference form resolves to the exact symbol and retains source occurrence and producer provenance.
+            status: passed
+            machine_assertion: missing_expected_reference_evidence_count == 0
+          - result_id: unrelated-name-matches-not-resolved
+            description: >-
+              Comments, strings, and same-name unrelated symbols do not become exact semantic references.
+            status: passed
+            machine_assertion: false_semantic_reference_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Normalized import and reference evidence.
+            schema_or_format: normalized-evidence-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: artifact_digest
+            description: Raw analyzer artifact digest and configuration identity.
+            schema_or_format: analyzer-artifact-identity-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Reference-analysis runner state was cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - evidence
+          - references
+          - imports
+      - test_id: p1-analyzer-failure-not-absence
+        title: Prevent analyzer failure from becoming zero references
+        objective: >-
+          Confirm that parser failure, semantic-analyzer failure, malformed output, timeout, resource exhaustion, and unsupported syntax produce failed or partial coverage rather than authoritative absence evidence.
+        category: failure
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - analysis.typescript.references.v1
+          - evidence.typescript.normalize.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - analysis.test-failure-not-absence
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: failures-remain-explicit
+            description: >-
+              Every failed or unsupported analyzer scope remains non-complete and emits no authoritative no-reference evidence.
+            status: passed
+            machine_assertion: failed_analyzer_absence_evidence_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Analyzer failure cases and resulting evidence and coverage states.
+            schema_or_format: analyzer-failure-semantics-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Failure-injection runner state was cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - evidence
+          - failure
+          - open-world
+      - test_id: p1-evidence-freshness
+        title: Invalidate stale TypeScript evidence
+        objective: >-
+          Confirm that source, configuration, compiler, analyzer, package, module, or canonicalization changes invalidate dependent evidence.
+        category: regression
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - evidence.typescript.normalize.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - evidence.test-typescript-freshness
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: stale-evidence-rejected
+            description: >-
+              Evidence generated from any materially different source or tool identity is marked stale and cannot satisfy current classification.
+            status: passed
+            machine_assertion: stale_evidence_accepted_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Evidence invalidation cases and dependency propagation.
+            schema_or_format: evidence-freshness-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Freshness test repositories and temporary artifacts were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - evidence
+          - freshness
+          - invalidation
+  - group_id: phase-1-coverage-and-classification
+    title: Coverage and classification
+    purpose: >-
+      Verify open-world TypeScript coverage, deterministic classification, positive-evidence dominance, and safe handling of unsupported scope.
+    execution_order: 40
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-complete-typescript-coverage
+        title: Establish complete supported TypeScript coverage
+        objective: >-
+          Confirm that complete coverage requires successful qualification, source discovery, parsing, import analysis, reference analysis, export analysis, configuration analysis, required gate readiness, and explicit accounting for every required file and module.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - coverage.typescript.single-package.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - coverage.test-typescript-complete-profile
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: required-dimensions-complete
+            description: >-
+              The supported fixture receives complete coverage only when every required dimension succeeds.
+            status: passed
+            machine_assertion: supported_fixture_coverage_status == 'complete'
+        evidence_requirements:
+          - evidence_type: coverage_record
+            description: File, module, package, and repository coverage records.
+            schema_or_format: typescript-coverage-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: artifact_digest
+            description: Deterministic coverage digest.
+            schema_or_format: coverage-digest-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Coverage-analysis runner state was cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - coverage
+          - complete
+          - open-world
+      - test_id: p1-partial-coverage-preserves-uncertainty
+        title: Preserve uncertainty under partial coverage
+        objective: >-
+          Confirm that inaccessible files, parse failures, analyzer failures, unsupported syntax, unresolved configuration, and unavailable required gates produce partial or failed coverage and prevent candidate-dead classification.
+        category: failure
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - coverage.typescript.single-package.v1
+          - classification.typescript.private-function.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - coverage.test-partial-uncertainty
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+          - phase-1-typescript-broken-runner
+        expected_results:
+          - result_id: partial-coverage-not-candidate-dead
+            description: >-
+              No target under incomplete required coverage receives candidate_dead.
+            status: passed
+            machine_assertion: incomplete_coverage_candidate_dead_count == 0
+        evidence_requirements:
+          - evidence_type: coverage_record
+            description: Partial and failed coverage records with exact affected scopes.
+            schema_or_format: typescript-coverage-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: Classification results for incomplete coverage cases.
+            schema_or_format: classification-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Partial-coverage test workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - coverage
+          - uncertainty
+          - failure
+      - test_id: p1-private-function-classification
+        title: Classify a supported private function deterministically
+        objective: >-
+          Confirm that a supported private non-exported module-level function with complete required coverage and no dominant liveness evidence may receive candidate_dead.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - classification.typescript.private-function.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - classification.test-private-function
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: supported-private-function-candidate
+            description: >-
+              The exact intended private function receives candidate_dead under the supported profile.
+            status: passed
+            machine_assertion: expected_target_classification == 'candidate_dead'
+          - result_id: classification-deterministic
+            description: >-
+              Repeated and reordered evidence inputs produce the same classification and explanation digest.
+            status: passed
+            machine_assertion: classification_nondeterminism_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Classification result and bounded explanation.
+            schema_or_format: classification-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: coverage_record
+            description: Complete coverage record used by the classification.
+            schema_or_format: typescript-coverage-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Classification runner state was cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - classification
+          - candidate-dead
+          - determinism
+      - test_id: p1-positive-evidence-dominance
+        title: Validate positive liveness evidence dominance
+        objective: >-
+          Confirm that direct calls, value references, imports, exports, re-exports, callbacks, tests, or supported configuration references produce live or inconclusive outcomes regardless of absence evidence from another tool.
+        category: regression
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - classification.typescript.private-function.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - classification.test-positive-evidence-dominance
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-live-function
+        expected_results:
+          - result_id: positive-evidence-prevents-dead-classification
+            description: >-
+              Every target with exact positive liveness evidence is excluded from candidate_dead.
+            status: passed
+            machine_assertion: positive_evidence_candidate_dead_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Evidence-precedence cases and classification outcomes.
+            schema_or_format: evidence-precedence-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Evidence-precedence test workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - classification
+          - liveness
+          - precedence
+      - test_id: p1-exported-and-public-symbol-protection
+        title: Protect exported and public symbols
+        objective: >-
+          Confirm that exported, re-exported, declaration-exposed, package-entry, and otherwise public symbols do not become remediation-eligible under the initial private-function profile.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - classification.typescript.private-function.v1
+          - remediation.typescript.private-function-delete.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - classification.test-public-surface-protection
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-live-function
+        expected_results:
+          - result_id: public-symbols-not-remediation-eligible
+            description: >-
+              Every public or exported symbol is live, inconclusive, or unsupported for remediation.
+            status: passed
+            machine_assertion: public_symbol_remediation_eligible_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Public-surface cases and resulting classifications.
+            schema_or_format: public-surface-protection-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Public-surface test workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - public-api
+          - exports
+          - remediation-boundary
+  - group_id: phase-1-disposition-and-reproduction
+    title: Human disposition, authorization, and reproduction
+    purpose: >-
+      Verify that human disposition, remediation authorization, and exact finding reproduction remain distinct and current.
+    execution_order: 50
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-human-disposition-separation
+        title: Keep human disposition separate from classification
+        objective: >-
+          Confirm that candidate_dead does not create confirmed_dead and that confirmed_dead, confirmed_live, and needs_investigation decisions are attributable, version-bound, revocable, and historically preserved.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - disposition.finding.record.v1
+        required_permissions:
+          - local-command-execution
+          - database-write
+        command_ids:
+          - disposition.test-separation-and-history
+        runner_profile: trusted-controller-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-database
+        expected_results:
+          - result_id: classification-does-not-create-disposition
+            description: >-
+              No machine classification creates a human disposition automatically.
+            status: passed
+            machine_assertion: automatic_human_disposition_count == 0
+          - result_id: disposition-history-preserved
+            description: >-
+              Revocation and supersession preserve the complete prior decision history.
+            status: passed
+            machine_assertion: disposition_history_loss_count == 0
+        evidence_requirements:
+          - evidence_type: database_record
+            description: Disposition records, actors, revisions, digests, and history.
+            schema_or_format: finding-disposition-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Disposition creation, revocation, and supersession events.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Synthetic disposition records and database fixture state were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - disposition
+          - human-review
+          - history
+      - test_id: p1-remediation-authorization-separation
+        title: Keep remediation authorization separate from disposition
+        objective: >-
+          Confirm that confirmed_dead does not authorize source modification and that remediation requires an exact current authorization bound to the finding, repository, commit, symbol, evidence, coverage, transformation, files, gates, and expiration.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - remediation.authorization.validate.v1
+        required_permissions:
+          - local-command-execution
+          - database-write
+        command_ids:
+          - remediation.test-authorization-separation
+        runner_profile: trusted-controller-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-database
+        expected_results:
+          - result_id: confirmed-dead-not-authority
+            description: >-
+              A confirmed_dead disposition without remediation authorization is denied.
+            status: passed
+            machine_assertion: disposition_only_remediation_allow_count == 0
+          - result_id: mismatched-authorizations-denied
+            description: >-
+              Wrong repository, commit, symbol, evidence digest, coverage digest, transformation, changed-file scope, expiration, or status denies remediation.
+            status: passed
+            machine_assertion: mismatched_remediation_authorization_allow_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Exact remediation authorization fixtures and validation outcomes.
+            schema_or_format: remediation-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: policy_decision
+            description: Allow and deny decisions for authorization cases.
+            schema_or_format: remediation-policy-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Synthetic remediation authorization records were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - remediation
+          - authorization
+          - separation
+      - test_id: p1-exact-finding-reproduction
+        title: Reproduce the exact TypeScript finding
+        objective: >-
+          Confirm that remediation preparation reproduces the exact repository, commit, package, module, file, private function, source occurrence, export state, content digest, evidence digest, coverage digest, disposition, and authorization.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - reproduction.typescript.private-function.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+          - database-read
+        command_ids:
+          - reproduction.test-typescript-private-function
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-database
+        expected_results:
+          - result_id: exact-finding-reproduced
+            description: >-
+              The authorized target reproduces exactly under unchanged inputs.
+            status: passed
+            machine_assertion: exact_reproduction_status == 'matched'
+          - result_id: approximate-matches-rejected
+            description: >-
+              Same-name symbols, moved symbols, changed bodies, changed exports, changed references, stale coverage, and expired authorization are rejected.
+            status: passed
+            machine_assertion: approximate_reproduction_accept_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Exact reproduction comparison for every identity component.
+            schema_or_format: finding-reproduction-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Reproduction success and mismatch events.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Reproduction test workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - reproduction
+          - exact-identity
+          - stale-state
+  - group_id: phase-1-remediation
+    title: Baseline, transformation, and post-change verification
+    purpose: >-
+      Verify the narrow private-function removal workflow, deterministic patch, exact changed-file scope, required gates, and safe failure behavior.
+    execution_order: 60
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-baseline-gates
+        title: Run required TypeScript baseline gates
+        objective: >-
+          Confirm that the unchanged source passes every required available syntax, type-check, lint, test, build, repository-status, and secret gate before transformation.
+        category: integration
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - verification.typescript.gates.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - verification.run-typescript-baseline
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: required-baseline-gates-pass
+            description: >-
+              Every required baseline gate has an explicit passing result.
+            status: passed
+            machine_assertion: required_baseline_nonpass_count == 0
+          - result_id: unavailable-gate-not-passed
+            description: >-
+              An unavailable, skipped, timed-out, malformed, or failed required gate is never represented as passed.
+            status: passed
+            machine_assertion: baseline_false_pass_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Per-gate baseline results and diagnostics.
+            schema_or_format: verification-gate-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: command_record
+            description: Structured command records for every baseline gate.
+            schema_or_format: structured-command-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Baseline gate processes and temporary outputs were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - baseline
+          - typecheck
+          - tests
+      - test_id: p1-structured-private-function-removal
+        title: Remove exactly one supported private function
+        objective: >-
+          Confirm that the structured TypeScript transformation removes only the exact authorized private module-level function and preserves unrelated source, comments, imports, formatting, and line endings according to the supported transformation profile.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - remediation.typescript.private-function-delete.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+          - source-modification
+        command_ids:
+          - remediation.test-private-function-delete
+        runner_profile: isolated-typescript-remediation-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-database
+        expected_results:
+          - result_id: exactly-one-target-removed
+            description: >-
+              The expected rewrite count is one and the exact authorized target is absent afterward.
+            status: passed
+            machine_assertion: rewrite_count == 1
+          - result_id: unrelated-source-preserved
+            description: >-
+              No unrelated declaration, comment, import, file, formatting region, or similarly named function changes.
+            status: passed
+            machine_assertion: unauthorized_semantic_change_count == 0
+        evidence_requirements:
+          - evidence_type: changed_file_record
+            description: Exact before-and-after changed-file and source-occurrence record.
+            schema_or_format: changed-file-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: Structured transformation result and rewrite count.
+            schema_or_format: transformation-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Remediation test workspace and generated temporary files were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - remediation
+          - structured-transformation
+          - exact-rewrite
+      - test_id: p1-unsupported-transformation-shapes
+        title: Reject unsupported transformation shapes
+        objective: >-
+          Confirm that exported functions, methods, constructors, nested functions, overloaded declarations, decorated declarations, generated files, ambiguous comments, unsupported syntax, and multiple matching targets are rejected before modification.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - remediation.typescript.private-function-delete.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+          - source-modification
+        command_ids:
+          - remediation.test-unsupported-typescript-shapes
+        runner_profile: isolated-typescript-remediation-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-live-function
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: unsupported-shapes-not-modified
+            description: >-
+              Every unsupported target is rejected with zero authorized source rewrites.
+            status: passed
+            machine_assertion: unsupported_shape_rewrite_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Unsupported shape cases, rejection reasons, and rewrite counts.
+            schema_or_format: transformation-rejection-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: changed_file_record
+            description: Proof that rejected cases produced no source changes.
+            schema_or_format: changed-file-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Unsupported-shape workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - remediation
+          - rejection
+          - unsupported
+      - test_id: p1-changed-file-allowlist
+        title: Enforce the changed-file allowlist
+        objective: >-
+          Confirm that added, modified, deleted, renamed, mode-changed, symbolic-link, binary, manifest, lockfile, configuration, generated, and source files are compared with the exact remediation authorization.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - remediation.typescript.private-function-delete.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+          - source-modification
+        command_ids:
+          - remediation.test-changed-file-allowlist
+        runner_profile: isolated-typescript-remediation-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: authorized-change-set-accepted
+            description: >-
+              The exact authorized source-file change is accepted.
+            status: passed
+            machine_assertion: authorized_change_set_status == 'accepted'
+          - result_id: unexpected-changes-rejected
+            description: >-
+              Every unexpected source, manifest, lockfile, generated, binary, symbolic-link, or mode change causes failure.
+            status: passed
+            machine_assertion: unexpected_change_allow_count == 0
+        evidence_requirements:
+          - evidence_type: changed_file_record
+            description: Complete repository change inventory and authorization comparison.
+            schema_or_format: changed-file-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Changed-file validation workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - changed-files
+          - allowlist
+          - security
+      - test_id: p1-post-change-gates
+        title: Run required TypeScript post-change gates
+        objective: >-
+          Confirm that every required baseline gate is rerun after transformation and that the candidate change introduces no unauthorized diagnostic, test, build, repository-state, or secret regression.
+        category: integration
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - verification.typescript.gates.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+          - source-modification
+        command_ids:
+          - verification.run-typescript-post-change
+        runner_profile: isolated-typescript-remediation-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: required-post-change-gates-pass
+            description: >-
+              Every required post-change gate passes.
+            status: passed
+            machine_assertion: required_post_change_nonpass_count == 0
+          - result_id: no-new-regressions
+            description: >-
+              Baseline comparison reports no new required diagnostic, test, build, file, or secret failure.
+            status: passed
+            machine_assertion: introduced_regression_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Baseline and post-change gate comparison.
+            schema_or_format: baseline-postchange-comparison-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: command_record
+            description: Structured post-change command records.
+            schema_or_format: structured-command-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Post-change processes, outputs, and workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - post-change
+          - verification
+          - regression
+      - test_id: p1-patch-determinism-and-idempotency
+        title: Validate deterministic and idempotent patch generation
+        objective: >-
+          Confirm that identical authorized inputs produce the same semantic patch and that a second transformation does not remove another similarly named function.
+        category: determinism
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - patch.deterministic.generate.v1
+          - remediation.typescript.private-function-delete.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+          - source-modification
+        command_ids:
+          - patch.test-determinism
+          - remediation.test-idempotency
+        runner_profile: isolated-typescript-remediation-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: patch-hash-stable
+            description: >-
+              Repeated authorized runs produce the same patch hash.
+            status: passed
+            machine_assertion: distinct_patch_hash_count == 1
+          - result_id: second-application-safe
+            description: >-
+              The second transformation returns the documented already-applied or exact-target-not-found result and makes no additional source changes.
+            status: passed
+            machine_assertion: second_application_rewrite_count == 0
+        evidence_requirements:
+          - evidence_type: artifact_digest
+            description: Patch hashes from repeated runs.
+            schema_or_format: patch-identity-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: test_report
+            description: Transformation idempotency result.
+            schema_or_format: transformation-idempotency-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Determinism and idempotency workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - patch
+          - determinism
+          - idempotency
+  - group_id: phase-1-external-fixture
+    title: Authorized external vertical-slice fixture
+    purpose: >-
+      Validate the Phase 1 workflow against the separately authorized external TypeScript fixture without treating historical access as current authorization.
+    execution_order: 70
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-external-fixture-analysis
+        title: Analyze the authorized external TypeScript fixture
+        objective: >-
+          At an explicitly authorized immutable commit, qualify akshay-hudev/rufa-test-lib and reproduce the intended private function normalizeLegacyReference without modifying or publishing the repository.
+        category: external
+        requirement: conditional
+        execution_mode: hybrid
+        activation:
+          default_active: false
+          all_of:
+            - The current Phase 1 authorization explicitly names akshay-hudev/rufa-test-lib.
+            - The authorization includes an exact immutable commit.
+            - The authorization permits source read and analysis.
+          reason: >-
+            External repository analysis is required only when explicitly authorized for the exact repository and commit.
+        capability_ids:
+          - repository.typescript.qualify.v1
+          - classification.typescript.private-function.v1
+          - reproduction.typescript.private-function.v1
+        required_permissions:
+          - external-repository-metadata-read
+          - external-repository-source-read
+          - isolated-runner-execution
+        command_ids:
+          - external-fixture.analyze-rufa-test-lib
+        runner_profile: isolated-external-typescript-runner
+        network_profile: provider-read-only
+        credential_capabilities:
+          - source-provider-read
+        external_operations:
+          - system_type: source_provider
+            system_identity: github-akshay-hudev-rufa-test-lib
+            environment: external-test-fixture
+            operation: Resolve the authorized commit and acquire read-only source.
+            authorization_required: true
+            production_access: not_applicable
+            credential_capability: source-provider-read
+            network_profile: provider-read-only
+            cleanup_required: true
+        fixture_ids:
+          - phase-1-external-rufa-test-lib
+        procedure:
+          - Validate repository policy and prohibited-repository policy before source access.
+          - Resolve the authorized revision to the exact immutable commit.
+          - Acquire source read-only without publisher credentials.
+          - Qualify the repository under the supported Phase 1 profile.
+          - Inventory and reproduce normalizeLegacyReference exactly.
+          - Record unsupported or incomplete scope without modifying source.
+        expected_results:
+          - result_id: external-repository-identity-exact
+            description: >-
+              The analyzed repository and immutable commit match the current authorization exactly.
+            status: passed
+            human_verification: Repository identity and commit match the authorization record.
+          - result_id: intended-function-reproduced
+            description: >-
+              normalizeLegacyReference is reproduced by exact package, module, file, source occurrence, content, evidence, and coverage identity.
+            status: passed
+            human_verification: The reproduced finding is the deliberate private function in the authorized fixture.
+          - result_id: external-fixture-not-modified
+            description: >-
+              No source, branch, pull request, release, setting, or other external write is performed.
+            status: passed
+            machine_assertion: external_fixture_write_operation_count == 0
+        evidence_requirements:
+          - evidence_type: external_operation_record
+            description: Authorized read-only provider operation and exact source commit.
+            schema_or_format: external-operation-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: Qualification, classification, and reproduction result.
+            schema_or_format: external-typescript-fixture-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: policy_decision
+            description: Repository read decision and prohibited-repository preflight result.
+            schema_or_format: repository-access-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_capability
+        retry_policy: manual_only
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: External source workspace, provider credentials, and temporary artifacts were removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - external
+          - rufa-test-lib
+          - read-only
+      - test_id: p1-external-fixture-remediation
+        title: Verify the external fixture remediation workflow
+        objective: >-
+          When separately authorized, run the exact reproduction, baseline, transformation, changed-file validation, post-change verification, and patch-generation workflow for normalizeLegacyReference without publishing it automatically.
+        category: external
+        requirement: conditional
+        execution_mode: hybrid
+        activation:
+          default_active: false
+          all_of:
+            - The current authorization explicitly permits remediation of the exact normalizeLegacyReference finding.
+            - A current confirmed_dead disposition exists.
+            - A current finding-specific remediation authorization exists.
+            - The authorization permits required dependency preparation and tests.
+          reason: >-
+            External fixture remediation is required only under exact current finding-specific authorization.
+        capability_ids:
+          - remediation.typescript.private-function-delete.v1
+          - verification.typescript.gates.v1
+          - patch.deterministic.generate.v1
+        required_permissions:
+          - external-repository-source-read
+          - isolated-runner-execution
+          - source-modification
+          - dependency-installation
+          - remediation-execution
+        command_ids:
+          - external-fixture.remediate-rufa-test-lib
+        runner_profile: isolated-external-remediation-runner
+        network_profile: registry-read-only
+        credential_capabilities:
+          - source-provider-read
+          - package-registry-read
+        external_operations:
+          - system_type: source_provider
+            system_identity: github-akshay-hudev-rufa-test-lib
+            environment: external-test-fixture
+            operation: Acquire the exact authorized source revision read-only.
+            authorization_required: true
+            production_access: not_applicable
+            credential_capability: source-provider-read
+            network_profile: provider-read-only
+            cleanup_required: true
+          - system_type: package_registry
+            system_identity: authorized-npm-registry
+            environment: isolated-remediation-runner
+            operation: Install exact authorized dependencies using the supported immutable npm profile.
+            authorization_required: true
+            production_access: not_applicable
+            credential_capability: package-registry-read
+            network_profile: registry-read-only
+            cleanup_required: true
+        fixture_ids:
+          - phase-1-external-rufa-test-lib
+        procedure:
+          - Revalidate repository, commit, finding, disposition, authorization, evidence, and coverage identities.
+          - Run required baseline gates in the isolated runner.
+          - Remove exactly normalizeLegacyReference using the approved structured transformation.
+          - Reject every unexpected changed file.
+          - Run every required post-change gate.
+          - Generate a deterministic local patch.
+          - Do not create a branch or pull request unless a separate publication test is activated.
+        expected_results:
+          - result_id: exact-external-target-removed-locally
+            description: >-
+              The isolated candidate workspace removes exactly the authorized function and no other source.
+            status: passed
+            human_verification: The local patch contains only the approved function removal.
+          - result_id: external-gates-pass
+            description: >-
+              Every required baseline and post-change gate passes with the exact approved project TypeScript compiler.
+            status: passed
+            machine_assertion: external_required_gate_nonpass_count == 0
+          - result_id: no-automatic-publication
+            description: >-
+              The remediation workflow creates no provider branch or pull request by itself.
+            status: passed
+            machine_assertion: remediation_stage_provider_write_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Current finding-specific external remediation authorization.
+            schema_or_format: remediation-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: test_report
+            description: External baseline and post-change verification results.
+            schema_or_format: verification-gate-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: changed_file_record
+            description: Exact external fixture candidate change set.
+            schema_or_format: changed-file-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: artifact_digest
+            description: Deterministic local patch identity.
+            schema_or_format: patch-identity-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_capability
+        retry_policy: external_state_reconciliation_required
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: External source, dependency environment, credentials, candidate workspace, and temporary patch files were cleaned or retained explicitly.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - external
+          - remediation
+          - exact-target
+  - group_id: phase-1-publisher
+    title: Trusted publisher
+    purpose: >-
+      Verify publisher isolation, exact patch validation, draft-only behavior, default-branch protection, idempotency, and unknown external-state handling.
+    execution_order: 80
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-publisher-isolation
+        title: Validate publisher isolation
+        objective: >-
+          Confirm that the trusted publisher can validate and publish an authorized patch but cannot run repository code, dependency installation, analyzers, builds, tests, or untrusted hooks.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - local-command-execution
+        command_ids:
+          - publisher.test-isolation
+        runner_profile: trusted-publisher-test-runner
+        network_profile: provider-emulator-only
+        fixture_ids:
+          - phase-1-provider-emulator
+          - phase-1-typescript-private-function
+        expected_results:
+          - result_id: publisher-cannot-execute-repository-tools
+            description: >-
+              Repository scripts, package managers, compilers, tests, hooks, and analyzers remain unavailable to the publisher.
+            status: passed
+            machine_assertion: publisher_untrusted_execution_count == 0
+          - result_id: runner-cannot-access-publisher-credentials
+            description: >-
+              Publisher credentials remain unavailable to every untrusted runner.
+            status: passed
+            machine_assertion: runner_publisher_credential_access_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Publisher and runner trust-boundary access tests.
+            schema_or_format: publisher-isolation-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Publisher emulator state and synthetic credentials were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - publisher
+          - isolation
+          - credentials
+      - test_id: p1-publisher-draft-only-policy
+        title: Enforce draft-only publication policy
+        objective: >-
+          Confirm that the trusted publisher rejects direct default-branch pushes, ready-for-review transitions, merge, auto-merge, release, and repository-setting operations while permitting an exact authorized draft pull request.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - local-command-execution
+        command_ids:
+          - publisher.test-draft-only-policy
+        runner_profile: trusted-publisher-test-runner
+        network_profile: provider-emulator-only
+        fixture_ids:
+          - phase-1-provider-emulator
+        expected_results:
+          - result_id: exact-draft-request-accepted
+            description: >-
+              An exact authorized patch may create one draft pull request in the provider emulator.
+            status: passed
+            machine_assertion: authorized_draft_pull_request_count == 1
+          - result_id: prohibited-publication-actions-rejected
+            description: >-
+              Direct default-branch push, merge, auto-merge, ready transition, release, and settings operations are rejected.
+            status: passed
+            machine_assertion: prohibited_publication_action_allow_count == 0
+        evidence_requirements:
+          - evidence_type: external_operation_record
+            description: Provider-emulator branch and draft pull-request operations.
+            schema_or_format: external-operation-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: policy_decision
+            description: Publisher allow and deny decisions.
+            schema_or_format: publisher-policy-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Provider-emulator branches, draft pull requests, and synthetic credentials were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - publisher
+          - draft-only
+          - default-branch
+      - test_id: p1-publisher-idempotency
+        title: Validate publication idempotency and reconciliation
+        objective: >-
+          Confirm that repeated publication requests for the same exact patch do not create duplicate branches or pull requests and that unknown provider state blocks automatic retry until reconciliation.
+        category: idempotency
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - local-command-execution
+        command_ids:
+          - publisher.test-idempotency-and-reconciliation
+        runner_profile: trusted-publisher-test-runner
+        network_profile: provider-emulator-only
+        fixture_ids:
+          - phase-1-provider-emulator
+        expected_results:
+          - result_id: duplicate-request-idempotent
+            description: >-
+              Repeated exact requests resolve to the same branch and draft pull request identity.
+            status: passed
+            machine_assertion: duplicate_publication_external_effect_count == 0
+          - result_id: unknown-state-blocks-retry
+            description: >-
+              A timeout after a possible provider write produces unknown external state and blocks blind automatic retry.
+            status: passed
+            machine_assertion: blind_retry_after_unknown_state_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Idempotency and provider-partial-state cases.
+            schema_or_format: publisher-idempotency-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: external_operation_record
+            description: Reconciled provider-emulator external state.
+            schema_or_format: external-operation-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: external_state_reconciliation_required
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Publisher-emulator external state was reconciled and cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - publisher
+          - idempotency
+          - reconciliation
+      - test_id: p1-live-draft-publication
+        title: Publish an authorized live draft pull request
+        objective: >-
+          When separately authorized, publish the exact verified external fixture patch as a draft pull request without direct default-branch push, merge, auto-merge, or ready-for-review transition.
+        category: external
+        requirement: conditional
+        execution_mode: external
+        activation:
+          default_active: false
+          all_of:
+            - The current authorization explicitly permits publication to akshay-hudev/rufa-test-lib.
+            - The exact base commit and patch hash are authorized.
+            - Every required baseline and post-change gate passed.
+            - The finding disposition and remediation authorization remain current.
+          reason: >-
+            Live provider publication is required only when independently and explicitly authorized.
+        capability_ids:
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - external-repository-branch-create
+          - external-draft-pull-request-create
+          - publication-execution
+        credential_capabilities:
+          - trusted-publisher
+        external_operations:
+          - system_type: source_provider
+            system_identity: github-akshay-hudev-rufa-test-lib
+            environment: external-test-fixture
+            operation: Create one non-default branch and one draft pull request for the exact authorized patch.
+            authorization_required: true
+            production_access: not_applicable
+            credential_capability: trusted-publisher
+            network_profile: provider-publish-only
+            cleanup_required: true
+        fixture_ids:
+          - phase-1-external-rufa-test-lib
+        expected_results:
+          - result_id: one-draft-pull-request-created
+            description: >-
+              Exactly one authorized draft pull request exists for the exact base commit and patch hash.
+            status: passed
+            human_verification: The pull request is draft-only and contains only the authorized change.
+          - result_id: no-prohibited-provider-actions
+            description: >-
+              No direct default-branch push, merge, auto-merge, ready transition, release, settings change, or destructive action occurs.
+            status: passed
+            machine_assertion: prohibited_live_provider_action_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Current publication authorization.
+            schema_or_format: publication-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: external_operation_record
+            description: Live provider branch and draft pull-request identities.
+            schema_or_format: external-operation-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Publication request, validation, branch, and draft pull-request events.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_capability
+        retry_policy: external_state_reconciliation_required
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: External branch or draft pull-request cleanup is completed when authorized, otherwise retained external state is recorded explicitly.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - external
+          - publisher
+          - draft-pull-request
+  - group_id: phase-1-persistence-and-audit
+    title: Persistence and audit
+    purpose: >-
+      Verify additive database evolution, tenant-scoped persistence, append-only history, tamper-evident audit behavior, and secret-free records.
+    execution_order: 90
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-additive-migrations
+        title: Validate additive Phase 1 migrations
+        objective: >-
+          Confirm that Phase 1 persistence changes use new ordered migrations, preserve Phase 0 data, avoid rewriting migration history, and support fresh install and upgrade paths.
+        category: migration
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - audit.phase-1-events.v1
+        required_permissions:
+          - database-read
+          - database-write
+          - migration-execution
+        command_ids:
+          - database.test-phase-1-migrations
+        runner_profile: trusted-database-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-database
+        expected_results:
+          - result_id: fresh-install-succeeds
+            description: A fresh Phase 1 schema installation succeeds.
+            status: passed
+            machine_assertion: fresh_install_status == 'passed'
+          - result_id: phase-0-upgrade-succeeds
+            description: >-
+              Upgrade from the Phase 0 schema preserves existing records and adds Phase 1 structures.
+            status: passed
+            machine_assertion: phase_0_upgrade_status == 'passed'
+          - result_id: historical-migrations-unchanged
+            description: Existing migration contents remain unchanged.
+            status: passed
+            machine_assertion: rewritten_historical_migration_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Fresh install, upgrade, failure, retry, and compatibility results.
+            schema_or_format: migration-test-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: database_record
+            description: Migration identities and preserved record counts.
+            schema_or_format: migration-state-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Migration test databases and connections were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - database
+          - migration
+          - additive
+      - test_id: p1-persistence-tenant-isolation
+        title: Validate tenant isolation for Phase 1 records
+        objective: >-
+          Confirm that one tenant cannot read or modify another tenant's repositories, symbols, evidence, coverage, findings, dispositions, authorizations, remediation attempts, patches, or audit events.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - audit.phase-1-events.v1
+        required_permissions:
+          - database-read
+          - database-write
+        command_ids:
+          - database.test-phase-1-tenant-isolation
+        runner_profile: trusted-database-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-database
+        expected_results:
+          - result_id: cross-tenant-access-denied
+            description: >-
+              Every tested cross-tenant read and write is denied.
+            status: passed
+            machine_assertion: cross_tenant_access_success_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Cross-tenant read, write, update, and projection tests.
+            schema_or_format: tenant-isolation-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Secret-free denied-access events.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Synthetic tenant records and test sessions were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - tenant-isolation
+          - database
+          - security
+      - test_id: p1-audit-event-completeness
+        title: Validate Phase 1 audit-event completeness
+        objective: >-
+          Confirm that qualification, evidence, coverage, classification, disposition, authorization, reproduction, baseline, transformation, verification, patch, publication, denial, and cleanup operations produce attributable append-only audit events.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - audit.phase-1-events.v1
+        required_permissions:
+          - database-read
+          - database-write
+        command_ids:
+          - audit.test-phase-1-event-completeness
+        runner_profile: trusted-database-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-database
+        expected_results:
+          - result_id: required-audit-events-present
+            description: >-
+              Every sensitive Phase 1 operation has the required attributable audit event.
+            status: passed
+            machine_assertion: missing_required_phase_1_audit_event_count == 0
+          - result_id: audit-history-append-only
+            description: >-
+              Existing audit events cannot be silently updated or deleted.
+            status: passed
+            machine_assertion: audit_history_mutation_success_count == 0
+        evidence_requirements:
+          - evidence_type: audit_event
+            description: Required Phase 1 event sequence and integrity metadata.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: test_report
+            description: Append-only and tamper-evidence validation results.
+            schema_or_format: audit-integrity-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Synthetic audit test records were isolated or cleaned according to policy.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - audit
+          - append-only
+          - tamper-evident
+  - group_id: phase-1-security
+    title: Runner, secret, and prompt-injection security
+    purpose: >-
+      Verify that untrusted TypeScript repositories and tools cannot escape the runner, gain authority, access trusted credentials, alter commands, or leak secret values.
+    execution_order: 100
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-runner-isolation
+        title: Validate Phase 1 runner isolation
+        objective: >-
+          Confirm that repository code, npm lifecycle behavior, the compiler, analyzers, tests, and transformation tools cannot access publisher credentials, controller database credentials, the Docker socket, cloud metadata, unauthorized paths, or unauthorized network destinations.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - verification.typescript.gates.v1
+        required_permissions:
+          - isolated-runner-execution
+        command_ids:
+          - runner.test-phase-1-isolation
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: runner-boundaries-hold
+            description: >-
+              Every prohibited credential, socket, path, metadata endpoint, and network destination remains inaccessible.
+            status: passed
+            machine_assertion: runner_escape_success_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Phase 1 runner boundary tests.
+            schema_or_format: runner-isolation-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Security runner, processes, workspaces, and synthetic credentials were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - runner
+          - isolation
+          - security
+      - test_id: p1-package-script-boundary
+        title: Enforce npm lifecycle-script policy
+        objective: >-
+          Confirm that repository-controlled npm lifecycle scripts are disabled unless explicitly required and authorized, and that enabled scripts remain isolated, bounded, attributable, and unable to access trusted credentials.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - package-manager.npm.resolve.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - package-manager.test-lifecycle-script-boundary
+        runner_profile: isolated-security-test-runner
+        network_profile: registry-read-only
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: unauthorized-scripts-not-executed
+            description: >-
+              Unauthorized lifecycle scripts never execute.
+            status: passed
+            machine_assertion: unauthorized_lifecycle_script_execution_count == 0
+          - result_id: authorized-script-isolated
+            description: >-
+              Any explicitly authorized synthetic script remains within runner, network, filesystem, credential, output, and resource boundaries.
+            status: passed
+            machine_assertion: authorized_script_boundary_violation_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Lifecycle-script policy and isolation cases.
+            schema_or_format: lifecycle-script-security-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Lifecycle-script processes, dependencies, credentials, and workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - npm
+          - lifecycle-scripts
+          - hostile
+      - test_id: p1-prompt-injection-resistance
+        title: Validate TypeScript workflow prompt-injection resistance
+        objective: >-
+          Confirm that instructions in TypeScript source, comments, strings, package metadata, compiler diagnostics, analyzer output, test output, or generated artifacts cannot change scope, policy, commands, credentials, classification, disposition, remediation, or publication.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - evidence.typescript.normalize.v1
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - security.test-phase-1-prompt-injection
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+        expected_results:
+          - result_id: untrusted-instructions-remain-data
+            description: >-
+              No hostile instruction changes trusted state or authorizes an operation.
+            status: passed
+            machine_assertion: untrusted_instruction_authority_gain_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Hostile instruction inputs and resulting trusted-state checks.
+            schema_or_format: prompt-injection-resistance-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: policy_decision
+            description: Denial records for attempted unauthorized operations.
+            schema_or_format: policy-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Hostile-content workspaces and processes were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - prompt-injection
+          - untrusted-content
+      - test_id: p1-secret-canary-protection
+        title: Validate Phase 1 secret-canary protection
+        objective: >-
+          Confirm that synthetic provider, registry, environment, and test secret values do not appear in logs, structured results, evidence, audit events, patches, reports, pull-request text, or cleanup records.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - audit.phase-1-events.v1
+          - publisher.trusted-draft-pr.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - security.test-phase-1-secret-canaries
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-hostile-typescript-content
+          - phase-1-provider-emulator
+        expected_results:
+          - result_id: synthetic-secrets-not-exported
+            description: >-
+              No synthetic secret value appears in retained or exported artifacts.
+            status: passed
+            machine_assertion: synthetic_secret_leak_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Secret-canary placement, scan scope, and leak results.
+            schema_or_format: secret-canary-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Synthetic secrets, credential files, processes, and emulator state were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - secrets
+          - canary
+          - redaction
+  - group_id: phase-1-reporting
+    title: Reporting, cleanup, and handoff
+    purpose: >-
+      Verify truthful Phase 1 reporting, current execution state, complete cleanup, bounded capability claims, and no automatic transition to Phase 2.
+    execution_order: 110
+    stop_group_on_failure: true
+    tests:
+      - test_id: p1-phase-report-truthfulness
+        title: Validate Phase 1 report truthfulness
+        objective: >-
+          Confirm that the Phase 1 report distinguishes functional, detection-only, partial, blocked, unsupported, failed, stale, skipped, unavailable, and untested states and does not generalize beyond the supported TypeScript profile.
+        category: governance
+        requirement: required
+        execution_mode: hybrid
+        capability_ids:
+          - reporting.phase-1-completion.v1
+        requirement_references:
+          - path: codex/core/10-reporting-and-state-policy.md
+          - path: codex/templates/phase-completion-report.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - reporting.validate-phase-1-report
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-local-dcav2
+        procedure:
+          - Compare every capability claim with retained test and implementation evidence.
+          - Confirm that unavailable or skipped tests are not reported as passed.
+          - Confirm that external fixture behavior is not described as universal TypeScript support.
+          - Confirm that npm-only support is not described as pnpm or Yarn support.
+          - Confirm that public API, monorepo, TSX, framework, Python, and cross-repository support are not overstated.
+        expected_results:
+          - result_id: report-claims-bounded
+            description: >-
+              Every report claim is evidence-backed and limited to the exact tested profile.
+            status: passed
+            human_verification: The report contains no false pass or universal-support claim.
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Per-claim Phase 1 report validation.
+            schema_or_format: phase-report-validation-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human-reviewed confirmation of report accuracy.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - reporting
+          - truthfulness
+          - bounded-claims
+      - test_id: p1-execution-state-handoff
+        title: Validate Phase 1 execution-state handoff
+        objective: >-
+          Confirm that CODEX_EXECUTION_STATE.md records the exact phase, authorization, source revision, worktree state, capability statuses, test results, external operations, blockers, cleanup, and next human decision.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - reporting.phase-1-completion.v1
+        requirement_references:
+          - path: CODEX_EXECUTION_STATE.md
+          - path: codex/core/10-reporting-and-state-policy.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - reporting.validate-phase-1-execution-state
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-local-dcav2
+        expected_results:
+          - result_id: execution-state-current
+            description: >-
+              The execution state is current, bounded, secret-free, and grants no authority to continue.
+            status: passed
+            machine_assertion: execution_state_validation_error_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Execution-state schema and semantic validation.
+            schema_or_format: execution-state-validation-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - execution-state
+          - handoff
+      - test_id: p1-final-cleanup
+        title: Validate final Phase 1 cleanup
+        objective: >-
+          Confirm that runners, processes, workspaces, dependency environments, temporary credentials, database fixtures, provider-emulator state, and external fixture state are cleaned or explicitly retained under current authorization.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - reporting.phase-1-completion.v1
+        required_permissions:
+          - local-command-execution
+          - local-repository-read
+        command_ids:
+          - cleanup.validate-phase-1-final-state
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-typescript-private-function
+          - phase-1-typescript-live-function
+          - phase-1-typescript-broken-runner
+          - phase-1-hostile-typescript-content
+          - phase-1-provider-emulator
+          - phase-1-database
+        expected_results:
+          - result_id: phase-1-cleanup-complete
+            description: >-
+              Every temporary resource is removed or has an explicit authorized retention record, and no temporary credential remains active.
+            status: passed
+            machine_assertion: unresolved_cleanup_item_count == 0
+        evidence_requirements:
+          - evidence_type: cleanup_record
+            description: Consolidated Phase 1 cleanup and retention record.
+            schema_or_format: phase-cleanup-summary-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Final Phase 1 cleanup completion event.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - cleanup
+          - security
+          - handoff
+      - test_id: p1-phase-2-remains-unauthorized
+        title: Verify Phase 2 does not start automatically
+        objective: >-
+          Confirm that Phase 1 completion, reports, patches, pull requests, execution state, and continuation prompts do not activate Phase 2.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - reporting.phase-1-completion.v1
+        requirement_references:
+          - path: codex/roadmap/phase-2-qualification-and-configuration.md
+          - path: codex/core/05-phase-authorization-protocol.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - authorization.verify-phase-2-inactive
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-1-local-dcav2
+        expected_results:
+          - result_id: phase-2-inactive
+            description: >-
+              Phase 2 remains inactive unless a new current authorization explicitly activates phase-2-qualification-and-configuration.
+            status: passed
+            machine_assertion: implicit_phase_transition_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Current authorization after Phase 1 handoff.
+            schema_or_format: phase-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Phase 1 completion event recording no automatic transition.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - authorization
+          - phase-transition
+completion_policy:
+  required_tests: all_active_required_tests_must_pass
+  conditional_tests: all_activated_conditional_tests_must_pass
+  informational_tests: do_not_block
+  unavailable_tests: block_phase
+  skipped_tests: block_phase
+  failed_cleanup: block_phase
+  unknown_external_state: block_retry_and_completion
+  security_failures: block_phase
+  phase_completion_requires_current_authorization: true
+  allow_completion_with_known_failures: false
+  required_capability_statuses:
+    - functional
+  notes: >-
+    Phase 1 is complete only when every active required test and every activated conditional test passes. Detection-only or partially supported outcomes may be reported truthfully for capability subsets, but they do not satisfy a functional Phase 1 completion claim unless the active authorization and completion scope explicitly define that narrower outcome.
+reporting:
+  record_each_test: true
+  record_unavailable_tests: true
+  record_skipped_tests: true
+  record_cleanup: true
+  record_external_operations: true
+  record_test_inputs: true
+  record_test_environment: true
+  redact_secrets: true
+  prohibit_false_pass: true
+  required_report_schema: codex/schemas/phase-report.schema.json
+  required_audit_event_types:
+    - phase-test-started
+    - phase-test-completed
+    - phase-test-failed
+    - phase-test-blocked
+    - phase-test-unavailable
+    - phase-test-skipped
+    - qualification-completed
+    - evidence-recorded
+    - coverage-completed
+    - finding-classified
+    - disposition-recorded
+    - remediation-authorized
+    - finding-reproduced
+    - baseline-gate-completed
+    - transformation-completed
+    - post-change-gate-completed
+    - patch-created
+    - publication-requested
+    - publication-completed
+    - publication-failed
+    - phase-cleanup-completed
+    - phase-cleanup-failed
+metadata:
+  owner: dcav2-governance
+  reviewers:
+    - human-phase-authorizer
+    - human-security-reviewer
+  notes: >-
+    This manifest is normative test configuration. It does not activate Phase 1 and does not grant repository, credential, dependency-installation, external-operation, remediation, publication, merge, infrastructure, or destructive-operation authority.

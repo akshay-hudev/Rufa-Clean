@@ -1,0 +1,949 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/phase-test-manifest.schema.json",
+  "title": "DCAv2 Phase Test Manifest",
+  "description": "Defines the machine-readable structure for phase-specific test manifests. A manifest describes required evidence and tests but does not authorize implementation, repository access, credential use, external operations, remediation, publication, or destructive actions. Test IDs and group IDs must also be unique across the complete manifest, even where JSON Schema cannot enforce cross-array uniqueness directly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "manifest_id",
+    "phase_id",
+    "title",
+    "purpose",
+    "document_status",
+    "implementation_authorized_by_manifest",
+    "defaults",
+    "test_groups",
+    "completion_policy",
+    "reporting"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "manifest_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "phase_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "document_status": {
+      "enum": [
+        "draft",
+        "active",
+        "deprecated",
+        "superseded"
+      ]
+    },
+    "implementation_authorized_by_manifest": {
+      "const": false
+    },
+    "supersedes_manifest_id": {
+      "$ref": "#/$defs/identifier"
+    },
+    "capability_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/capability_id"
+      },
+      "uniqueItems": true
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/document_reference"
+      },
+      "uniqueItems": true
+    },
+    "defaults": {
+      "$ref": "#/$defs/defaults"
+    },
+    "fixtures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fixture"
+      }
+    },
+    "test_groups": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/test_group"
+      }
+    },
+    "completion_policy": {
+      "$ref": "#/$defs/completion_policy"
+    },
+    "reporting": {
+      "$ref": "#/$defs/reporting_policy"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "capability_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "document_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "section": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unavailable_test_result",
+        "skipped_test_result",
+        "unexpected_error_result",
+        "cleanup_required"
+      ],
+      "properties": {
+        "default_runner_profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "default_network_profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "default_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "default_output_limit_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "default_retry_policy": {
+          "$ref": "#/$defs/retry_policy"
+        },
+        "unavailable_test_result": {
+          "const": "not_passed"
+        },
+        "skipped_test_result": {
+          "const": "not_passed"
+        },
+        "unexpected_error_result": {
+          "enum": [
+            "failed",
+            "blocked"
+          ]
+        },
+        "cleanup_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_id",
+        "fixture_type",
+        "description",
+        "authorization_required"
+      ],
+      "properties": {
+        "fixture_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "fixture_type": {
+          "enum": [
+            "synthetic_repository",
+            "local_repository",
+            "external_repository",
+            "database",
+            "service_emulator",
+            "provider_emulator",
+            "registry_emulator",
+            "telemetry_fixture",
+            "generated_dataset",
+            "other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "immutable_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorization_required": {
+          "type": "boolean"
+        },
+        "contains_synthetic_secrets": {
+          "type": "boolean",
+          "default": false
+        },
+        "tenant_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cleanup_required": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "test_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "group_id",
+        "title",
+        "purpose",
+        "tests"
+      ],
+      "properties": {
+        "group_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "execution_order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "stop_group_on_failure": {
+          "type": "boolean",
+          "default": false
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/test_case"
+          }
+        }
+      }
+    },
+    "test_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "test_id",
+        "title",
+        "objective",
+        "category",
+        "requirement",
+        "execution_mode",
+        "failure_behavior",
+        "retry_policy",
+        "cleanup_required",
+        "expected_results",
+        "evidence_requirements"
+      ],
+      "properties": {
+        "test_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "enum": [
+            "governance",
+            "functional",
+            "integration",
+            "regression",
+            "security",
+            "migration",
+            "failure",
+            "hostile",
+            "determinism",
+            "idempotency",
+            "performance",
+            "external"
+          ]
+        },
+        "requirement": {
+          "enum": [
+            "required",
+            "conditional",
+            "informational"
+          ]
+        },
+        "execution_mode": {
+          "enum": [
+            "automated",
+            "manual",
+            "hybrid",
+            "external"
+          ]
+        },
+        "activation": {
+          "$ref": "#/$defs/activation"
+        },
+        "capability_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/capability_id"
+          },
+          "uniqueItems": true
+        },
+        "requirement_references": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/document_reference"
+          },
+          "uniqueItems": true
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "command_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "runner_profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "network_profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "credential_capabilities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "external_operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/external_operation"
+          }
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "output_limit_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resource_profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "fixture_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "procedure": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "expected_results": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/expected_result"
+          }
+        },
+        "evidence_requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/evidence_requirement"
+          }
+        },
+        "failure_behavior": {
+          "enum": [
+            "block_phase",
+            "block_capability",
+            "mark_partial",
+            "record_only"
+          ]
+        },
+        "retry_policy": {
+          "$ref": "#/$defs/retry_policy"
+        },
+        "cleanup_required": {
+          "type": "boolean"
+        },
+        "cleanup_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_requirement"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "requirement": {
+                "const": "conditional"
+              }
+            },
+            "required": [
+              "requirement"
+            ]
+          },
+          "then": {
+            "required": [
+              "activation"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "enum": [
+                  "automated",
+                  "hybrid"
+                ]
+              }
+            },
+            "required": [
+              "execution_mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "command_ids"
+            ],
+            "properties": {
+              "command_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "const": "manual"
+              }
+            },
+            "required": [
+              "execution_mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "procedure"
+            ],
+            "properties": {
+              "procedure": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "execution_mode": {
+                "const": "external"
+              }
+            },
+            "required": [
+              "execution_mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "external_operations"
+            ],
+            "properties": {
+              "external_operations": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "cleanup_required": {
+                "const": true
+              }
+            },
+            "required": [
+              "cleanup_required"
+            ]
+          },
+          "then": {
+            "required": [
+              "cleanup_evidence"
+            ],
+            "properties": {
+              "cleanup_evidence": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_active"
+      ],
+      "properties": {
+        "default_active": {
+          "type": "boolean"
+        },
+        "all_of": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "any_of": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "none_of": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "properties": {
+            "default_active": {
+              "const": true
+            }
+          },
+          "required": [
+            "default_active"
+          ]
+        },
+        {
+          "required": [
+            "all_of"
+          ]
+        },
+        {
+          "required": [
+            "any_of"
+          ]
+        },
+        {
+          "required": [
+            "none_of"
+          ]
+        }
+      ]
+    },
+    "external_operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system_type",
+        "system_identity",
+        "operation",
+        "authorization_required",
+        "production_access"
+      ],
+      "properties": {
+        "system_type": {
+          "enum": [
+            "source_provider",
+            "package_registry",
+            "artifact_registry",
+            "schema_registry",
+            "telemetry_system",
+            "infrastructure_provider",
+            "database",
+            "message_system",
+            "calendar_or_scheduler",
+            "other"
+          ]
+        },
+        "system_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorization_required": {
+          "const": true
+        },
+        "production_access": {
+          "enum": [
+            "not_applicable",
+            "denied",
+            "explicit_authorization_only"
+          ]
+        },
+        "credential_capability": {
+          "$ref": "#/$defs/identifier"
+        },
+        "network_profile": {
+          "$ref": "#/$defs/identifier"
+        },
+        "cleanup_required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "expected_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result_id",
+        "description"
+      ],
+      "properties": {
+        "result_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed",
+            "blocked",
+            "partial",
+            "not_applicable"
+          ]
+        },
+        "machine_assertion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "human_verification": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "evidence_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_type",
+        "description",
+        "required_for_pass"
+      ],
+      "properties": {
+        "evidence_type": {
+          "enum": [
+            "structured_result",
+            "test_report",
+            "command_record",
+            "artifact_digest",
+            "database_record",
+            "audit_event",
+            "coverage_record",
+            "policy_decision",
+            "authorization_record",
+            "changed_file_record",
+            "cleanup_record",
+            "manual_attestation",
+            "external_operation_record",
+            "other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "schema_or_format": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_for_pass": {
+          "type": "boolean"
+        },
+        "retention_required": {
+          "type": "boolean",
+          "default": true
+        },
+        "secret_free": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "retry_policy": {
+      "enum": [
+        "no_retry",
+        "bounded_automatic",
+        "manual_only",
+        "external_state_reconciliation_required"
+      ]
+    },
+    "completion_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_tests",
+        "conditional_tests",
+        "informational_tests",
+        "unavailable_tests",
+        "skipped_tests",
+        "failed_cleanup",
+        "unknown_external_state",
+        "security_failures",
+        "phase_completion_requires_current_authorization"
+      ],
+      "properties": {
+        "required_tests": {
+          "const": "all_active_required_tests_must_pass"
+        },
+        "conditional_tests": {
+          "const": "all_activated_conditional_tests_must_pass"
+        },
+        "informational_tests": {
+          "enum": [
+            "do_not_block",
+            "block_when_explicitly_referenced"
+          ]
+        },
+        "unavailable_tests": {
+          "enum": [
+            "block_phase",
+            "block_capability",
+            "mark_partial"
+          ]
+        },
+        "skipped_tests": {
+          "enum": [
+            "block_phase",
+            "block_capability",
+            "mark_partial"
+          ]
+        },
+        "failed_cleanup": {
+          "enum": [
+            "block_phase",
+            "block_external_operations",
+            "mark_partial"
+          ]
+        },
+        "unknown_external_state": {
+          "const": "block_retry_and_completion"
+        },
+        "security_failures": {
+          "const": "block_phase"
+        },
+        "phase_completion_requires_current_authorization": {
+          "const": true
+        },
+        "allow_completion_with_known_failures": {
+          "type": "boolean",
+          "default": false
+        },
+        "required_capability_statuses": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "functional",
+              "detection_only",
+              "partially_supported",
+              "blocked",
+              "unsupported"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "reporting_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_each_test",
+        "record_unavailable_tests",
+        "record_skipped_tests",
+        "record_cleanup",
+        "record_external_operations",
+        "record_test_inputs",
+        "record_test_environment",
+        "redact_secrets",
+        "prohibit_false_pass"
+      ],
+      "properties": {
+        "record_each_test": {
+          "const": true
+        },
+        "record_unavailable_tests": {
+          "const": true
+        },
+        "record_skipped_tests": {
+          "const": true
+        },
+        "record_cleanup": {
+          "const": true
+        },
+        "record_external_operations": {
+          "const": true
+        },
+        "record_test_inputs": {
+          "const": true
+        },
+        "record_test_environment": {
+          "const": true
+        },
+        "redact_secrets": {
+          "const": true
+        },
+        "prohibit_false_pass": {
+          "const": true
+        },
+        "required_report_schema": {
+          "type": "string",
+          "minLength": 1
+        },
+        "required_audit_event_types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

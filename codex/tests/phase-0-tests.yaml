@@ -1,0 +1,1369 @@
+$schema: ./phase-test-manifest.schema.json
+schema_version: "1.0.0"
+manifest_id: phase-0-tests
+phase_id: phase-0-reconciliation
+title: Phase 0 Reconciliation Test Manifest
+purpose: >-
+  Defines the required governance, repository-state, baseline, security, runner, persistence, reporting, and handoff tests for Phase 0. This manifest records required tests but does not authorize implementation, repository access, credential use, external operations, remediation, publication, or destructive actions.
+document_status: active
+implementation_authorized_by_manifest: false
+capability_ids:
+  - governance.reconciliation.phase-0.v1
+  - governance.authorization.default-deny.v1
+  - governance.repository-access-policy.v1
+  - repository.current-system-inventory.v1
+  - repository.baseline-validation.v1
+  - runner.typescript-tool-resolution.reproduce.v1
+  - security.prompt-injection-governance.v1
+  - security.secret-handling-governance.v1
+  - reporting.phase-0-completion.v1
+references:
+  - path: AGENTS.md
+    purpose: Defines repository-level operating instructions.
+  - path: codex/core/01-instruction-precedence.md
+    purpose: Defines instruction precedence and conflict handling.
+  - path: codex/core/03-safety-invariants.md
+    purpose: Defines permanent safety invariants.
+  - path: codex/core/05-phase-authorization-protocol.md
+    purpose: Defines phase authorization requirements.
+  - path: codex/core/08-secret-handling-policy.md
+    purpose: Defines secret-handling requirements.
+  - path: codex/core/09-prompt-injection-policy.md
+    purpose: Defines treatment of untrusted instructions.
+  - path: codex/core/10-reporting-and-state-policy.md
+    purpose: Defines truthful reporting and state requirements.
+  - path: codex/access/github-repository-policy.yaml
+    purpose: Defines operation-specific repository-access policy.
+  - path: codex/access/prohibited-repositories.yaml
+    purpose: Defines repositories that must never receive content access.
+  - path: codex/architecture/current-system-contract.md
+    purpose: Defines the current implementation boundary to reconcile.
+  - path: codex/engineering/runner-security-controls.md
+    purpose: Defines required runner security controls.
+  - path: codex/engineering/testing-policy.md
+    purpose: Defines test execution and reporting policy.
+  - path: codex/roadmap/phase-0-reconciliation.md
+    purpose: Defines Phase 0 scope and completion criteria.
+  - path: codex/authorizations/current-phase-authorization.yaml
+    purpose: Identifies whether Phase 0 execution is currently authorized.
+defaults:
+  default_runner_profile: governance-readonly-runner
+  default_network_profile: network-disabled
+  default_timeout_seconds: 600
+  default_output_limit_bytes: 1048576
+  default_retry_policy: no_retry
+  unavailable_test_result: not_passed
+  skipped_test_result: not_passed
+  unexpected_error_result: failed
+  cleanup_required: true
+fixtures:
+  - fixture_id: phase-0-local-repository
+    fixture_type: local_repository
+    description: >-
+      The local DCAv2 working tree at the exact revision and worktree state recorded for the authorized Phase 0 execution.
+    source_identity: local-dcav2-working-tree
+    authorization_required: true
+    cleanup_required: false
+  - fixture_id: phase-0-governance-tree
+    fixture_type: generated_dataset
+    description: >-
+      The expected governance file inventory and reference relationships for the DCAv2 operating-system structure.
+    source_identity: codex-governance-file-inventory
+    authorization_required: false
+    cleanup_required: false
+  - fixture_id: phase-0-hostile-content
+    fixture_type: synthetic_repository
+    description: >-
+      Synthetic source, documentation, command output, and metadata containing prompt-injection attempts, false authorization claims, and secret canaries.
+    source_identity: synthetic-phase-0-hostile-content
+    authorization_required: false
+    contains_synthetic_secrets: true
+    tenant_scope: synthetic-phase-0-tenant
+    cleanup_required: true
+  - fixture_id: phase-0-database-snapshot
+    fixture_type: database
+    description: >-
+      An authorized local or isolated database snapshot used only to inventory current migrations, audit behavior, and tenant boundaries.
+    source_identity: authorized-phase-0-database-snapshot
+    authorization_required: true
+    contains_synthetic_secrets: false
+    tenant_scope: phase-0-test-tenant
+    cleanup_required: true
+test_groups:
+  - group_id: phase-0-governance-integrity
+    title: Governance integrity
+    purpose: >-
+      Verify that the permanent governance documents are present, parseable, internally consistent, and incapable of authorizing implementation by themselves.
+    execution_order: 10
+    stop_group_on_failure: true
+    tests:
+      - test_id: p0-required-governance-files
+        title: Verify required governance files
+        objective: >-
+          Confirm that every governance file required before Phase 0 execution exists at its canonical repository-relative path.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.reconciliation.phase-0.v1
+        requirement_references:
+          - path: codex/README.md
+            purpose: Defines the canonical governance structure.
+          - path: codex/roadmap/phase-0-reconciliation.md
+            purpose: Defines the Phase 0 prerequisites.
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - governance.verify-required-files
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+          - phase-0-governance-tree
+        expected_results:
+          - result_id: all-required-files-present
+            description: >-
+              Every required governance file exists at the expected path and no required path is represented only by an unresolved link.
+            status: passed
+            machine_assertion: missing_required_file_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Canonical inventory of required, present, and missing files.
+            schema_or_format: governance-file-inventory-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - governance
+          - file-inventory
+      - test_id: p0-structured-governance-parse
+        title: Parse structured governance files
+        objective: >-
+          Confirm that every required YAML and JSON governance file parses without silently ignoring duplicate keys or malformed structure.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.reconciliation.phase-0.v1
+        required_permissions:
+          - local-repository-read
+          - local-command-execution
+        command_ids:
+          - governance.parse-yaml-files
+          - governance.parse-json-files
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: structured-files-parse
+            description: >-
+              All required YAML and JSON files parse successfully with duplicate-key rejection enabled where the parser supports it.
+            status: passed
+            machine_assertion: parse_failure_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Per-file parse status and parser identity.
+            schema_or_format: structured-file-parse-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - governance
+          - yaml
+          - json
+      - test_id: p0-instruction-precedence-consistency
+        title: Validate instruction-precedence consistency
+        objective: >-
+          Confirm that lower-precedence documents do not claim authority to override permanent safety invariants, active human authorization, or prohibited-repository policy.
+        category: governance
+        requirement: required
+        execution_mode: hybrid
+        capability_ids:
+          - governance.reconciliation.phase-0.v1
+        requirement_references:
+          - path: codex/core/01-instruction-precedence.md
+          - path: codex/core/03-safety-invariants.md
+          - path: codex/core/05-phase-authorization-protocol.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - governance.check-precedence-claims
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        procedure:
+          - Review every reported authority conflict.
+          - Confirm that permanent safety invariants cannot be weakened by roadmap or report files.
+          - Confirm that only current explicit human authorization can activate execution.
+        expected_results:
+          - result_id: no-authority-conflicts
+            description: >-
+              No lower-precedence file grants itself implementation, remediation, publication, destructive-operation, or policy override authority.
+            status: passed
+            human_verification: Every reported authority claim is consistent with the precedence policy.
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Detected authority claims and their precedence classification.
+            schema_or_format: instruction-precedence-analysis-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human review of all detected precedence conflicts.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - governance
+          - precedence
+      - test_id: p0-roadmap-does-not-authorize
+        title: Verify roadmap files do not authorize execution
+        objective: >-
+          Confirm that every roadmap phase explicitly states that the roadmap does not authorize implementation or external operations.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.authorization.default-deny.v1
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - governance.verify-roadmap-non-authorization
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: roadmap-authority-denied
+            description: >-
+              Every roadmap file has an explicit non-authorization statement and an inactive default phase status.
+            status: passed
+            machine_assertion: unauthorized_roadmap_authority_claim_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Per-roadmap-file authorization and default-status checks.
+            schema_or_format: roadmap-authority-check-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - governance
+          - roadmap
+          - default-deny
+  - group_id: phase-0-authorization-and-access
+    title: Authorization and repository access
+    purpose: >-
+      Verify default-deny execution state, operation-specific repository policy, and prohibited-repository enforcement before any content access.
+    execution_order: 20
+    stop_group_on_failure: true
+    tests:
+      - test_id: p0-current-authorization-default-deny
+        title: Validate inactive current authorization
+        objective: >-
+          Confirm that the current authorization record grants no implementation, remediation, publication, credential, external-operation, or destructive-operation permission unless an explicit Phase 0 authorization has replaced the inactive record.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.authorization.default-deny.v1
+        requirement_references:
+          - path: codex/authorizations/current-phase-authorization.yaml
+          - path: codex/core/05-phase-authorization-protocol.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - authorization.validate-current-record
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: authorization-state-consistent
+            description: >-
+              The current authorization is either explicitly inactive with all operation permissions denied or is a valid current Phase 0 authorization satisfying the authorization protocol.
+            status: passed
+            machine_assertion: authorization_record_is_internally_consistent == true
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Validated current-phase authorization record with no secret values.
+            schema_or_format: phase-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: Authorization validation result and denied operation set.
+            schema_or_format: authorization-validation-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - authorization
+          - default-deny
+      - test_id: p0-repository-policy-operation-specific
+        title: Validate operation-specific repository policy
+        objective: >-
+          Confirm that repository access is evaluated independently for metadata, source read, analysis, modification, publication, and destructive operations.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.repository-access-policy.v1
+        requirement_references:
+          - path: codex/access/github-repository-policy.yaml
+          - path: codex/access/external-operation-policy.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - access-policy.validate-operation-matrix
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: operation-policy-separated
+            description: >-
+              Read authority cannot imply modification, publication, merge, settings, deletion, or destructive authority.
+            status: passed
+            machine_assertion: implicit_permission_escalation_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Operation matrix showing allowed, denied, and authorization-required operations.
+            schema_or_format: repository-operation-policy-matrix-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - access-policy
+          - least-privilege
+      - test_id: p0-prohibited-repository-preflight
+        title: Validate prohibited-repository preflight denial
+        objective: >-
+          Confirm that the prohibited repository is denied before branch, commit, tree, file, package, analysis, modification, or publication access is attempted.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.repository-access-policy.v1
+        requirement_references:
+          - path: codex/access/prohibited-repositories.yaml
+          - path: codex/core/03-safety-invariants.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - access-policy.test-prohibited-repository-preflight
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-governance-tree
+        expected_results:
+          - result_id: prohibited-content-access-denied
+            description: >-
+              The policy engine returns a prohibited decision using canonical repository identity without requesting repository content.
+            status: passed
+            machine_assertion: prohibited_repository_content_request_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Prohibited decision containing only minimum canonical identity metadata.
+            schema_or_format: repository-access-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Secret-free denial event proving the preflight decision occurred.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - prohibited-repository
+          - preflight
+          - security
+      - test_id: p0-external-operations-default-deny
+        title: Validate default denial of external operations
+        objective: >-
+          Confirm that external reads, writes, branch creation, pull-request creation, publication, deployment, infrastructure changes, and destructive operations require explicit current authorization.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.authorization.default-deny.v1
+        requirement_references:
+          - path: codex/access/external-operation-policy.md
+          - path: codex/core/05-phase-authorization-protocol.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - external-operations.validate-default-deny
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-governance-tree
+        expected_results:
+          - result_id: external-operations-denied-without-authorization
+            description: >-
+              Every tested external operation is denied when no matching current authorization is supplied.
+            status: passed
+            machine_assertion: unauthorized_external_operation_allow_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Decision record for every tested external operation type.
+            schema_or_format: external-operation-policy-test-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - external-operations
+          - default-deny
+  - group_id: phase-0-current-system-reconciliation
+    title: Current-system reconciliation
+    purpose: >-
+      Establish an evidence-backed inventory of the existing implementation, preserve functioning behavior, and record the actual baseline without rewriting the system.
+    execution_order: 30
+    stop_group_on_failure: false
+    tests:
+      - test_id: p0-current-system-inventory
+        title: Inventory the current implementation
+        objective: >-
+          Record the existing repository structure, application components, commands, tests, migrations, analyzers, runner paths, publisher paths, and known unfinished capabilities.
+        category: functional
+        requirement: required
+        execution_mode: hybrid
+        capability_ids:
+          - repository.current-system-inventory.v1
+        requirement_references:
+          - path: codex/architecture/current-system-contract.md
+          - path: codex/roadmap/phase-0-reconciliation.md
+        required_permissions:
+          - local-repository-read
+          - local-command-execution
+        command_ids:
+          - repository.inventory-current-system
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        procedure:
+          - Compare the discovered implementation with the current-system contract.
+          - Mark every claimed capability as implemented, partial, absent, stale, or unknown.
+          - Record evidence paths without copying secret values.
+        expected_results:
+          - result_id: current-system-inventory-complete
+            description: >-
+              Every material current subsystem has an evidence-backed status and no planned roadmap capability is reported as already implemented without evidence.
+            status: passed
+            human_verification: The inventory distinguishes implemented behavior from planned behavior.
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Current subsystem and capability inventory.
+            schema_or_format: current-system-inventory-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human-reviewed reconciliation of inventory claims.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - current-system
+          - inventory
+          - reconciliation
+      - test_id: p0-existing-codebase-preservation
+        title: Verify the existing codebase is preserved
+        objective: >-
+          Confirm that Phase 0 reconciliation does not replace functioning implementation wholesale or delete existing behavior without separately authorized evidence-backed changes.
+        category: regression
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.baseline-validation.v1
+        required_permissions:
+          - local-repository-read
+          - local-command-execution
+        command_ids:
+          - repository.compare-phase-0-change-scope
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: no-unauthorized-rewrite
+            description: >-
+              Phase 0 changes are limited to authorized reconciliation, governance, tests, diagnostics, or narrowly approved corrections.
+            status: passed
+            machine_assertion: unauthorized_rewrite_or_deletion_count == 0
+        evidence_requirements:
+          - evidence_type: changed_file_record
+            description: Complete changed-file inventory with authorization classification.
+            schema_or_format: changed-file-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - regression
+          - preserve-existing-system
+      - test_id: p0-existing-test-baseline
+        title: Record the existing test baseline
+        objective: >-
+          Execute every authorized existing baseline test command and record passed, failed, skipped, and unavailable tests without converting any unavailable or skipped test into a pass.
+        category: regression
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.baseline-validation.v1
+        required_permissions:
+          - local-repository-read
+          - local-command-execution
+        command_ids:
+          - tests.run-authorized-existing-baseline
+        runner_profile: isolated-project-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: baseline-results-truthful
+            description: >-
+              Every discovered authorized baseline test has an explicit result and no skipped, unavailable, timed-out, or failed test is reported as passed.
+            status: passed
+            machine_assertion: false_pass_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Per-command test results, durations, failures, skips, and unavailable tools.
+            schema_or_format: baseline-test-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: command_record
+            description: Structured records for every executed baseline command.
+            schema_or_format: structured-command-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Test processes, temporary files, and isolated workspaces were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - baseline
+          - regression
+          - truthful-reporting
+      - test_id: p0-working-tree-preservation
+        title: Preserve pre-existing local work
+        objective: >-
+          Confirm that Phase 0 execution does not overwrite, reset, clean, stash, revert, or delete pre-existing local user changes.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.baseline-validation.v1
+        requirement_references:
+          - path: codex/core/07-source-control-policy.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - repository.verify-preexisting-work-preserved
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: preexisting-work-preserved
+            description: >-
+              The before-and-after repository state proves that pre-existing local work was not destroyed or silently incorporated.
+            status: passed
+            machine_assertion: preexisting_user_change_loss_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Redacted before-and-after repository-status comparison.
+            schema_or_format: worktree-preservation-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - source-control
+          - local-work
+  - group_id: phase-0-runner-reconciliation
+    title: Runner and tool-resolution reconciliation
+    purpose: >-
+      Reproduce and classify the known TypeScript compiler-resolution failure without treating unavailable tooling as a passing remediation gate.
+    execution_order: 40
+    stop_group_on_failure: false
+    tests:
+      - test_id: p0-typescript-compiler-resolution-reproduction
+        title: Reproduce the isolated TypeScript compiler-resolution defect
+        objective: >-
+          Determine whether the isolated runner can resolve the repository's declared TypeScript compiler during the supported remediation verification path.
+        category: failure
+        requirement: conditional
+        execution_mode: automated
+        activation:
+          default_active: false
+          any_of:
+            - The current implementation contains the TypeScript remediation verification path.
+            - The current implementation contains a direct successor that requires the project TypeScript compiler.
+          reason: >-
+            The test is required whenever the current implementation attempts TypeScript remediation verification.
+        capability_ids:
+          - runner.typescript-tool-resolution.reproduce.v1
+        requirement_references:
+          - path: codex/roadmap/phase-0-reconciliation.md
+          - path: codex/engineering/runner-security-controls.md
+          - path: codex/engineering/structured-command-policy.md
+        required_permissions:
+          - local-repository-read
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - runner.reproduce-typescript-compiler-resolution
+        runner_profile: isolated-typescript-reproduction-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: compiler-resolution-state-recorded
+            description: >-
+              The runner either resolves the exact approved project compiler or returns an explicit reproducible unavailable-tool result.
+            status: passed
+            machine_assertion: compiler_resolution_status in ['resolved', 'unavailable']
+          - result_id: unavailable-compiler-not-passed
+            description: >-
+              An unavailable compiler is recorded as blocked or failed and is never represented as a passed verification gate.
+            status: passed
+            machine_assertion: unavailable_compiler_false_pass_count == 0
+        evidence_requirements:
+          - evidence_type: command_record
+            description: Structured compiler-resolution command record.
+            schema_or_format: structured-command-result-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: structured_result
+            description: Tool-resolution paths, selected executable identity, and failure classification.
+            schema_or_format: tool-resolution-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_capability
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Isolated runner processes and workspaces were removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - runner
+          - typescript
+          - tool-resolution
+      - test_id: p0-runner-failure-semantics
+        title: Validate runner failure semantics
+        objective: >-
+          Confirm that tool absence, timeout, malformed output, process failure, resource exhaustion, and cleanup failure produce distinct non-passing states.
+        category: failure
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - runner.typescript-tool-resolution.reproduce.v1
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - runner.test-failure-classification
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-hostile-content
+        expected_results:
+          - result_id: runner-failures-remain-distinct
+            description: >-
+              Every injected runner failure maps to the expected failed, blocked, partial, unavailable, or cleanup-failed status.
+            status: passed
+            machine_assertion: runner_failure_misclassification_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Injected failure classes and resulting structured statuses.
+            schema_or_format: runner-failure-semantics-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: All failure-injection processes and temporary resources were cleaned.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - runner
+          - failure-semantics
+      - test_id: p0-runner-isolation-baseline
+        title: Validate baseline runner isolation
+        objective: >-
+          Confirm that the current runner cannot access trusted publisher credentials, controller database credentials, the Docker socket, cloud metadata, or paths outside its authorized workspace.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - runner.typescript-tool-resolution.reproduce.v1
+        requirement_references:
+          - path: codex/engineering/runner-security-controls.md
+          - path: codex/core/08-secret-handling-policy.md
+        required_permissions:
+          - isolated-runner-execution
+        command_ids:
+          - runner.test-isolation-baseline
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-hostile-content
+        expected_results:
+          - result_id: trusted-boundaries-inaccessible
+            description: >-
+              Every prohibited credential, socket, metadata endpoint, and filesystem path remains inaccessible to runner code.
+            status: passed
+            machine_assertion: runner_trust_boundary_escape_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Negative-access results for every tested trust boundary.
+            schema_or_format: runner-isolation-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Security test execution and result events.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Security-test runner and synthetic credentials were removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - runner
+          - isolation
+          - credentials
+  - group_id: phase-0-persistence-and-evidence
+    title: Persistence, audit, and evidence reconciliation
+    purpose: >-
+      Inventory current persistence, audit, tenant, evidence, and coverage behavior without inventing support that does not exist.
+    execution_order: 50
+    stop_group_on_failure: false
+    tests:
+      - test_id: p0-database-migration-inventory
+        title: Inventory existing database migrations
+        objective: >-
+          Record every existing migration, its order, current schema role, reversibility characteristics, and compatibility status without rewriting historical migrations.
+        category: migration
+        requirement: conditional
+        execution_mode: hybrid
+        activation:
+          default_active: false
+          any_of:
+            - The current implementation contains a persistent database schema.
+            - The current implementation contains migration files or migration metadata.
+          reason: Database reconciliation is required whenever persistence exists.
+        capability_ids:
+          - repository.current-system-inventory.v1
+        requirement_references:
+          - path: codex/engineering/database-evolution-policy.md
+          - path: codex/architecture/audit-policy.md
+        required_permissions:
+          - local-repository-read
+          - database-read
+        command_ids:
+          - database.inventory-migrations
+        runner_profile: trusted-database-inspection-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+          - phase-0-database-snapshot
+        procedure:
+          - Compare migration files with recorded applied migration state.
+          - Identify gaps, rewrites, ordering conflicts, and destructive behavior.
+          - Record findings without modifying the database.
+        expected_results:
+          - result_id: migration-history-inventoried
+            description: >-
+              Existing migration history is ordered, attributable, and reported without modifying historical migration content.
+            status: passed
+            human_verification: Migration inventory distinguishes existing, applied, pending, conflicting, and unknown migrations.
+        evidence_requirements:
+          - evidence_type: database_record
+            description: Redacted migration inventory and current applied state.
+            schema_or_format: migration-inventory-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human-reviewed migration compatibility assessment.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_capability
+        retry_policy: manual_only
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Temporary database connections and snapshots were closed or removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - database
+          - migrations
+      - test_id: p0-audit-behavior-inventory
+        title: Inventory current audit behavior
+        objective: >-
+          Determine whether current audit records are append-only, attributable, tenant-scoped, tamper-evident, secret-free, and sufficient to reconstruct sensitive operations.
+        category: governance
+        requirement: conditional
+        execution_mode: hybrid
+        activation:
+          default_active: false
+          any_of:
+            - The current implementation persists audit or event records.
+            - The current implementation claims append-only or tamper-evident audit behavior.
+          reason: Audit reconciliation is required whenever audit behavior exists or is claimed.
+        capability_ids:
+          - repository.current-system-inventory.v1
+        requirement_references:
+          - path: codex/architecture/audit-policy.md
+          - path: codex/core/10-reporting-and-state-policy.md
+        required_permissions:
+          - local-repository-read
+          - database-read
+        command_ids:
+          - audit.inventory-current-behavior
+        runner_profile: trusted-database-inspection-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+          - phase-0-database-snapshot
+        procedure:
+          - Compare persisted audit behavior with the audit policy.
+          - Mark every required property as implemented, partial, absent, failed, or unknown.
+          - Do not claim tamper evidence without reproducible integrity checks.
+        expected_results:
+          - result_id: audit-capability-status-truthful
+            description: >-
+              Every audit property has an evidence-backed status and unsupported properties are not reported as functional.
+            status: passed
+            human_verification: Audit claims match observed storage and verification behavior.
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Current audit-property capability matrix.
+            schema_or_format: audit-capability-inventory-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human-reviewed audit integrity assessment.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_capability
+        retry_policy: manual_only
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Temporary audit-inspection resources were closed or removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - audit
+          - persistence
+      - test_id: p0-evidence-and-coverage-gap-analysis
+        title: Reconcile current evidence and coverage behavior
+        objective: >-
+          Compare current evidence, finding, classification, and coverage records with the permanent evidence and open-world coverage contracts.
+        category: functional
+        requirement: required
+        execution_mode: hybrid
+        capability_ids:
+          - repository.current-system-inventory.v1
+        requirement_references:
+          - path: codex/architecture/evidence-model.md
+          - path: codex/architecture/coverage-model.md
+          - path: codex/architecture/classification-policy.md
+        required_permissions:
+          - local-repository-read
+          - database-read
+        command_ids:
+          - evidence.inventory-current-model
+        runner_profile: trusted-database-inspection-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        procedure:
+          - Inventory current evidence producers and stored evidence fields.
+          - Identify where failed or unsupported scope may currently be lost.
+          - Identify whether classifications are deterministic and reproducible.
+          - Record gaps without changing classification semantics.
+        expected_results:
+          - result_id: evidence-coverage-gaps-recorded
+            description: >-
+              Current implementation strengths and gaps are reported explicitly, including every known path where unknown scope could be mistaken for absence.
+            status: passed
+            human_verification: The gap analysis distinguishes implemented behavior from roadmap requirements.
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Evidence, coverage, and classification capability-gap report.
+            schema_or_format: evidence-coverage-gap-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human-reviewed confirmation that no unsupported capability is overstated.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - evidence
+          - coverage
+          - classification
+  - group_id: phase-0-security-controls
+    title: Security and untrusted-content controls
+    purpose: >-
+      Validate the minimum governance and runner controls for secrets, prompt injection, structured commands, and untrusted repository content.
+    execution_order: 60
+    stop_group_on_failure: true
+    tests:
+      - test_id: p0-secret-canary-protection
+        title: Validate synthetic secret protection
+        objective: >-
+          Confirm that synthetic secret values do not appear in structured results, logs, reports, audit events, patches, or cleanup records.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - security.secret-handling-governance.v1
+        requirement_references:
+          - path: codex/core/08-secret-handling-policy.md
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - security.test-secret-canary-redaction
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-hostile-content
+        expected_results:
+          - result_id: synthetic-secrets-not-exported
+            description: >-
+              No synthetic secret value appears in any retained or exported artifact.
+            status: passed
+            machine_assertion: synthetic_secret_leak_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Secret-canary placement, scan scope, and leak count.
+            schema_or_format: secret-canary-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Secret-free security-test completion event.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Synthetic secret files, processes, and environments were removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - secrets
+          - canary
+          - redaction
+      - test_id: p0-prompt-injection-does-not-gain-authority
+        title: Validate prompt-injection resistance
+        objective: >-
+          Confirm that instructions in source, documentation, metadata, command output, analyzer output, or test output cannot alter governance, authorization, scope, credentials, commands, classification, or publication behavior.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - security.prompt-injection-governance.v1
+        requirement_references:
+          - path: codex/core/09-prompt-injection-policy.md
+          - path: codex/core/01-instruction-precedence.md
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - security.test-untrusted-instruction-isolation
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-hostile-content
+        expected_results:
+          - result_id: untrusted-instructions-remain-data
+            description: >-
+              Every hostile instruction is retained only as untrusted data and produces no trusted policy, authorization, credential, command, remediation, or publication change.
+            status: passed
+            machine_assertion: untrusted_instruction_authority_gain_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Hostile instruction cases and resulting trusted-state checks.
+            schema_or_format: prompt-injection-resistance-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: policy_decision
+            description: Default-deny decisions for requested unauthorized actions.
+            schema_or_format: policy-decision-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Hostile-content test workspaces and processes were removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - prompt-injection
+          - hostile-content
+      - test_id: p0-structured-command-authority
+        title: Validate structured-command authority boundaries
+        objective: >-
+          Confirm that repository text, report text, and tool output cannot create trusted shell commands or modify the trusted command registry.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.reconciliation.phase-0.v1
+        requirement_references:
+          - path: codex/engineering/structured-command-policy.md
+          - path: codex/core/09-prompt-injection-policy.md
+        required_permissions:
+          - local-command-execution
+          - isolated-runner-execution
+        command_ids:
+          - security.test-structured-command-boundary
+        runner_profile: isolated-security-test-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-hostile-content
+        expected_results:
+          - result_id: untrusted-command-text-rejected
+            description: >-
+              Untrusted shell strings and command-like instructions cannot be dispatched unless they map to an approved structured command ID.
+            status: passed
+            machine_assertion: unregistered_command_execution_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Attempted command injections and dispatch decisions.
+            schema_or_format: structured-command-boundary-report-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Command-boundary test processes and temporary files were removed.
+            schema_or_format: cleanup-record-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        tags:
+          - commands
+          - injection
+          - security
+  - group_id: phase-0-reporting-and-handoff
+    title: Reporting and handoff
+    purpose: >-
+      Verify that Phase 0 reports actual results truthfully, records unresolved blockers, leaves future phases unauthorized, and produces a bounded continuation state.
+    execution_order: 70
+    stop_group_on_failure: true
+    tests:
+      - test_id: p0-phase-report-truthfulness
+        title: Validate Phase 0 report truthfulness
+        objective: >-
+          Confirm that the Phase 0 report distinguishes implemented, planned, passed, failed, skipped, unavailable, blocked, partial, and untested states.
+        category: governance
+        requirement: required
+        execution_mode: hybrid
+        capability_ids:
+          - reporting.phase-0-completion.v1
+        requirement_references:
+          - path: codex/core/10-reporting-and-state-policy.md
+          - path: codex/templates/phase-completion-report.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - reporting.validate-phase-0-report
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        procedure:
+          - Review every capability and test claim against retained evidence.
+          - Confirm that unavailable and skipped tests are not reported as passed.
+          - Confirm that fixture-only behavior is not reported as general support.
+          - Confirm that unresolved runner and infrastructure defects remain visible.
+        expected_results:
+          - result_id: no-unsupported-completion-claims
+            description: >-
+              Every report claim is bounded by retained evidence and no failure, skip, unavailable test, or planned capability is misreported as complete.
+            status: passed
+            human_verification: The completion report is evidence-backed and contains no false pass or universal-support claim.
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Validation result for every report claim and referenced evidence identity.
+            schema_or_format: phase-report-validation-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: manual_attestation
+            description: Human-reviewed confirmation of report truthfulness.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - reporting
+          - truthfulness
+      - test_id: p0-execution-state-handoff
+        title: Validate execution-state handoff
+        objective: >-
+          Confirm that the execution-state record contains the exact repository state, authorization state, completed work, failed work, blockers, tests, cleanup status, and next human decision.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - reporting.phase-0-completion.v1
+        requirement_references:
+          - path: CODEX_EXECUTION_STATE.md
+          - path: codex/core/10-reporting-and-state-policy.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - reporting.validate-execution-state
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: execution-state-complete
+            description: >-
+              The handoff state is current, bounded, secret-free, and does not grant authority to continue.
+            status: passed
+            machine_assertion: execution_state_validation_error_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Execution-state schema and semantic validation result.
+            schema_or_format: execution-state-validation-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - execution-state
+          - handoff
+      - test_id: p0-phase-1-remains-unauthorized
+        title: Verify Phase 1 does not start automatically
+        objective: >-
+          Confirm that Phase 0 completion, reports, tests, execution state, and continuation prompts do not activate Phase 1.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - governance.authorization.default-deny.v1
+          - reporting.phase-0-completion.v1
+        requirement_references:
+          - path: codex/roadmap/phase-1-typescript-vertical-slice.md
+          - path: codex/core/05-phase-authorization-protocol.md
+        required_permissions:
+          - local-repository-read
+        command_ids:
+          - authorization.verify-next-phase-inactive
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+        expected_results:
+          - result_id: phase-1-inactive
+            description: >-
+              Phase 1 remains inactive unless a new current authorization explicitly activates phase-1-typescript-vertical-slice.
+            status: passed
+            machine_assertion: implicit_phase_transition_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Current authorization record after Phase 0 handoff.
+            schema_or_format: phase-authorization-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Phase 0 completion event that records no automatic transition.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+        tags:
+          - authorization
+          - phase-transition
+      - test_id: p0-final-cleanup-state
+        title: Validate final Phase 0 cleanup state
+        objective: >-
+          Confirm that temporary runners, processes, database snapshots, synthetic credentials, test fixtures, and external test state are either cleaned or explicitly retained under policy.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - reporting.phase-0-completion.v1
+        required_permissions:
+          - local-repository-read
+          - local-command-execution
+        command_ids:
+          - cleanup.validate-phase-0-final-state
+        runner_profile: governance-readonly-runner
+        network_profile: network-disabled
+        fixture_ids:
+          - phase-0-local-repository
+          - phase-0-hostile-content
+          - phase-0-database-snapshot
+        expected_results:
+          - result_id: final-cleanup-complete
+            description: >-
+              Every temporary resource is removed or has an explicit authorized retention record, and no temporary credential remains active.
+            status: passed
+            machine_assertion: unresolved_cleanup_item_count == 0
+        evidence_requirements:
+          - evidence_type: cleanup_record
+            description: Consolidated cleanup and retention record for Phase 0.
+            schema_or_format: phase-cleanup-summary-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: audit_event
+            description: Final Phase 0 cleanup completion event.
+            schema_or_format: audit-event-v1
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: manual_only
+        cleanup_required: false
+        tags:
+          - cleanup
+          - handoff
+          - security
+completion_policy:
+  required_tests: all_active_required_tests_must_pass
+  conditional_tests: all_activated_conditional_tests_must_pass
+  informational_tests: do_not_block
+  unavailable_tests: block_phase
+  skipped_tests: block_phase
+  failed_cleanup: block_phase
+  unknown_external_state: block_retry_and_completion
+  security_failures: block_phase
+  phase_completion_requires_current_authorization: true
+  allow_completion_with_known_failures: false
+  notes: >-
+    Phase 0 may report the current implementation as partial or blocked, but the Phase 0 reconciliation process itself is complete only when every active required test and activated conditional test passes. A discovered product defect may remain open when it is reproduced, bounded, reported, and does not invalidate a required Phase 0 governance or security test.
+reporting:
+  record_each_test: true
+  record_unavailable_tests: true
+  record_skipped_tests: true
+  record_cleanup: true
+  record_external_operations: true
+  record_test_inputs: true
+  record_test_environment: true
+  redact_secrets: true
+  prohibit_false_pass: true
+  required_report_schema: codex/schemas/phase-report.schema.json
+  required_audit_event_types:
+    - phase-test-started
+    - phase-test-completed
+    - phase-test-failed
+    - phase-test-blocked
+    - phase-test-unavailable
+    - phase-test-skipped
+    - phase-cleanup-completed
+    - phase-cleanup-failed
+metadata:
+  owner: dcav2-governance
+  reviewers:
+    - human-phase-authorizer
+  notes: >-
+    This manifest is normative test configuration. It does not activate Phase 0 and does not grant repository, credential, external-operation, remediation, publication, or destructive-operation authority.
