@@ -1,0 +1,1677 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/phase-authorization.schema.json",
+  "title": "DCAv2 Phase Authorization",
+  "description": "Defines the machine-readable structure for temporary human phase-authorization records. An authorization record mirrors an explicit human instruction; it does not create permission, override permanent safety invariants, remove prohibited repositories, authorize a later phase, or make remediation, publication, merge, production access, governance modification, or destructive operations implicit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authorization",
+    "local_repository",
+    "github",
+    "excluded_repositories",
+    "database",
+    "credentials",
+    "governance_modification",
+    "publication",
+    "destructive_operations",
+    "expiration"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "authorization": {
+      "$ref": "#/$defs/authorization"
+    },
+    "local_repository": {
+      "$ref": "#/$defs/local_repository"
+    },
+    "github": {
+      "$ref": "#/$defs/github_scope"
+    },
+    "excluded_repositories": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/canonical_repository"
+      },
+      "contains": {
+        "const": "akshay-hudev/Rufa-Clean"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "commands": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "runner_profiles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "network_profiles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "database": {
+      "$ref": "#/$defs/database_permissions"
+    },
+    "credentials": {
+      "$ref": "#/$defs/credentials"
+    },
+    "governance_modification": {
+      "$ref": "#/$defs/governance_modification"
+    },
+    "remediation": {
+      "$ref": "#/$defs/remediation"
+    },
+    "publication": {
+      "$ref": "#/$defs/publication"
+    },
+    "external_systems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/external_system"
+      }
+    },
+    "destructive_operations": {
+      "$ref": "#/$defs/destructive_operations"
+    },
+    "budgets": {
+      "$ref": "#/$defs/budgets"
+    },
+    "required_tests": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/identifier"
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expiration": {
+      "$ref": "#/$defs/expiration"
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+    "reporting": {
+      "$ref": "#/$defs/reporting"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "authorization": {
+            "properties": {
+              "status": {
+                "const": "active"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "authorization"
+        ]
+      },
+      "then": {
+        "properties": {
+          "authorization": {
+            "$ref": "#/$defs/active_authorization"
+          },
+          "validation": {
+            "type": "object",
+            "properties": {
+              "human_instruction_explicit": {
+                "const": true
+              },
+              "matches_latest_human_instruction": {
+                "const": true
+              },
+              "authorization_not_expired": {
+                "const": true
+              },
+              "repository_policy_valid": {
+                "const": true
+              },
+              "prohibited_repository_policy_valid": {
+                "const": true
+              },
+              "governance_integrity_recorded": {
+                "const": true
+              },
+              "preexisting_worktree_state_understood": {
+                "const": true
+              }
+            },
+            "required": [
+              "human_instruction_explicit",
+              "matches_latest_human_instruction",
+              "authorization_not_expired",
+              "repository_policy_valid",
+              "prohibited_repository_policy_valid",
+              "governance_integrity_recorded",
+              "preexisting_worktree_state_understood"
+            ]
+          }
+        },
+        "required": [
+          "validation"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "authorization": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "inactive",
+                  "expired",
+                  "revoked",
+                  "completed",
+                  "superseded"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "authorization"
+        ]
+      },
+      "then": {
+        "properties": {
+          "authorization": {
+            "properties": {
+              "implementation_authorized": {
+                "const": false
+              },
+              "external_operations_authorized": {
+                "const": false
+              }
+            },
+            "required": [
+              "implementation_authorized",
+              "external_operations_authorized"
+            ]
+          },
+          "governance_modification": {
+            "properties": {
+              "allowed": {
+                "const": false
+              }
+            },
+            "required": [
+              "allowed"
+            ]
+          },
+          "publication": {
+            "properties": {
+              "allowed": {
+                "const": false
+              }
+            },
+            "required": [
+              "allowed"
+            ]
+          },
+          "destructive_operations": {
+            "properties": {
+              "allowed": {
+                "const": false
+              }
+            },
+            "required": [
+              "allowed"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "nullable_string": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "phase_id": {
+      "enum": [
+        "phase-0-reconciliation",
+        "phase-1-typescript-vertical-slice",
+        "phase-2-qualification-and-configuration",
+        "phase-3a-npm-monorepos",
+        "phase-3b-pnpm",
+        "phase-3c-yarn",
+        "phase-3d-tsx-and-frameworks",
+        "phase-4-python",
+        "phase-5-additional-language",
+        "phase-6-cross-repository",
+        "phase-7-contracts-and-microservices",
+        "phase-8-infrastructure-and-runtime",
+        "phase-9-campaigns-and-control-plane",
+        "phase-10-scale-validation"
+      ]
+    },
+    "nullable_phase_id": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/phase_id"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "permission": {
+      "enum": [
+        "allowed",
+        "prohibited",
+        "authorization_required"
+      ]
+    },
+    "canonical_repository": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?/[A-Za-z0-9._-]+$"
+    },
+    "repository_selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "const": "github"
+        },
+        "canonical_name": {
+          "$ref": "#/$defs/canonical_repository"
+        },
+        "repository_id": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 39,
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "repository_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "private",
+            "internal",
+            "unknown"
+          ]
+        },
+        "allowed_branches": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allowed_commits": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{7,64}$"
+          }
+        },
+        "allowed_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "canonical_name"
+          ]
+        },
+        {
+          "required": [
+            "owner",
+            "name"
+          ]
+        },
+        {
+          "required": [
+            "repository_id"
+          ]
+        }
+      ]
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "phase",
+        "status",
+        "objective",
+        "granted_by",
+        "implementation_authorized",
+        "external_operations_authorized"
+      ],
+      "properties": {
+        "id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[a-z0-9][a-z0-9._-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phase": {
+          "$ref": "#/$defs/nullable_phase_id"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "active",
+            "expired",
+            "revoked",
+            "completed",
+            "superseded",
+            "inactive"
+          ]
+        },
+        "objective": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "granted_by": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "human_instruction_reference": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "human_instruction_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "issued_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "activated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "supersedes_authorization_id": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "implementation_authorized": {
+          "type": "boolean"
+        },
+        "external_operations_authorized": {
+          "type": "boolean"
+        },
+        "combined_phase_scope": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/phase_id"
+          }
+        },
+        "expires_when": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "active_authorization": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/authorization"
+        },
+        {
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "phase": {
+              "$ref": "#/$defs/phase_id"
+            },
+            "status": {
+              "const": "active"
+            },
+            "objective": {
+              "type": "string",
+              "minLength": 1
+            },
+            "granted_by": {
+              "type": "string",
+              "minLength": 1
+            },
+            "implementation_authorized": {
+              "const": true
+            }
+          }
+        }
+      ]
+    },
+    "local_repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "branch_creation",
+        "local_commits",
+        "generate_patches",
+        "modify_tracked_files",
+        "create_new_files",
+        "create_additive_migrations",
+        "destructive_git_operations",
+        "preserve_preexisting_work"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "path": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "repository_identity": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "expected_remote": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "allowed_branch": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "allowed_base_commit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-fA-F]{7,64}$"
+        },
+        "branch_creation": {
+          "$ref": "#/$defs/permission"
+        },
+        "local_commits": {
+          "$ref": "#/$defs/permission"
+        },
+        "generate_patches": {
+          "$ref": "#/$defs/permission"
+        },
+        "modify_tracked_files": {
+          "$ref": "#/$defs/permission"
+        },
+        "create_new_files": {
+          "$ref": "#/$defs/permission"
+        },
+        "create_additive_migrations": {
+          "$ref": "#/$defs/permission"
+        },
+        "destructive_git_operations": {
+          "const": "prohibited"
+        },
+        "discard_preexisting_changes": {
+          "const": "prohibited"
+        },
+        "destructive_clean": {
+          "const": "prohibited"
+        },
+        "rewrite_history": {
+          "const": "prohibited"
+        },
+        "force_push": {
+          "const": "prohibited"
+        },
+        "delete_user_branches": {
+          "const": "prohibited"
+        },
+        "external_push": {
+          "const": "prohibited"
+        },
+        "preserve_preexisting_work": {
+          "const": true
+        },
+        "allowed_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "github_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_scope",
+        "discovery",
+        "metadata",
+        "clone",
+        "fetch",
+        "qualification",
+        "analysis",
+        "isolated_build_test",
+        "local_patch_preparation",
+        "modification",
+        "external_branch_creation",
+        "draft_pull_request",
+        "provider_comment",
+        "issue_creation",
+        "artifact_upload",
+        "default_branch_push",
+        "pull_request_ready_transition",
+        "merge",
+        "auto_merge",
+        "force_push",
+        "history_rewrite",
+        "branch_protection_bypass",
+        "repository_settings_change",
+        "repository_deletion"
+      ],
+      "properties": {
+        "owner_scope": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 39,
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"
+          }
+        },
+        "repository_scope": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repository_selector"
+          }
+        },
+        "discovery": {
+          "$ref": "#/$defs/permission"
+        },
+        "metadata": {
+          "$ref": "#/$defs/permission"
+        },
+        "clone": {
+          "$ref": "#/$defs/permission"
+        },
+        "fetch": {
+          "$ref": "#/$defs/permission"
+        },
+        "qualification": {
+          "$ref": "#/$defs/permission"
+        },
+        "analysis": {
+          "$ref": "#/$defs/permission"
+        },
+        "isolated_build_test": {
+          "$ref": "#/$defs/permission"
+        },
+        "local_patch_preparation": {
+          "$ref": "#/$defs/permission"
+        },
+        "modification": {
+          "$ref": "#/$defs/permission"
+        },
+        "external_branch_creation": {
+          "$ref": "#/$defs/permission"
+        },
+        "draft_pull_request": {
+          "$ref": "#/$defs/permission"
+        },
+        "provider_comment": {
+          "$ref": "#/$defs/permission"
+        },
+        "issue_creation": {
+          "$ref": "#/$defs/permission"
+        },
+        "artifact_upload": {
+          "$ref": "#/$defs/permission"
+        },
+        "maximum_external_operations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "credential_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "network_profiles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "default_branch_push": {
+          "const": "prohibited"
+        },
+        "pull_request_ready_transition": {
+          "const": "prohibited"
+        },
+        "merge": {
+          "const": "prohibited"
+        },
+        "auto_merge": {
+          "const": "prohibited"
+        },
+        "force_push": {
+          "const": "prohibited"
+        },
+        "history_rewrite": {
+          "const": "prohibited"
+        },
+        "branch_protection_bypass": {
+          "const": "prohibited"
+        },
+        "repository_settings_change": {
+          "const": "prohibited"
+        },
+        "repository_deletion": {
+          "const": "prohibited"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "database_permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "local_test_database_creation",
+        "additive_migrations",
+        "schema_validation",
+        "migration_testing",
+        "data_backfills",
+        "destructive_migrations",
+        "production_database_access",
+        "rewrite_historical_migrations",
+        "modify_audit_history"
+      ],
+      "properties": {
+        "local_test_database_creation": {
+          "$ref": "#/$defs/permission"
+        },
+        "additive_migrations": {
+          "$ref": "#/$defs/permission"
+        },
+        "schema_validation": {
+          "$ref": "#/$defs/permission"
+        },
+        "migration_testing": {
+          "$ref": "#/$defs/permission"
+        },
+        "data_backfills": {
+          "$ref": "#/$defs/permission"
+        },
+        "destructive_migrations": {
+          "$ref": "#/$defs/permission"
+        },
+        "production_database_access": {
+          "$ref": "#/$defs/permission"
+        },
+        "rewrite_historical_migrations": {
+          "const": "prohibited"
+        },
+        "modify_audit_history": {
+          "const": "prohibited"
+        },
+        "target_databases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "credential_capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "use",
+        "external_writes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "available",
+            "unavailable",
+            "unknown",
+            "not_configured"
+          ]
+        },
+        "use": {
+          "enum": [
+            "allowed",
+            "prohibited",
+            "authorization_required"
+          ]
+        },
+        "allowed_operations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "target_scope": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repository_selector"
+          }
+        },
+        "network_profiles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "external_writes": {
+          "$ref": "#/$defs/permission"
+        },
+        "expires_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "credentials": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "use_existing_configured_credentials",
+        "availability_does_not_imply_permission",
+        "secret_values_present",
+        "credential_bearing_urls_present",
+        "capabilities"
+      ],
+      "properties": {
+        "use_existing_configured_credentials": {
+          "$ref": "#/$defs/permission"
+        },
+        "availability_does_not_imply_permission": {
+          "const": true
+        },
+        "secret_values_present": {
+          "const": false
+        },
+        "credential_bearing_urls_present": {
+          "const": false
+        },
+        "capabilities": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/credential_capability"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "governance_modification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed"
+      ],
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "files": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "policy_areas": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "objective": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_reviewers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "expiration": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "cannot_weaken_safety_invariants": {
+          "const": true
+        },
+        "cannot_remove_prohibited_repositories": {
+          "const": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "allowed": {
+                "const": true
+              }
+            },
+            "required": [
+              "allowed"
+            ]
+          },
+          "then": {
+            "required": [
+              "objective",
+              "limitations",
+              "required_reviewers",
+              "expiration",
+              "cannot_weaken_safety_invariants",
+              "cannot_remove_prohibited_repositories"
+            ],
+            "anyOf": [
+              {
+                "required": [
+                  "files"
+                ]
+              },
+              {
+                "required": [
+                  "policy_areas"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "remediation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_authorization_is_sufficient",
+        "confirmed_dead_is_sufficient",
+        "finding_specific_authorization_required",
+        "publication_permission_separate"
+      ],
+      "properties": {
+        "phase_authorization_is_sufficient": {
+          "const": false
+        },
+        "confirmed_dead_is_sufficient": {
+          "const": false
+        },
+        "finding_specific_authorization_required": {
+          "const": true
+        },
+        "publication_permission_separate": {
+          "const": true
+        },
+        "allowed_finding_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "allowed_remediation_attempt_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "allowed_transformation_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "allowed_paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_gate_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed",
+        "separate_publication_authorization_required",
+        "trusted_publisher_required",
+        "draft_pull_request_only",
+        "direct_default_branch_push",
+        "pull_request_ready_transition",
+        "merge",
+        "auto_merge",
+        "branch_protection_bypass",
+        "repository_settings_change",
+        "repository_deletion"
+      ],
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "separate_publication_authorization_required": {
+          "const": true
+        },
+        "trusted_publisher_required": {
+          "const": true
+        },
+        "draft_pull_request_only": {
+          "const": true
+        },
+        "allowed_repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/repository_selector"
+          }
+        },
+        "allowed_base_commits": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{7,64}$"
+          }
+        },
+        "allowed_patch_hashes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          }
+        },
+        "maximum_publications": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "direct_default_branch_push": {
+          "const": "prohibited"
+        },
+        "pull_request_ready_transition": {
+          "const": "prohibited"
+        },
+        "merge": {
+          "const": "prohibited"
+        },
+        "auto_merge": {
+          "const": "prohibited"
+        },
+        "branch_protection_bypass": {
+          "const": "prohibited"
+        },
+        "repository_settings_change": {
+          "const": "prohibited"
+        },
+        "repository_deletion": {
+          "const": "prohibited"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "external_system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system_id",
+        "system_type",
+        "environment",
+        "operations",
+        "credential_capabilities",
+        "network_profiles",
+        "production_access"
+      ],
+      "properties": {
+        "system_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "system_type": {
+          "enum": [
+            "source_provider",
+            "package_registry",
+            "artifact_registry",
+            "schema_registry",
+            "telemetry_system",
+            "infrastructure_provider",
+            "database",
+            "message_system",
+            "deployment_system",
+            "feature_flag_system",
+            "other"
+          ]
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "credential_capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "network_profiles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "production_access": {
+          "enum": [
+            "denied",
+            "explicit_authorization_only",
+            "not_applicable"
+          ]
+        },
+        "maximum_operations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "cleanup_required": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "destructive_operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "resource_identity",
+        "reason",
+        "recovery_plan",
+        "rollback_plan",
+        "affected_environments",
+        "approval_scope",
+        "expiration"
+      ],
+      "properties": {
+        "operation_id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "resource_identity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recovery_plan": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rollback_plan": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affected_environments": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "approval_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expiration": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "destructive_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed",
+        "ordinary_phase_authorization_is_sufficient",
+        "permanent_prohibitions_remain_enforced"
+      ],
+      "properties": {
+        "allowed": {
+          "type": "boolean"
+        },
+        "ordinary_phase_authorization_is_sufficient": {
+          "const": false
+        },
+        "permanent_prohibitions_remain_enforced": {
+          "const": true
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/destructive_operation"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "allowed": {
+                "const": true
+              }
+            },
+            "required": [
+              "allowed"
+            ]
+          },
+          "then": {
+            "required": [
+              "operations"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "allowed": {
+                "const": false
+              }
+            },
+            "required": [
+              "allowed"
+            ]
+          },
+          "then": {
+            "properties": {
+              "operations": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maximum_external_operations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "maximum_runtime_seconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "maximum_concurrent_workers": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "maximum_storage_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "maximum_network_bytes": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "maximum_estimated_cost": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "hard_limits": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "expiration_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "phase_stops_for_human_review",
+            "phase_acceptance_criteria_completed",
+            "timestamp",
+            "external_operation_count",
+            "source_revision_change",
+            "finding_change",
+            "evidence_change",
+            "coverage_change",
+            "policy_change",
+            "credential_loss",
+            "governance_integrity_failure",
+            "human_revocation"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "maximum_operations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "timestamp"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "timestamp"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "external_operation_count"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "maximum_operations"
+            ]
+          }
+        }
+      ]
+    },
+    "expiration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conditions",
+        "any_condition_expires",
+        "automatic_renewal",
+        "unknown_expiration_result"
+      ],
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/expiration_condition"
+          }
+        },
+        "any_condition_expires": {
+          "const": true
+        },
+        "automatic_renewal": {
+          "const": false
+        },
+        "unknown_expiration_result": {
+          "const": "inactive"
+        },
+        "evaluated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "human_instruction_explicit": {
+          "type": "boolean"
+        },
+        "matches_latest_human_instruction": {
+          "type": "boolean"
+        },
+        "authorization_not_expired": {
+          "type": "boolean"
+        },
+        "phase_recognized": {
+          "type": "boolean"
+        },
+        "local_repository_matches_scope": {
+          "type": "boolean"
+        },
+        "requested_operations_permitted": {
+          "type": "boolean"
+        },
+        "repository_policy_valid": {
+          "type": "boolean"
+        },
+        "prohibited_repository_policy_valid": {
+          "type": "boolean"
+        },
+        "governance_integrity_recorded": {
+          "type": "boolean"
+        },
+        "preexisting_worktree_state_understood": {
+          "type": "boolean"
+        },
+        "credentials_sufficient_or_documented": {
+          "type": "boolean"
+        },
+        "validated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "validated_by": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "validation_digest": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "reporting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_in_execution_state": {
+          "const": true
+        },
+        "record_in_phase_report": {
+          "const": true
+        },
+        "record_in_audit": {
+          "const": true
+        },
+        "record_external_operations": {
+          "const": true
+        },
+        "record_failures": {
+          "const": true
+        },
+        "record_cleanup": {
+          "const": true
+        },
+        "redact_secrets": {
+          "const": true
+        },
+        "authorization_file_is_not_authority_source": {
+          "const": true
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "enum": [
+            "template",
+            "current",
+            "historical"
+          ]
+        },
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "created_by": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "reviewers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "append_only_history_required": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

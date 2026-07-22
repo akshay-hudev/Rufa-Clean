@@ -1,0 +1,1475 @@
+{
+"$schema": "https://json-schema.org/draft/2020-12/schema",
+"$id": "https://dcav2.local/schemas/repository-access-policy.schema.json",
+"title": "DCAv2 Repository Access Policy",
+"description": "Defines the machine-readable structure for provider-specific repository-access policy. The policy evaluates repository operations independently and does not authorize execution, credential use, remediation, publication, merge, infrastructure changes, or destructive operations by itself.",
+"type": "object",
+"additionalProperties": false,
+"required": [
+"schema_version",
+"policy_id",
+"title",
+"purpose",
+"document_status",
+"implementation_authorized_by_policy",
+"provider",
+"defaults",
+"standing_scope",
+"identity_resolution",
+"operations",
+"prohibited_repository_policy",
+"external_writes",
+"credentials",
+"audit"
+],
+"properties": {
+"$schema": {
+"type": "string",
+"format": "uri-reference"
+},
+"schema_version": {
+"const": "1.0.0"
+},
+"policy_id": {
+"$ref": "#/$defs/identifier"
+},
+"title": {
+"type": "string",
+"minLength": 1,
+"maxLength": 200
+},
+"purpose": {
+"type": "string",
+"minLength": 1
+},
+"document_status": {
+"enum": [
+"draft",
+"active",
+"deprecated",
+"superseded"
+]
+},
+"implementation_authorized_by_policy": {
+"const": false
+},
+"provider": {
+"const": "github"
+},
+"supersedes_policy_id": {
+"$ref": "#/$defs/identifier"
+},
+"references": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/document_reference"
+},
+"uniqueItems": true
+},
+"defaults": {
+"$ref": "#/$defs/defaults"
+},
+"standing_scope": {
+"$ref": "#/$defs/standing_scope"
+},
+"identity_resolution": {
+"$ref": "#/$defs/identity_resolution"
+},
+"operations": {
+"$ref": "#/$defs/operation_matrix"
+},
+"repository_rules": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/repository_rule"
+}
+},
+"prohibited_repository_policy": {
+"$ref": "#/$defs/prohibited_repository_policy"
+},
+"external_writes": {
+"$ref": "#/$defs/external_write_policy"
+},
+"local_git": {
+"$ref": "#/$defs/local_git_policy"
+},
+"governance_modification": {
+"$ref": "#/$defs/governance_modification_policy"
+},
+"credentials": {
+"$ref": "#/$defs/credential_policy"
+},
+"network": {
+"$ref": "#/$defs/network_policy"
+},
+"remediation": {
+"$ref": "#/$defs/remediation_policy"
+},
+"publication": {
+"$ref": "#/$defs/publication_policy"
+},
+"failure_behavior": {
+"$ref": "#/$defs/failure_behavior"
+},
+"audit": {
+"$ref": "#/$defs/audit_policy"
+},
+"metadata": {
+"$ref": "#/$defs/metadata"
+}
+},
+"$defs": {
+"identifier": {
+"type": "string",
+"minLength": 1,
+"maxLength": 200,
+"pattern": "^[a-z0-9][a-z0-9.-]*$"
+},
+"github_login": {
+"type": "string",
+"minLength": 1,
+"maxLength": 39,
+"pattern": "^A-Za-z0-9?$"
+},
+"repository_name": {
+"type": "string",
+"minLength": 1,
+"maxLength": 100,
+"pattern": "^[A-Za-z0-9.-]+$"
+},
+"canonical_repository_name": {
+"type": "string",
+"minLength": 3,
+"maxLength": 200,
+"pattern": "^A-Za-z0-9?/[A-Za-z0-9._-]+$"
+},
+"document_reference": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"path"
+],
+"properties": {
+"path": {
+"type": "string",
+"minLength": 1
+},
+"section": {
+"type": "string",
+"minLength": 1
+},
+"purpose": {
+"type": "string",
+"minLength": 1
+}
+}
+},
+"metadata": {
+"type": "object",
+"additionalProperties": false,
+"properties": {
+"owner": {
+"type": "string",
+"minLength": 1
+},
+"created_at": {
+"type": "string",
+"format": "date-time"
+},
+"updated_at": {
+"type": "string",
+"format": "date-time"
+},
+"reviewers": {
+"type": "array",
+"items": {
+"type": "string",
+"minLength": 1
+},
+"uniqueItems": true
+},
+"notes": {
+"type": "string"
+}
+}
+},
+"decision": {
+"enum": [
+"deny",
+"authorization_required",
+"allow_when_authorized"
+]
+},
+"operation_id": {
+"enum": [
+"account_discovery",
+"repository_metadata",
+"clone",
+"fetch",
+"qualification",
+"static_analysis",
+"isolated_build_test",
+"local_patch_preparation",
+"external_source_modification",
+"external_branch_creation",
+"draft_pull_request_creation",
+"provider_comment_creation",
+"issue_creation",
+"artifact_upload",
+"default_branch_push",
+"pull_request_ready_transition",
+"pull_request_merge",
+"auto_merge_enablement",
+"force_push",
+"history_rewrite",
+"repository_settings_change",
+"repository_deletion"
+]
+},
+"defaults": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"decision",
+"missing_permission",
+"ambiguous_permission",
+"expired_authorization",
+"revoked_authorization",
+"operation_inheritance",
+"production_access",
+"destructive_operations"
+],
+"properties": {
+"decision": {
+"const": "deny"
+},
+"missing_permission": {
+"const": "deny"
+},
+"ambiguous_permission": {
+"const": "deny"
+},
+"expired_authorization": {
+"const": "deny"
+},
+"revoked_authorization": {
+"const": "deny"
+},
+"operation_inheritance": {
+"const": "prohibited"
+},
+"production_access": {
+"const": "deny"
+},
+"destructive_operations": {
+"const": "deny"
+},
+"unknown_repository_identity": {
+"enum": [
+"deny",
+"configuration_required"
+]
+},
+"unknown_external_state": {
+"const": "block_retry_and_completion"
+}
+}
+},
+"owner_scope": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"provider",
+"owner",
+"eligibility_only",
+"authorization_required"
+],
+"properties": {
+"provider": {
+"const": "github"
+},
+"owner": {
+"$ref": "#/$defs/github_login"
+},
+"eligibility_only": {
+"const": true
+},
+"authorization_required": {
+"const": true
+},
+"allowed_repository_visibility": {
+"type": "array",
+"items": {
+"enum": [
+"public",
+"private",
+"internal",
+"unknown"
+]
+},
+"uniqueItems": true
+},
+"notes": {
+"type": "string"
+}
+}
+},
+"standing_scope": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"eligibility_does_not_authorize_execution",
+"authorized_owners",
+"prohibited_repository_policy_required"
+],
+"properties": {
+"eligibility_does_not_authorize_execution": {
+"const": true
+},
+"authorized_owners": {
+"type": "array",
+"minItems": 1,
+"items": {
+"$ref": "#/$defs/owner_scope"
+}
+},
+"explicit_repository_inclusions": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/repository_selector"
+}
+},
+"explicit_repository_exclusions": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/repository_selector"
+}
+},
+"prohibited_repository_policy_required": {
+"const": true
+},
+"current_phase_authorization_required": {
+"type": "boolean",
+"default": true
+},
+"latest_human_instruction_required": {
+"type": "boolean",
+"default": true
+}
+}
+},
+"repository_selector": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"provider"
+],
+"properties": {
+"provider": {
+"const": "github"
+},
+"canonical_name": {
+"$ref": "#/$defs/canonical_repository_name"
+},
+"owner": {
+"$ref": "#/$defs/github_login"
+},
+"name": {
+"$ref": "#/$defs/repository_name"
+},
+"repository_id": {
+"oneOf": [
+{
+"type": "integer",
+"minimum": 1
+},
+{
+"type": "string",
+"minLength": 1,
+"maxLength": 100
+}
+]
+},
+"repository_url": {
+"type": "string",
+"format": "uri"
+},
+"visibility": {
+"enum": [
+"public",
+"private",
+"internal",
+"unknown"
+]
+}
+},
+"anyOf": [
+{
+"required": [
+"canonical_name"
+]
+},
+{
+"required": [
+"owner",
+"name"
+]
+},
+{
+"required": [
+"repository_id"
+]
+}
+]
+},
+"identity_resolution": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"canonical_identity_required",
+"resolve_before_content_access",
+"minimum_preflight_metadata",
+"rename_revalidation_required",
+"aliases_do_not_bypass_policy"
+],
+"properties": {
+"canonical_identity_required": {
+"const": true
+},
+"resolve_before_content_access": {
+"const": true
+},
+"minimum_preflight_metadata": {
+"type": "array",
+"minItems": 1,
+"items": {
+"enum": [
+"provider",
+"repository_id",
+"owner",
+"name",
+"canonical_name",
+"visibility"
+]
+},
+"uniqueItems": true,
+"contains": {
+"const": "canonical_name"
+}
+},
+"rename_revalidation_required": {
+"const": true
+},
+"aliases_do_not_bypass_policy": {
+"const": true
+},
+"mirrors_require_independent_evaluation": {
+"type": "boolean",
+"default": true
+},
+"forks_require_independent_evaluation": {
+"type": "boolean",
+"default": true
+},
+"submodules_require_independent_evaluation": {
+"type": "boolean",
+"default": true
+},
+"nested_repositories_require_independent_evaluation": {
+"type": "boolean",
+"default": true
+},
+"identity_conflict_result": {
+"enum": [
+"deny",
+"configuration_required",
+"blocked"
+]
+}
+}
+},
+"operation_rule": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"decision",
+"authorization_required",
+"implies_other_operations",
+"audit_required"
+],
+"properties": {
+"decision": {
+"$ref": "#/$defs/decision"
+},
+"authorization_required": {
+"type": "boolean"
+},
+"required_permissions": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"credential_capabilities": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"network_profiles": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"runner_profiles": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"prerequisites": {
+"type": "array",
+"items": {
+"type": "string",
+"minLength": 1
+}
+},
+"implies_other_operations": {
+"const": false
+},
+"audit_required": {
+"const": true
+},
+"production_access": {
+"enum": [
+"not_applicable",
+"denied",
+"explicit_authorization_only"
+]
+},
+"notes": {
+"type": "string"
+}
+}
+},
+"permanently_denied_operation_rule": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"decision",
+"authorization_required",
+"permanently_prohibited",
+"implies_other_operations",
+"audit_required"
+],
+"properties": {
+"decision": {
+"const": "deny"
+},
+"authorization_required": {
+"const": false
+},
+"permanently_prohibited": {
+"const": true
+},
+"implies_other_operations": {
+"const": false
+},
+"audit_required": {
+"const": true
+},
+"reason": {
+"type": "string",
+"minLength": 1
+}
+}
+},
+"operation_matrix": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"account_discovery",
+"repository_metadata",
+"clone",
+"fetch",
+"qualification",
+"static_analysis",
+"isolated_build_test",
+"local_patch_preparation",
+"external_source_modification",
+"external_branch_creation",
+"draft_pull_request_creation",
+"default_branch_push",
+"pull_request_ready_transition",
+"pull_request_merge",
+"auto_merge_enablement",
+"force_push",
+"history_rewrite",
+"repository_settings_change",
+"repository_deletion"
+],
+"properties": {
+"account_discovery": {
+"$ref": "#/$defs/operation_rule"
+},
+"repository_metadata": {
+"$ref": "#/$defs/operation_rule"
+},
+"clone": {
+"$ref": "#/$defs/operation_rule"
+},
+"fetch": {
+"$ref": "#/$defs/operation_rule"
+},
+"qualification": {
+"$ref": "#/$defs/operation_rule"
+},
+"static_analysis": {
+"$ref": "#/$defs/operation_rule"
+},
+"isolated_build_test": {
+"$ref": "#/$defs/operation_rule"
+},
+"local_patch_preparation": {
+"$ref": "#/$defs/operation_rule"
+},
+"external_source_modification": {
+"$ref": "#/$defs/operation_rule"
+},
+"external_branch_creation": {
+"$ref": "#/$defs/operation_rule"
+},
+"draft_pull_request_creation": {
+"$ref": "#/$defs/operation_rule"
+},
+"provider_comment_creation": {
+"$ref": "#/$defs/operation_rule"
+},
+"issue_creation": {
+"$ref": "#/$defs/operation_rule"
+},
+"artifact_upload": {
+"$ref": "#/$defs/operation_rule"
+},
+"default_branch_push": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"pull_request_ready_transition": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"pull_request_merge": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"auto_merge_enablement": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"force_push": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"history_rewrite": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"repository_settings_change": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+},
+"repository_deletion": {
+"$ref": "#/$defs/permanently_denied_operation_rule"
+}
+}
+},
+"operation_override": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"operation",
+"decision",
+"authorization_required"
+],
+"properties": {
+"operation": {
+"$ref": "#/$defs/operation_id"
+},
+"decision": {
+"$ref": "#/$defs/decision"
+},
+"authorization_required": {
+"type": "boolean"
+},
+"required_permissions": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"credential_capabilities": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"network_profile": {
+"$ref": "#/$defs/identifier"
+},
+"reason": {
+"type": "string",
+"minLength": 1
+}
+}
+},
+"repository_rule": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"rule_id",
+"selector",
+"operation_overrides"
+],
+"properties": {
+"rule_id": {
+"$ref": "#/$defs/identifier"
+},
+"selector": {
+"$ref": "#/$defs/repository_selector"
+},
+"operation_overrides": {
+"type": "array",
+"minItems": 1,
+"items": {
+"$ref": "#/$defs/operation_override"
+}
+},
+"priority": {
+"type": "integer",
+"minimum": 0
+},
+"expiration": {
+"$ref": "#/$defs/expiration"
+},
+"notes": {
+"type": "string"
+}
+}
+},
+"prohibited_repository_policy": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"source",
+"precedence",
+"evaluate_before_content_access",
+"authorization_can_override",
+"minimum_metadata_only",
+"denied_operations",
+"audit_required"
+],
+"properties": {
+"source": {
+"const": "codex/access/prohibited-repositories.yaml"
+},
+"precedence": {
+"const": "hard_deny"
+},
+"evaluate_before_content_access": {
+"const": true
+},
+"authorization_can_override": {
+"const": false
+},
+"minimum_metadata_only": {
+"const": true
+},
+"aliases_and_renames_included": {
+"type": "boolean",
+"default": true
+},
+"forks_and_mirrors_included": {
+"type": "boolean",
+"default": true
+},
+"submodules_included": {
+"type": "boolean",
+"default": true
+},
+"denied_operations": {
+"type": "array",
+"uniqueItems": true,
+"items": {
+"$ref": "#/$defs/operation_id"
+},
+"allOf": [
+{
+"contains": {
+"const": "repository_metadata"
+}
+},
+{
+"contains": {
+"const": "clone"
+}
+},
+{
+"contains": {
+"const": "fetch"
+}
+},
+{
+"contains": {
+"const": "qualification"
+}
+},
+{
+"contains": {
+"const": "static_analysis"
+}
+},
+{
+"contains": {
+"const": "external_source_modification"
+}
+},
+{
+"contains": {
+"const": "external_branch_creation"
+}
+},
+{
+"contains": {
+"const": "draft_pull_request_creation"
+}
+}
+]
+},
+"audit_required": {
+"const": true
+},
+"denial_result": {
+"enum": [
+"prohibited",
+"deny"
+]
+}
+}
+},
+"external_write_policy": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"default_decision",
+"explicit_authorization_required",
+"reads_do_not_authorize_writes",
+"remediation_does_not_authorize_publication",
+"permanently_prohibited"
+],
+"properties": {
+"default_decision": {
+"const": "deny"
+},
+"explicit_authorization_required": {
+"const": true
+},
+"reads_do_not_authorize_writes": {
+"const": true
+},
+"remediation_does_not_authorize_publication": {
+"const": true
+},
+"permitted_when_authorized": {
+"type": "array",
+"items": {
+"enum": [
+"external_branch_creation",
+"draft_pull_request_creation",
+"provider_comment_creation",
+"issue_creation",
+"artifact_upload"
+]
+},
+"uniqueItems": true
+},
+"permanently_prohibited": {
+"type": "array",
+"uniqueItems": true,
+"items": {
+"enum": [
+"default_branch_push",
+"pull_request_ready_transition",
+"pull_request_merge",
+"auto_merge_enablement",
+"force_push",
+"history_rewrite",
+"branch_protection_bypass",
+"repository_settings_change",
+"repository_deletion"
+]
+},
+"allOf": [
+{
+"contains": {
+"const": "default_branch_push"
+}
+},
+{
+"contains": {
+"const": "pull_request_ready_transition"
+}
+},
+{
+"contains": {
+"const": "pull_request_merge"
+}
+},
+{
+"contains": {
+"const": "auto_merge_enablement"
+}
+},
+{
+"contains": {
+"const": "force_push"
+}
+},
+{
+"contains": {
+"const": "history_rewrite"
+}
+},
+{
+"contains": {
+"const": "branch_protection_bypass"
+}
+},
+{
+"contains": {
+"const": "repository_settings_change"
+}
+},
+{
+"contains": {
+"const": "repository_deletion"
+}
+}
+]
+},
+"unknown_external_state": {
+"const": "block_retry_and_completion"
+},
+"reconciliation_required_before_retry": {
+"type": "boolean",
+"default": true
+}
+}
+},
+"local_git_policy": {
+"type": "object",
+"additionalProperties": false,
+"properties": {
+"authorization_required_for": {
+"type": "array",
+"items": {
+"enum": [
+"create_phase_branch",
+"create_commit",
+"generate_patch",
+"modify_tracked_files",
+"create_files",
+"create_additive_migrations"
+]
+},
+"uniqueItems": true
+},
+"denied_by_default": {
+"type": "array",
+"items": {
+"enum": [
+"discard_preexisting_changes",
+"destructive_clean",
+"amend_preexisting_commit",
+"rewrite_history",
+"force_push",
+"delete_user_branch",
+"external_push"
+]
+},
+"uniqueItems": true
+},
+"preserve_preexisting_work": {
+"type": "boolean",
+"default": true
+}
+}
+},
+"governance_modification_policy": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"default_decision",
+"explicit_authorization_required"
+],
+"properties": {
+"default_decision": {
+"const": "deny"
+},
+"explicit_authorization_required": {
+"const": true
+},
+"protected_paths": {
+"type": "array",
+"items": {
+"type": "string",
+"minLength": 1
+},
+"uniqueItems": true
+},
+"authorization_must_identify": {
+"type": "array",
+"items": {
+"enum": [
+"files_or_policy_area",
+"objective",
+"limitations",
+"required_review",
+"expiration"
+]
+},
+"uniqueItems": true
+}
+}
+},
+"credential_rule": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"status",
+"use"
+],
+"properties": {
+"status": {
+"enum": [
+"available",
+"unavailable",
+"unknown",
+"not_configured"
+]
+},
+"use": {
+"enum": [
+"allowed_when_authorized",
+"prohibited",
+"not_applicable"
+]
+},
+"allowed_operations": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/operation_id"
+},
+"uniqueItems": true
+},
+"target_scope": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/repository_selector"
+}
+},
+"network_profiles": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+},
+"external_writes_allowed": {
+"type": "boolean"
+},
+"secret_value_present": {
+"const": false
+},
+"notes": {
+"type": "string"
+}
+}
+},
+"credential_policy": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"availability_does_not_imply_permission",
+"secret_values_allowed",
+"capabilities"
+],
+"properties": {
+"availability_does_not_imply_permission": {
+"const": true
+},
+"secret_values_allowed": {
+"const": false
+},
+"credential_bearing_urls_allowed": {
+"const": false
+},
+"authentication_headers_allowed": {
+"const": false
+},
+"capabilities": {
+"type": "object",
+"minProperties": 1,
+"propertyNames": {
+"$ref": "#/$defs/identifier"
+},
+"additionalProperties": {
+"$ref": "#/$defs/credential_rule"
+}
+},
+"minimum_required_scope": {
+"type": "boolean",
+"default": true
+},
+"temporary_credentials_required_when_available": {
+"type": "boolean"
+},
+"revocation_required_after_use": {
+"type": "boolean"
+}
+}
+},
+"network_policy": {
+"type": "object",
+"additionalProperties": false,
+"properties": {
+"default_profile": {
+"$ref": "#/$defs/identifier"
+},
+"repository_content_can_add_destinations": {
+"const": false
+},
+"profiles": {
+"type": "object",
+"propertyNames": {
+"$ref": "#/$defs/identifier"
+},
+"additionalProperties": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"mode"
+],
+"properties": {
+"mode": {
+"enum": [
+"disabled",
+"allowlisted"
+]
+},
+"allowed_destinations": {
+"type": "array",
+"items": {
+"type": "string",
+"minLength": 1
+},
+"uniqueItems": true
+},
+"allowed_operations": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/operation_id"
+},
+"uniqueItems": true
+}
+}
+}
+}
+}
+},
+"remediation_policy": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"phase_authorization_is_insufficient",
+"confirmed_dead_is_insufficient",
+"publication_requires_separate_permission",
+"required_prerequisites"
+],
+"properties": {
+"phase_authorization_is_insufficient": {
+"const": true
+},
+"confirmed_dead_is_insufficient": {
+"const": true
+},
+"publication_requires_separate_permission": {
+"const": true
+},
+"required_prerequisites": {
+"type": "array",
+"uniqueItems": true,
+"items": {
+"enum": [
+"current_finding",
+"immutable_source_snapshot",
+"human_disposition",
+"remediation_authorization",
+"exact_finding_reproduction",
+"baseline_verification",
+"supported_deterministic_transformation",
+"post_change_verification",
+"changed_file_allowlist",
+"publication_permission"
+]
+},
+"allOf": [
+{
+"contains": {
+"const": "current_finding"
+}
+},
+{
+"contains": {
+"const": "immutable_source_snapshot"
+}
+},
+{
+"contains": {
+"const": "human_disposition"
+}
+},
+{
+"contains": {
+"const": "remediation_authorization"
+}
+},
+{
+"contains": {
+"const": "exact_finding_reproduction"
+}
+},
+{
+"contains": {
+"const": "baseline_verification"
+}
+},
+{
+"contains": {
+"const": "supported_deterministic_transformation"
+}
+},
+{
+"contains": {
+"const": "post_change_verification"
+}
+},
+{
+"contains": {
+"const": "changed_file_allowlist"
+}
+}
+]
+}
+}
+},
+"publication_policy": {
+"type": "object",
+"additionalProperties": false,
+"properties": {
+"trusted_publisher_required": {
+"const": true
+},
+"draft_pull_request_only": {
+"const": true
+},
+"direct_default_branch_push": {
+"const": "prohibited"
+},
+"merge": {
+"const": "prohibited"
+},
+"auto_merge": {
+"const": "prohibited"
+},
+"automatic_ready_transition": {
+"const": "prohibited"
+},
+"branch_protection_bypass": {
+"const": "prohibited"
+},
+"repository_settings_change": {
+"const": "prohibited"
+},
+"repository_deletion": {
+"const": "prohibited"
+}
+}
+},
+"expiration": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"type"
+],
+"properties": {
+"type": {
+"enum": [
+"timestamp",
+"phase_completion",
+"human_review_stop",
+"operation_count",
+"source_revision_change",
+"evidence_change",
+"coverage_change",
+"policy_change",
+"human_revocation"
+]
+},
+"timestamp": {
+"type": "string",
+"format": "date-time"
+},
+"maximum_operations": {
+"type": "integer",
+"minimum": 1
+},
+"description": {
+"type": "string",
+"minLength": 1
+}
+},
+"allOf": [
+{
+"if": {
+"properties": {
+"type": {
+"const": "timestamp"
+}
+},
+"required": [
+"type"
+]
+},
+"then": {
+"required": [
+"timestamp"
+]
+}
+},
+{
+"if": {
+"properties": {
+"type": {
+"const": "operation_count"
+}
+},
+"required": [
+"type"
+]
+},
+"then": {
+"required": [
+"maximum_operations"
+]
+}
+}
+]
+},
+"failure_behavior": {
+"type": "object",
+"additionalProperties": false,
+"properties": {
+"identity_failure": {
+"enum": [
+"deny",
+"blocked",
+"configuration_required"
+]
+},
+"authorization_failure": {
+"const": "deny"
+},
+"prohibited_repository_match": {
+"const": "deny_before_content_access"
+},
+"credential_failure": {
+"enum": [
+"deny",
+"blocked"
+]
+},
+"policy_unavailable": {
+"enum": [
+"deny",
+"blocked"
+]
+},
+"external_state_unknown": {
+"const": "block_retry_and_completion"
+},
+"preserve_local_work": {
+"const": true
+},
+"record_exact_failure": {
+"const": true
+}
+}
+},
+"audit_policy": {
+"type": "object",
+"additionalProperties": false,
+"required": [
+"record_each_decision",
+"record_denials",
+"record_external_operations",
+"record_canonical_identity",
+"record_authorization_identity",
+"append_only",
+"secret_free"
+],
+"properties": {
+"record_each_decision": {
+"const": true
+},
+"record_denials": {
+"const": true
+},
+"record_external_operations": {
+"const": true
+},
+"record_canonical_identity": {
+"const": true
+},
+"record_authorization_identity": {
+"const": true
+},
+"record_credential_capability": {
+"type": "boolean",
+"default": true
+},
+"record_network_profile": {
+"type": "boolean",
+"default": true
+},
+"record_policy_version": {
+"type": "boolean",
+"default": true
+},
+"append_only": {
+"const": true
+},
+"secret_free": {
+"const": true
+},
+"required_event_types": {
+"type": "array",
+"items": {
+"$ref": "#/$defs/identifier"
+},
+"uniqueItems": true
+}
+}
+}
+}
+}
