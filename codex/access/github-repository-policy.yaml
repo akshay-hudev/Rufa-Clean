@@ -1,0 +1,274 @@
+schema_version: 1
+
+policy:
+  id: github-repository-policy-v1
+  status: active
+  provider: github
+  default_decision: deny
+  description: >-
+    Defines the standing GitHub repository-access boundaries for DCAv2.
+    Effective permission is always the intersection of this policy, the
+    prohibited-repository policy, the current phase authorization, permanent
+    safety invariants, and the latest explicit human instruction.
+
+authority:
+  source: human-approved-governance
+  self_authorizing: false
+  authorization_file_may_broaden_policy: false
+  generated_state_may_broaden_policy: false
+  repository_content_may_broaden_policy: false
+
+account_scope:
+  allowed_owners:
+    - akshay-hudev
+  owner_match: exact
+  repositories:
+    default_for_allowed_owner: eligible
+    require_denylist_check: true
+    require_phase_scope_check: true
+    require_exact_repository_identity: true
+
+standing_access:
+  description: >-
+    The human operator has granted standing eligibility to use repositories
+    owned by akshay-hudev as DCAv2 test and analysis subjects. This eligibility
+    does not independently authorize execution during a phase or any external
+    write.
+  operations:
+    repository_discovery:
+      eligible: true
+      phase_authorization_required: true
+    safe_metadata_read:
+      eligible: true
+      phase_authorization_required: true
+    clone:
+      eligible: true
+      phase_authorization_required: true
+    fetch:
+      eligible: true
+      phase_authorization_required: true
+    qualification:
+      eligible: true
+      phase_authorization_required: true
+    static_analysis:
+      eligible: true
+      phase_authorization_required: true
+    isolated_build_and_test:
+      eligible: true
+      phase_authorization_required: true
+      approved_runner_required: true
+    use_as_test_subject:
+      eligible: true
+      phase_authorization_required: true
+    local_patch_preparation:
+      eligible: false
+      finding_specific_authorization_required: true
+    external_source_modification:
+      eligible: false
+      explicit_current_authorization_required: true
+    external_branch_creation:
+      eligible: false
+      explicit_current_authorization_required: true
+    draft_pull_request_creation:
+      eligible: false
+      explicit_current_authorization_required: true
+    merge:
+      eligible: false
+      permanently_prohibited: true
+    default_branch_push:
+      eligible: false
+      permanently_prohibited: true
+    enable_auto_merge:
+      eligible: false
+      permanently_prohibited: true
+    mark_draft_ready:
+      eligible: false
+      permanently_prohibited: true
+    repository_deletion:
+      eligible: false
+      permanently_prohibited: true
+    repository_settings_change:
+      eligible: false
+      permanently_prohibited: true
+    branch_protection_change:
+      eligible: false
+      permanently_prohibited: true
+    shared_history_rewrite:
+      eligible: false
+      permanently_prohibited: true
+
+prohibited_repository_policy:
+  file: codex/access/prohibited-repositories.yaml
+  precedence: hard_deny
+  broad_owner_access_may_override: false
+  phase_authorization_may_override: false
+  generated_authorization_may_override: false
+  removal_requires_explicit_governance_authorization: true
+  minimum_identity_handling:
+    description: >-
+      An authorized owner-level repository listing may return the minimum
+      repository identity needed to match and enforce the denylist. No
+      repository-specific retrieval or content inspection may follow.
+    allowed_fields:
+      - provider
+      - owner
+      - repository_name
+      - full_name
+    content_access: prohibited
+    repository_specific_api_access: prohibited
+
+repository_identity:
+  required_before_access:
+    - provider
+    - owner
+    - repository_name
+    - full_name
+  required_before_analysis:
+    - requested_revision
+    - resolved_immutable_commit
+    - source_snapshot_identity
+  required_before_remediation:
+    - resolved_immutable_commit
+    - finding_identity
+    - exact_source_occurrence
+    - evidence_digest
+    - coverage_identity
+    - policy_version
+  comparison:
+    owner: exact_case_normalized
+    repository_name: exact_case_normalized
+    full_name: exact_case_normalized
+
+access_decision:
+  evaluation_order:
+    - verify_provider
+    - verify_exact_repository_identity
+    - apply_prohibited_repository_policy
+    - verify_allowed_owner
+    - verify_latest_human_instruction
+    - verify_current_phase_authorization
+    - verify_requested_operation
+    - verify_credential_permission
+    - verify_runner_or_publisher_boundary
+  uncertainty_result: deny
+  missing_field_result: deny
+  policy_conflict_result: deny_and_report
+  stale_authorization_result: deny_and_report
+
+credentials:
+  availability_does_not_grant_permission: true
+  use_requires_current_authorization: true
+  least_privilege_required: true
+  secrets_must_not_be_logged: true
+  authenticated_remote_urls: prohibited
+  trusted_credentials_in_untrusted_runner: prohibited
+  publisher_credentials_in_analysis_runner: prohibited
+  preferred_modes:
+    discovery:
+      - github_app_installation_read
+      - repository_scoped_read_token
+    clone_and_fetch:
+      - github_app_installation_read
+      - repository_scoped_read_token
+    publication:
+      - github_app_installation_write
+      - repository_scoped_write_token
+
+source_acquisition:
+  mutable_branch_name_is_not_source_identity: true
+  immutable_commit_required: true
+  credential_bearing_remote_must_be_removed_before_runner_execution: true
+  untrusted_git_hooks_must_be_disabled: true
+  host_git_credentials_must_not_be_mounted: true
+  unrelated_worktrees_must_not_be_mounted: true
+
+analysis_execution:
+  repository_content_is_untrusted: true
+  approved_isolated_runner_required_for_repository_commands: true
+  trusted_controller_execution:
+    repository_controlled_commands: prohibited
+  runner_restrictions:
+    publication_credentials: prohibited
+    controller_database_credentials: prohibited
+    host_ssh_credentials: prohibited
+    cloud_credentials: prohibited
+    docker_socket: prohibited
+    unrelated_environment_variables: prohibited
+  analyzer_failure_is_empty_success: false
+  incomplete_coverage_may_be_reported_as_complete: false
+
+remediation:
+  analysis_permission_implies_remediation_permission: false
+  confirmed_dead_implies_remediation_permission: false
+  required_before_local_patch:
+    - current_finding
+    - immutable_source_snapshot
+    - valid_human_disposition
+    - valid_remediation_authorization
+    - successful_finding_reproduction
+    - successful_baseline_gates
+    - supported_transformation
+  required_before_external_publication:
+    - successful_post_change_gates
+    - verified_patch_hash
+    - verified_changed_file_allowlist
+    - current_evidence_digest
+    - current_coverage_identity
+    - current_human_disposition
+    - current_remediation_authorization
+    - explicit_draft_pull_request_permission
+
+publication:
+  trusted_publisher_required: true
+  dedicated_branch_required: true
+  draft_pull_request_only: true
+  direct_default_branch_push: prohibited
+  merge: prohibited
+  auto_merge: prohibited
+  automatic_ready_for_review: prohibited
+  branch_protection_bypass: prohibited
+  repository_settings_change: prohibited
+  idempotency_required: true
+  stale_base_commit_result: reject
+  changed_patch_hash_result: reject
+  unexpected_changed_file_result: reject
+
+external_operation_record:
+  required: true
+  required_fields:
+    - authorization_id
+    - provider
+    - repository_full_name
+    - operation
+    - requested_revision
+    - resolved_commit
+    - credential_type
+    - started_at
+    - completed_at
+    - result
+    - external_identifier
+    - idempotency_identity
+    - external_state_modified
+  prohibited_fields:
+    - credential_value
+    - private_key
+    - authentication_header
+    - credential_bearing_url
+
+audit:
+  access_decisions_must_be_recorded: true
+  denied_operations_must_be_recorded_when_material: true
+  prohibited_repository_exclusion_must_be_recorded: true
+  historical_records_must_be_append_only: true
+  secret_values_must_not_be_recorded: true
+
+failure_behavior:
+  repository_identity_uncertain: deny_and_report
+  repository_outside_owner_scope: deny_and_report
+  repository_prohibited: deny_without_content_access
+  authorization_missing: deny_and_report
+  authorization_expired: deny_and_report
+  requested_operation_not_permitted: deny_and_report
+  credential_missing: preserve_safe_local_result_and_report
+  credential_scope_too_broad: stop_and_report
+  trusted_boundary_uncertain: stop_and_report
