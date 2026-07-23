@@ -3,37 +3,41 @@ schema_version: 2
 record_type: phase_authorization
 
 authorization:
-  id: governance-correction-20260723-01
-  kind: governance_correction
-  phase: null
+  id: phase-0-reconciliation-20260723-02
+  kind: roadmap_phase
+  phase: phase-0-reconciliation
   status: completed
   objective: >-
-    Replace the absolute Rufa-Clean repository prohibition with a
-    repository-role and operation-specific target exclusion.
+    Perform the previously requested fast implementation-readiness
+    reconciliation before the Phase 1 TypeScript vertical-slice sprint, using
+    the corrected repository-role policy.
   granted_by: human-operator
-  granted_at: 2026-07-23
-  completed_at: 2026-07-23T06:51:28Z
-  supersedes_authorization_id: phase-0-reconciliation-20260723-01
+  granted_at: 2026-07-23T06:57:19Z
+  completed_at: 2026-07-23T07:11:09Z
+  supersedes_authorization_id: governance-correction-20260723-01
   notes:
-    - No application source modification is authorized.
-    - No Phase 0 or Phase 1 implementation is authorized.
+    - This request does not authorize itself.
+    - Phase 1 remains unauthorized.
+    - Rufa-Clean is the implementation repository, not an analysis target.
+    - The authorized reconciliation completed with Phase 1 readiness BLOCKED.
+    - See codex/reports/phase-0-reconciliation-report-02.md.
 
 human_instruction:
   summary: >-
-    Correct governance, schemas, tests, templates, state, and reports so the
-    local DCAv2 implementation may be developed when explicitly authorized
-    while all dead-code target roles for Rufa-Clean remain permanently denied.
-  conversation_reference: current-conversation-governance-correction
-  captured_at: 2026-07-23
+    The human operator replied exactly APPROVED to activate the bounded Phase 0
+    reconciliation request.
+  conversation_reference: current-conversation-approved
+  captured_at: 2026-07-23T06:57:19Z
   exact_scope_confirmed: true
 
 validity:
-  starts_at: 2026-07-23
+  starts_at: null
   expires_at: null
   expires_when:
-    - governance_correction_is_completed
+    - phase_stops_for_human_review
     - human_operator_revokes_authorization
     - repository_scope_changes
+    - governing_policy_changes
   maximum_external_operations: 0
   continuation_requires_new_authorization: true
 
@@ -42,22 +46,11 @@ local_repository:
   path: /Users/apple/Desktop/Akshay@goAI/DCAv2
   repository_role: implementation_repository
   allowed_paths:
-    - AGENTS.md
-    - CODEX_EXECUTION_STATE.md
-    - codex/
+    - .
   modification_allowlist:
-    - AGENTS.md
+    - codex/authorizations/current-phase-authorization.yaml
     - CODEX_EXECUTION_STATE.md
-    - codex/core/
-    - codex/access/
-    - codex/authorizations/
-    - codex/architecture/
-    - codex/engineering/
-    - codex/roadmap/
-    - codex/tests/
-    - codex/schemas/
-    - codex/templates/
-    - codex/reports/
+    - codex/reports/phase-0-reconciliation-report-02.md
   operations:
     inspect_repository: true
     inspect_git_history: true
@@ -69,6 +62,9 @@ local_repository:
     run_containerized_tests: false
   prohibited_operations:
     application_source_modification: true
+    test_modification: true
+    dependency_installation: true
+    database_creation_or_modification: true
     discard_preexisting_changes: true
     destructive_git_clean: true
     hard_reset: true
@@ -82,8 +78,8 @@ repository_access:
     full_name: akshay-hudev/Rufa-Clean
     role: implementation_repository
     local_inspection: allowed
-    local_modification: allowed
-    local_build_and_test: prohibited
+    local_modification: authorization_required
+    local_build_and_test: allowed
   target_role_exclusions:
     - analysis_target
     - test_fixture
@@ -112,18 +108,7 @@ database:
 governance:
   modification_allowed: true
   allowed_files:
-    - AGENTS.md
-    - CODEX_EXECUTION_STATE.md
-    - codex/core/
-    - codex/access/
-    - codex/authorizations/
-    - codex/architecture/
-    - codex/engineering/
-    - codex/roadmap/
-    - codex/tests/
-    - codex/schemas/
-    - codex/templates/
-    - codex/reports/
+    - codex/authorizations/current-phase-authorization.yaml
   permanent_safety_invariants_may_be_weakened: false
   repository_role_exclusions_may_be_weakened: false
 
@@ -144,7 +129,7 @@ publication:
   mark_draft_ready: false
 
 testing:
-  phase_test_manifest: null
+  phase_test_manifest: codex/tests/phase-0-tests.yaml
   dependencies_may_be_installed: false
   unavailable_required_tests_block_completion: true
 
@@ -166,12 +151,13 @@ safety:
 
 validation:
   validated: true
-  validated_at: 2026-07-23T06:51:28Z
+  validated_at: 2026-07-23T07:11:09Z
   validated_by: codex
   validation_errors: []
-  validation_warnings: []
+  validation_warnings:
+    - Phase 1 is blocked by the prerequisites recorded in the Phase 0 report.
 
 human_approval:
   approved: true
-  approval_reference: current-conversation-governance-correction
-  approved_at: 2026-07-23
+  approval_reference: current-conversation-approved
+  approved_at: 2026-07-23T06:57:19Z

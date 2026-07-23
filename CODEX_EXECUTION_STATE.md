@@ -1,5 +1,141 @@
 # DCAv2 Execution State
 
+## Current Phase 0 reconciliation handoff
+
+This is the current execution state. The governance correction, the original
+blocked Phase 0 attempt, and the earlier manual-assembly snapshot remain below
+as historical records. They are not rewritten and do not authorize future
+work.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-0-reconciliation-2026-07-23-02 |
+| Authorization ID | phase-0-reconciliation-20260723-02 |
+| Authorized phase | phase-0-reconciliation |
+| Authorized work status | completed |
+| Roadmap Phase 0 status | incomplete |
+| Phase 1 readiness | BLOCKED |
+| Authorization status | completed; inactive |
+| Repository role | implementation_repository |
+| Repository identity | akshay-hudev/Rufa-Clean |
+| Current branch | main |
+| Current commit | 9be9897b384115a1cb7a4ca523772cdd04d00174 |
+| Started | 2026-07-23T06:57:19Z |
+| Completed | 2026-07-23T07:11:09Z |
+| Automatic continuation permitted | No |
+
+### Scope and preservation
+
+The human operator replied exactly `APPROVED` to activate the corrected,
+operation-specific Phase 0 request. Local implementation inspection and safe
+local tests were permitted. Application/test changes, dependency installation,
+database mutation, containerized execution, external access, credentials,
+target analysis, remediation, publication, and Phase 1 work were prohibited.
+
+The starting worktree was clean on `main` at
+`9be9897b384115a1cb7a4ca523772cdd04d00174`, synchronized with `origin/main`.
+The sanitized origin identity was
+`github.com/akshay-hudev/Rufa-Clean.git`. It was treated only as the authorized
+DCAv2 implementation repository.
+
+Only these Phase 0 records changed:
+
+- `codex/authorizations/current-phase-authorization.yaml`
+- `CODEX_EXECUTION_STATE.md`
+- `codex/reports/phase-0-reconciliation-report-02.md`
+
+No application source, test, dependency, migration, database, branch, commit,
+credential, container, external system, or production resource was modified.
+
+The original blocked report remains unchanged at
+`codex/reports/phase-0-reconciliation-report.md`, with SHA-256
+`aeb165977083e697d7d794655e0b0503266564f7ea11899688cca842645bfbde`.
+
+### Validation and baseline
+
+Passed:
+
+- 36/36 required files present;
+- 38/38 local JSON/YAML documents parsed with duplicate-key rejection;
+- repository-role governance validation;
+- Phase 0 and Phase 1 manifest schema validation;
+- test-ID, security-control-ID, schema-path, and file-reference checks;
+- governing-file and historical-report hash checks;
+- TypeScript 5.9.3 non-emitting compilation;
+- installed dependency-tree consistency;
+- 24 selected unit-test files and 171 tests under a clean environment with a
+  synthetic non-routable database URL;
+- `git diff --check`.
+
+The first secret-free unit baseline without database configuration recorded:
+
+- 20 files passed;
+- 4 files failed at import;
+- 144 tests passed;
+- failure: `src/db/client.ts` eagerly required `DATABASE_URL` for pure unit
+  suites.
+
+The controlled synthetic-URL retry confirms the unit assertions but does not
+erase the clean-baseline failure.
+
+Unavailable and not passed:
+
+- PostgreSQL migration, audit, and workflow integration;
+- isolated TypeScript analysis and remediation integration;
+- hostile-runner containment;
+- actual isolated missing-`tsc` reproduction;
+- live GitHub acquisition or publication;
+- vulnerability and provenance lookup.
+
+### Verified current implementation
+
+- Node.js/TypeScript CommonJS, npm lockfile v3, PostgreSQL.
+- CLI, cron, and discovery/indexing entry points; no HTTP API framework.
+- Legacy tree-sitter, Knip, SCIP, and Vulture inventory path, currently
+  fail-closed at legacy source acquisition.
+- Narrow milestone analyzer for a private top-level TypeScript function in a
+  single-package npm project.
+- Explicit coverage, failed/inconclusive/conflicting classification behavior,
+  separate human disposition, separate remediation authorization, isolated
+  transformation/gates, deterministic patch records, draft-only publisher, and
+  hash-linked milestone audit records.
+- Digest-pinned Docker runner controls are implemented and unit-tested through
+  a mocked process boundary, but actual containment is unverified.
+- 24 statically inventoried tables across legacy baseline and milestone ledger;
+  migrations `0001_legacy_baseline`, `0002_milestone_ledger`, and
+  `0003_publication_attempts`.
+
+### Blockers
+
+1. Application code does not enforce the corrected repository-role exclusion
+   before credentials, source acquisition, analysis, remediation, or
+   publication.
+2. Required containerized runner/compiler/security tests were prohibited and
+   remain unavailable.
+3. Pure unit suites require unrelated import-time `DATABASE_URL`
+   configuration.
+4. The prior governance correction missed identity-wide wording in the Phase 0
+   roadmap and Phase 0/Phase 1 manifest descriptions, and the Phase 0 manifest
+   still models the implementation worktree as a generic local-repository
+   fixture.
+5. No capability-matrix instance exists, all 23 Phase 0-required security
+   controls remain `not_assessed`, and required database/runner evidence is
+   unavailable.
+
+Full evidence, commands, limitations, and smallest safe corrections are in:
+
+`codex/reports/phase-0-reconciliation-report-02.md`
+
+### Next safe action
+
+Do not start Phase 1.
+
+Issue a narrow prerequisite-repair authorization for the remaining governance
+role correction, runtime role-aware access enforcement, database-client test
+decoupling, and synthetic pinned-runner/disposable-PostgreSQL verification.
+After those prerequisites pass and matrices are updated, create and approve a
+separate Phase 1 authorization.
+
 ## Current governance-correction handoff
 
 This section is the current execution state. The blocked Phase 0 attempt and
