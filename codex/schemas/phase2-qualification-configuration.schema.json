@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/phase2-qualification-configuration.schema.json",
+  "title": "DCAv2 Phase 2 Qualification Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceRoots",
+    "testRoots",
+    "generatedRoots",
+    "excludedRoots",
+    "requiredGates",
+    "optionalGates",
+    "networkProfile",
+    "runnerProfile"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "sourceRoots": { "$ref": "#/$defs/paths" },
+    "testRoots": { "$ref": "#/$defs/paths" },
+    "generatedRoots": { "$ref": "#/$defs/paths" },
+    "excludedRoots": { "$ref": "#/$defs/paths" },
+    "requiredGates": { "$ref": "#/$defs/gates" },
+    "optionalGates": { "$ref": "#/$defs/gates" },
+    "networkProfile": {
+      "enum": ["network-disabled", "npm-public-install-only"]
+    },
+    "runnerProfile": { "const": "isolated-typescript-runner" }
+  },
+  "$defs": {
+    "paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+      }
+    },
+    "gates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["typecheck", "build", "test"] }
+    }
+  }
+}

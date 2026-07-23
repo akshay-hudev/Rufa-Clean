@@ -161,6 +161,7 @@ export class DockerIsolatedRunner {
       args: string[],
       networkMode: "registry_proxy" | "none",
       executionEnvironment: Readonly<Record<string, string>> = {},
+      timeoutMs = this.limits.timeoutMs,
     ): Promise<IsolatedCommandResult> => {
       if (disposed) {
         throw new Error("Isolated runner session has been disposed");
@@ -172,7 +173,7 @@ export class DockerIsolatedRunner {
         dockerArgs.push("--env", `${key}=${value}`);
       }
       dockerArgs.push(containerName, command, ...args);
-      const result = await dockerRaw(dockerArgs);
+      const result = await dockerRaw(dockerArgs, timeoutMs);
       if (result.timedOut) {
         await dockerRaw(["kill", containerName], 30_000);
       }
@@ -194,15 +195,27 @@ export class DockerIsolatedRunner {
         if (!this.registryEgress) {
           // No network is safer than silently granting broad egress. This can
           // succeed only when the lockfile requires no uncached downloads.
-          return exec(command, args, "none");
+          return exec(
+            command,
+            args,
+            "none",
+            {},
+            Math.max(this.limits.timeoutMs, 60_000),
+          );
         }
         try {
-          return await exec(command, args, "registry_proxy", {
-            HTTPS_PROXY: this.registryEgress.proxyUrl,
-            HTTP_PROXY: this.registryEgress.proxyUrl,
-            NO_PROXY: "",
-            npm_config_registry: "https://registry.npmjs.org/",
-          });
+          return await exec(
+            command,
+            args,
+            "registry_proxy",
+            {
+              HTTPS_PROXY: this.registryEgress.proxyUrl,
+              HTTP_PROXY: this.registryEgress.proxyUrl,
+              NO_PROXY: "",
+              npm_config_registry: "https://registry.npmjs.org/",
+            },
+            Math.max(this.limits.timeoutMs, 60_000),
+          );
         } finally {
           await docker(["network", "disconnect", this.registryEgress.networkName, containerName], 30_000);
         }

@@ -3,10 +3,10 @@ schema_version: 2
 record_type: phase_authorization_request
 
 authorization:
-  id: phase-2-qualification-and-configuration-20260723-draft-01
+  id: phase-2-qualification-and-configuration-20260723-01
   kind: roadmap_phase
   phase: phase-2-qualification-and-configuration
-  status: draft
+  status: requested
   objective: >-
     Implement deterministic repository qualification and configuration
     readiness decisions before analysis, remediation, or publication.
@@ -16,21 +16,24 @@ authorization:
   supersedes_authorization_id: phase-1-typescript-vertical-slice-20260723-01
   notes:
     - This request does not authorize itself.
-    - This is a non-authorizing transition draft and is not ready for approval.
-    - Phase 2 must not begin until a Phase 2 test manifest is created, validated, presented, and explicitly approved with this request.
+    - Phase 2 must not begin until the human approves this exact request by replying exactly APPROVED.
+    - The validated Phase 2 test manifest is codex/tests/phase-2-tests.yaml.
     - Autonomous debugging of ordinary implementation, test, Docker, PostgreSQL, fixture, and dependency failures is requested.
     - Paid or metered tools and services remain prohibited.
     - The existing codex/phase-0-prerequisite-readiness implementation branch must be preserved and reused for all remaining DCAv2 implementation phases.
-    - No implementation checkpoint commit is proposed by this draft.
+    - No implementation checkpoint commit is authorized.
+    - No new local or remote implementation branch is authorized.
+    - Rufa-Clean external branch, commit, push, pull-request, update, and publication operations are denied by canonical identity.
     - Remediation and publication are outside the default Phase 2 scope.
 
 human_instruction:
   summary: >-
-    Await a complete Phase 2 test manifest and a separate explicit human
-    authorization before implementing qualification and configuration scope.
-  conversation_reference: phase-1-completion-transition-draft
-  captured_at: 2026-07-23
-  exact_scope_confirmed: false
+    Proposed bounded Phase 2 qualification-and-configuration implementation
+    authorization, prepared under the human-approved governance-preparation
+    instruction and awaiting separate exact approval.
+  conversation_reference: phase-2-governance-preparation-request
+  captured_at: 2026-07-23T16:57:51Z
+  exact_scope_confirmed: true
 
 validity:
   starts_at: null
@@ -54,16 +57,14 @@ local_repository:
   allowed_paths:
     - .
   modification_allowlist:
-    - AGENTS.md
     - CODEX_EXECUTION_STATE.md
-    - codex/architecture/
-    - codex/authorizations/
+    - codex/authorizations/current-phase-authorization.yaml
     - codex/capability-matrix.yaml
-    - codex/engineering/
     - codex/reports/
     - codex/schemas/
-    - codex/templates/
-    - codex/tests/
+    - codex/tests/security-control-matrix.yaml
+    - codex/tests/validate-capability-matrix.mjs
+    - codex/tests/validate-repository-role-governance.mjs
     - scripts/
     - src/
     - test-fixtures/
@@ -83,6 +84,11 @@ local_repository:
     run_containerized_tests: true
     autonomous_debugging: true
   prohibited_operations:
+    modify_agents_file: true
+    modify_core_policy: true
+    modify_access_policy: true
+    modify_phase_2_roadmap: true
+    modify_phase_2_test_manifest: true
     switch_to_new_implementation_branch: true
     delete_required_branch: true
     reset_required_branch: true
@@ -128,6 +134,7 @@ external_operations:
   allowed: true
   permitted_providers:
     - github
+    - npmjs-public-registry
   permitted_operations:
     - repository_discovery
     - metadata_read
@@ -135,6 +142,8 @@ external_operations:
     - fetch
     - qualification
     - isolated_build_and_test
+    - public_package_metadata_read
+    - public_dependency_download
   github:
     allowed_owners:
       - akshay-hudev
@@ -193,11 +202,21 @@ external_operations:
       preferred_size: 3_to_5
       rufa_test_lib_role: optional_smoke_only
       force_unsuitable_repository_selection: false
+  npm_registry:
+    allowed_registry: registry.npmjs.org
+    public_packages_only: true
+    credential_use: denied
+    dependency_install_stage_only: true
+    repository_lifecycle_scripts_in_isolated_runner_only: true
+    network_removed_after_installation: true
   destructive_operations_allowed: false
   paid_or_metered_services_allowed: false
 
 credentials:
   use_existing_configured_credentials: true
+  github_app_credentials_allowed: true
+  private_package_registry_credentials_allowed: false
+  production_credentials_allowed: false
   secret_values_may_be_recorded: false
   credentials_in_untrusted_runner: false
   report_status_only:
@@ -218,16 +237,20 @@ database:
 governance:
   modification_allowed: true
   allowed_files:
-    - AGENTS.md
     - CODEX_EXECUTION_STATE.md
-    - codex/architecture/
-    - codex/authorizations/
+    - codex/authorizations/current-phase-authorization.yaml
     - codex/capability-matrix.yaml
-    - codex/engineering/
     - codex/reports/
     - codex/schemas/
-    - codex/templates/
-    - codex/tests/
+    - codex/tests/security-control-matrix.yaml
+    - codex/tests/validate-capability-matrix.mjs
+    - codex/tests/validate-repository-role-governance.mjs
+  immutable_files:
+    - AGENTS.md
+    - codex/core/
+    - codex/access/
+    - codex/roadmap/phase-2-qualification-and-configuration.md
+    - codex/tests/phase-2-tests.yaml
   permanent_safety_invariants_may_be_weakened: false
   repository_role_exclusions_may_be_weakened: false
 
@@ -235,7 +258,7 @@ analysis:
   repository_qualification: true
   evidence_collection: false
   machine_classification: false
-  external_repository_execution: false
+  external_repository_execution: true
   requested_qualification_scope:
     repository_identity: true
     immutable_revision: true
@@ -253,6 +276,8 @@ analysis:
 remediation:
   enabled: false
   source_transformation_allowed: false
+  finding_disposition_allowed: false
+  finding_specific_authorization_creation_allowed: false
 
 publication:
   enabled: false
@@ -269,7 +294,7 @@ publication:
   maximum_draft_pull_requests: 0
 
 testing:
-  phase_test_manifest: null
+  phase_test_manifest: codex/tests/phase-2-tests.yaml
   dependencies_may_be_installed: true
   local_docker_allowed: true
   local_postgresql_allowed: true
@@ -278,7 +303,8 @@ testing:
   rufa_test_lib_primary_evidence: false
   unavailable_required_tests_block_completion: true
   autonomous_failure_correction: true
-  activation_blocker: validated_phase_2_test_manifest_required
+  discovered_repository_commands_execute_directly: false
+  approved_structured_commands_only: true
 
 reporting:
   execution_state_required: true
@@ -308,11 +334,10 @@ safety:
   no_automatic_phase_transition: true
 
 validation:
-  validated: false
+  validated: true
   validation_errors: []
   validation_warnings:
-    - Phase 2 test manifest has not yet been created or approved.
-    - This draft must not be activated or approved in its current form.
+    - This request remains non-authorizing until the human replies exactly APPROVED.
 
 human_approval:
   approved: false

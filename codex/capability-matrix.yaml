@@ -1,19 +1,19 @@
 $schema: ./schemas/capability-matrix.schema.json
 schema_version: "1.0.0"
-matrix_id: dcav2-phase-1-typescript-vertical-slice-capabilities
-title: DCAv2 Phase 1 TypeScript Vertical-Slice Capability Matrix
+matrix_id: dcav2-phase-2-qualification-and-configuration-capabilities
+title: DCAv2 Phase 2 Qualification and Configuration Capability Matrix
 purpose: >-
-  Records evidence-backed capability status at the Phase 1 TypeScript
-  vertical-slice boundary. This matrix is descriptive and grants no execution
+  Records evidence-backed capability status at the Phase 2 qualification and
+  configuration boundary. This matrix is descriptive and grants no execution
   authority.
 document_status: active
 implementation_authorized_by_matrix: false
-generated_at: "2026-07-23T10:45:00Z"
+generated_at: "2026-07-23T18:00:00Z"
 source_revision:
   repository: akshay-hudev/Rufa-Clean
-  commit: 2aaa35519c161a5f9b4f4b6e2bd49307858cf9c6
+  commit: a2f75fbdcbb82c13e3724405cabceab5c6c56efb
   worktree_status: modified
-  captured_at: "2026-07-23T10:45:00Z"
+  captured_at: "2026-07-23T18:00:00Z"
 references:
   - path: codex/tests/phase-0-tests.yaml
     purpose: Phase 0 test identities and acceptance evidence.
@@ -25,6 +25,10 @@ references:
     purpose: Phase 1 test identities and bounded acceptance evidence.
   - path: codex/reports/phase-1-representative-analysis.json
     purpose: Phase 1 representative eligible-repository evidence.
+  - path: codex/tests/phase-2-tests.yaml
+    purpose: Phase 2 test identities and bounded acceptance evidence.
+  - path: codex/reports/phase-2-representative-qualification.json
+    purpose: Phase 2 representative eligible-repository qualification evidence.
 status_vocabulary:
   support_statuses:
     - planned
@@ -906,18 +910,296 @@ capabilities:
           secret_free: true
           retained: true
           current: true
+  - &phase2_capability
+    capability_id: repository.identity.validate.v1
+    title: Validate canonical repository identity
+    description: >-
+      Binds provider, owner, repository name, canonical full name, requested
+      role, operation, and authorization before target content access.
+    domain: qualification
+    version: 1
+    lifecycle_status: active
+    support_status: functional
+    implementation_status: implemented
+    validation_status: passed
+    introduced_in_phase: phase-2-qualification-and-configuration
+    last_validated_in_phase: phase-2-qualification-and-configuration
+    authorization_required: true
+    trust_boundary: &phase2_boundary
+      execution_zone: trusted_controller
+      repository_content_trusted: false
+      structured_output_validation_required: true
+      prohibited_credentials:
+        - github-app-private-key
+        - github-installation-token
+        - database-url
+        - publisher-credential
+      network_profiles:
+        - network-disabled
+        - registry-proxy-then-network-none
+      runner_profiles:
+        - digest-pinned-docker-runner
+    scope: &phase2_scope
+      scope_type: single_package
+      bounded: true
+      open_world_behavior: preserve_unknown_scope
+      languages:
+        - TypeScript
+      package_managers:
+        - npm
+      target_shapes:
+        - single-package-npm-typescript-qualification
+      excluded_shapes:
+        - npm-workspace
+        - pnpm
+        - yarn
+        - monorepo
+        - tsx-only
+        - python
+      maximum_tested_scope:
+        repositories: 5
+        notes: >-
+          Four representative non-Rufa repositories plus rufa-test-lib as
+          optional smoke evidence; unsupported shapes remain explicit.
+    operations: &phase2_operations
+      detection_supported: true
+      classification_supported: false
+      human_review_supported: false
+      remediation_supported: false
+      publication_supported: false
+      deployment_supported: false
+      infrastructure_modification_supported: false
+      destructive_operations_supported: false
+      external_reads_supported: true
+      external_writes_supported: false
+    security_control_ids:
+      - access-repository-policy
+      - access-repository-role-exclusion
+      - gov-operation-permission-separation
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids:
+          - p2-repository-identity-validation
+          - p2-rufa-clean-target-exclusion
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-github-app-read-only
+        report_identity: codex/reports/phase-2-representative-qualification.json
+    evidence: &phase2_evidence
+      evidence_required: true
+      current_evidence_available: true
+      evidence_status: current
+      evidence_identities:
+        - evidence_id: phase2-test-and-representative-evidence
+          evidence_type: test_report
+          description: codex/reports/phase-2-representative-qualification.json
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+      implementation_revision:
+        repository: akshay-hudev/Rufa-Clean
+        commit: a2f75fbdcbb82c13e3724405cabceab5c6c56efb
+        worktree_status: modified
+    limitations: &phase2_limitations
+      - limitation_id: phase2-bounded-qualification-profile
+        description: >-
+          Ready status is limited to a single npm package with lockfile version
+          3, authored TypeScript, one root tsconfig, project-local compiler,
+          and required baseline gates.
+        effect: partial_coverage
+        affects_support_status: false
+        reported_to_users: true
+    scale_validation:
+      status: not_validated
+      notes: Phase 2 makes no scale claim.
+    reporting: *truthful_reporting
+  - <<: *phase2_capability
+    capability_id: repository.revision.resolve.v1
+    title: Resolve immutable repository revisions
+    description: Resolves mutable provider references to an exact commit and source snapshot.
+    domain: repository-access
+    security_control_ids:
+      - access-repository-policy
+      - evidence-provenance
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-immutable-revision-resolution, p2-qualification-digest-freshness]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-github-app-read-only
+  - <<: *phase2_capability
+    capability_id: repository.profile.qualify.v1
+    title: Match the versioned Phase 2 repository profile
+    description: Matches supported inputs exactly and preserves mismatch, ambiguity, and failure statuses.
+    domain: qualification
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-versioned-profile-matching, p2-qualification-statuses]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-representative-runner
+  - <<: *phase2_capability
+    capability_id: repository.language.detect.v1
+    title: Detect repository languages
+    description: Reports attributable language signals separately from support status.
+    domain: inventory
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-language-detection]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-representative-read-only
+  - <<: *phase2_capability
+    capability_id: repository.package-manager.detect.v1
+    title: Detect package-manager inputs and conflicts
+    description: Reports npm, pnpm, Yarn, lockfile versions, declarations, and conflicts explicitly.
+    domain: package-management
+    security_control_ids:
+      - supply-tool-provenance
+      - supply-no-host-global-fallback
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-package-manager-detection]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-representative-read-only
+  - <<: *phase2_capability
+    capability_id: repository.workspace.detect.v1
+    title: Detect workspace boundaries
+    description: Detects workspace mechanisms and retains unsupported monorepo status.
+    domain: inventory
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-workspace-detection]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-representative-read-only
+  - &phase2_root_capability
+    <<: *phase2_capability
+    capability_id: repository.source-roots.discover.v1
+    title: Discover confined source roots
+    description: Validates normalized configured source roots and rejects symbolic-link escape.
+    domain: security
+    security_control_ids:
+      - runner-filesystem-confinement
+      - evidence-provenance
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-root-discovery]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-hostile-fixture
+  - <<: *phase2_root_capability
+    capability_id: repository.test-roots.discover.v1
+    title: Discover confined test roots
+    description: Reports configured test roots separately from production roots.
+  - <<: *phase2_root_capability
+    capability_id: repository.generated-roots.discover.v1
+    title: Discover confined generated roots
+    description: Reports configured generated roots and excludes them from authored-source claims.
+  - <<: *phase2_capability
+    capability_id: repository.build-system.detect.v1
+    title: Detect build and test systems
+    description: Retains build and test script names as digest-bound untrusted observations.
+    domain: inventory
+    security_control_ids:
+      - injection-untrusted-content
+      - command-structured-registry
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-build-system-detection, p2-command-discovery-non-executable]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-hostile-fixture
+  - <<: *phase2_capability
+    capability_id: repository.toolchain.requirements.v1
+    title: Resolve bounded toolchain requirements
+    description: Requires approved-runner Node/npm and project-local TypeScript without host fallback.
+    domain: runtime-resolution
+    security_control_ids:
+      - supply-tool-provenance
+      - supply-no-host-global-fallback
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-toolchain-resolution]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase2_capability
+    capability_id: repository.commands.discover.v1
+    title: Discover commands without granting execution authority
+    description: Maps only approved script names to fixed structured runner commands.
+    domain: security
+    security_control_ids:
+      - command-structured-registry
+      - injection-untrusted-content
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-command-discovery-non-executable, p2-approved-command-mapping]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-hostile-fixture
+  - <<: *phase2_capability
+    capability_id: repository.configuration.validate.v1
+    title: Validate qualification configuration authority
+    description: Applies deterministic precedence and rejects unsafe or security-sensitive fields.
+    domain: other
+    security_control_ids:
+      - gov-operation-permission-separation
+      - secret-minimization
+      - injection-untrusted-content
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-configuration-precedence, p2-configuration-validation]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase2_capability
+    capability_id: repository.baseline.evaluate.v1
+    title: Evaluate isolated baseline gates
+    description: Installs with scripts disabled, seals network, executes mapped gates, and preserves failures.
+    domain: verification
+    trust_boundary: *phase1_runner_boundary
+    security_control_ids:
+      - runner-trust-separation
+      - runner-network-egress
+      - runner-resource-limits
+      - runner-process-cleanup
+      - verification-baseline-gates
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-baseline-evaluation, p2-runner-isolation]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: digest-pinned-docker-runner
+        report_identity: codex/reports/phase-2-representative-qualification.json
+  - <<: *phase2_capability
+    capability_id: repository.capability-route.v1
+    title: Route capabilities from exact qualification state
+    description: Produces deterministic per-capability enabled, limited, blocked, unsupported, or stale routes.
+    domain: other
+    security_control_ids:
+      - evidence-failure-not-absence
+      - reporting-truthfulness
+    test_references:
+      - manifest_path: codex/tests/phase-2-tests.yaml
+        test_ids: [p2-capability-routing, p2-qualification-digest-freshness]
+        status: passed
+        executed_at: "2026-07-23T18:00:00Z"
+        environment_identity: local-unit-and-representative-runner
 matrix_summary:
-  total_capabilities: 28
+  total_capabilities: 43
   planned: 0
   experimental: 0
   detection_only: 0
   partially_supported: 2
-  functional: 26
+  functional: 41
   blocked: 0
   unsupported: 0
   deprecated: 0
   superseded: 0
-  validation_passed: 27
+  validation_passed: 42
   validation_failed: 0
   validation_not_run: 0
   scale_validated: 0

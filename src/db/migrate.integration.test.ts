@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Pool } from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 
 const databaseUrl = process.env.DCA_TEST_DATABASE_URL;
@@ -32,25 +33,42 @@ describeDatabase("PostgreSQL migration controls", () => {
       "0003_publication_attempts",
       "0004_publication_reconciliation",
       "0005_phase1_qualification",
+      "0006_phase2_qualification",
     ]);
 
-    const target = defaultMigrations().at(-1)!;
+    root = await mkdtemp(join(tmpdir(), "dcav2-migration-checksum-"));
+    const probePath = join(root, "phase2_checksum_probe.sql");
+    await writeFile(
+      probePath,
+      "CREATE TABLE phase2_checksum_probe (id integer PRIMARY KEY);\n",
+    );
+    const target = { version: "phase2_checksum_probe", path: probePath };
+    await pool.query("CREATE SCHEMA phase2_checksum_test");
+    const checksumPool = new Pool({
+      connectionString: databaseUrl,
+      options: "-c search_path=phase2_checksum_test",
+    });
+    await migrate(checksumPool, [target]);
     const expected = createHash("sha256")
       .update(await readFile(target.path))
       .digest("hex");
-    await pool.query(
+    await checksumPool.query(
       "UPDATE schema_migrations SET checksum = $1 WHERE version = $2",
       ["0".repeat(64), target.version],
     );
     try {
-      await expect(migrate(pool)).rejects.toThrow(/Applied migration changed/);
+      await expect(migrate(checksumPool, [target])).rejects.toThrow(/Applied migration changed/);
     } finally {
-      await pool.query(
+      await checksumPool.query(
         "UPDATE schema_migrations SET checksum = $1 WHERE version = $2",
         [expected, target.version],
       );
     }
-    await expect(migrate(pool)).resolves.toBeUndefined();
+    await expect(migrate(checksumPool, [target])).resolves.toBeUndefined();
+    await checksumPool.end();
+    await pool.query("DROP SCHEMA phase2_checksum_test CASCADE");
+    await rm(root, { recursive: true, force: true });
+    root = "";
   }, 60_000);
 
   it("rolls back every statement in a failed migration transaction", async () => {

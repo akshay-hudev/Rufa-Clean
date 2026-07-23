@@ -2480,6 +2480,42 @@ phase_security_requirements:
       - external-state-reconciliation
       - reporting-truthfulness
       - reporting-execution-state-nonauthority
+  - phase_id: phase-2-qualification-and-configuration
+    required_control_ids:
+      - gov-instruction-precedence
+      - gov-phase-authorization
+      - gov-operation-permission-separation
+      - access-repository-policy
+      - access-repository-role-exclusion
+      - scm-preserve-local-work
+      - scm-default-branch-protection
+      - secret-minimization
+      - secret-export-scanning
+      - injection-untrusted-content
+      - command-structured-registry
+      - runner-trust-separation
+      - runner-privilege-restrictions
+      - runner-filesystem-confinement
+      - runner-network-egress
+      - runner-resource-limits
+      - runner-process-cleanup
+      - credential-capability-scoping
+      - credential-trusted-component-separation
+      - supply-tool-provenance
+      - supply-no-host-global-fallback
+      - package-lifecycle-script-boundary
+      - evidence-provenance
+      - evidence-failure-not-absence
+      - coverage-open-world
+      - verification-baseline-gates
+      - audit-append-only
+      - audit-tamper-evidence
+      - audit-secret-free
+      - tenant-data-isolation
+      - database-additive-migrations
+      - external-operation-authorization
+      - reporting-truthfulness
+      - reporting-execution-state-nonauthority
   - phase_id: phase-6-cross-repository
     additional_required_control_ids:
       - cross-repository-submodule-access

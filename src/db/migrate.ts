@@ -18,6 +18,7 @@ export function defaultMigrations(): MigrationDefinition[] {
     { version: "0003_publication_attempts", path: join(__dirname, "../../src/db/migrations/0003_publication_attempts.sql") },
     { version: "0004_publication_reconciliation", path: join(__dirname, "../../src/db/migrations/0004_publication_reconciliation.sql") },
     { version: "0005_phase1_qualification", path: join(__dirname, "../../src/db/migrations/0005_phase1_qualification.sql") },
+    { version: "0006_phase2_qualification", path: join(__dirname, "../../src/db/migrations/0006_phase2_qualification.sql") },
   ];
 }
 

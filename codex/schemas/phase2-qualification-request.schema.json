@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/phase2-qualification-request.schema.json",
+  "title": "DCAv2 Phase 2 Qualification Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "requestId",
+    "accountScopeId",
+    "authorizationId",
+    "repository",
+    "requestedRevision",
+    "resolvedCommit",
+    "sourceSnapshotId",
+    "requestedCapabilities",
+    "requestedProfileId",
+    "requestedAt",
+    "requestDigest"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "requestId": { "$ref": "#/$defs/identifier" },
+    "accountScopeId": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "authorizationId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "repository": { "$ref": "#/$defs/repository" },
+    "requestedRevision": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "resolvedCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "sourceSnapshotId": { "$ref": "#/$defs/sha256" },
+    "requestedCapabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/capability" }
+    },
+    "requestedProfileId": { "const": "typescript-single-package-npm-v1" },
+    "requestedAt": { "type": "string", "format": "date-time" },
+    "requestDigest": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{2,159}$"
+    },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "owner", "name", "fullName"],
+      "properties": {
+        "provider": { "const": "github" },
+        "owner": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "fullName": { "type": "string", "pattern": "^[^/]+/[^/]+$" },
+        "providerRepositoryId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "capability": {
+      "enum": [
+        "repository.identity.validate.v1",
+        "repository.revision.resolve.v1",
+        "repository.profile.qualify.v1",
+        "repository.language.detect.v1",
+        "repository.package-manager.detect.v1",
+        "repository.workspace.detect.v1",
+        "repository.source-roots.discover.v1",
+        "repository.test-roots.discover.v1",
+        "repository.generated-roots.discover.v1",
+        "repository.build-system.detect.v1",
+        "repository.toolchain.requirements.v1",
+        "repository.commands.discover.v1",
+        "repository.configuration.validate.v1",
+        "repository.baseline.evaluate.v1",
+        "repository.capability-route.v1"
+      ]
+    }
+  }
+}

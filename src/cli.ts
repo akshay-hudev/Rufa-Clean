@@ -23,6 +23,19 @@ import {
   qualifyTypeScriptRepository,
   type QualificationToolchain,
 } from "./milestone/qualify";
+import { digestCanonical } from "./milestone/canonical";
+import { runQualificationBaseline } from "./qualification/baseline";
+import {
+  createQualificationRequest,
+  qualifyRepository as qualifyPhase2Repository,
+} from "./qualification/qualify";
+import { Phase2QualificationStore } from "./qualification/store";
+import {
+  PHASE_2_CAPABILITY_IDS,
+  type BaselineGateResult,
+  type ConfigurationSource,
+  type ToolRequirement,
+} from "./qualification/types";
 
 interface Arguments {
   positionals: string[];
@@ -180,6 +193,157 @@ async function analyze(
   }
 }
 
+async function qualify(
+  args: Arguments,
+  access: RepositoryAccessAuthorizer,
+): Promise<void> {
+  const account = required(args, "account");
+  const identity = repository(required(args, "repo"));
+  const revision = required(args, "revision");
+  const actor = required(args, "actor");
+  const accessRequest = {
+    repository: { provider: "github" as const, owner: identity.owner, name: identity.name },
+    role: "analysis_target" as const,
+  };
+  // The target-role decision occurs before credentials or source acquisition.
+  access.assert({ ...accessRequest, operation: "qualify" });
+  const source = await acquireGitHubSource({
+    owner: identity.owner,
+    repository: identity.name,
+    revision,
+    access,
+    role: "analysis_target",
+    credentialProvider: () => readOnlyRepositoryCredential(
+      identity.owner,
+      identity.name,
+      access,
+      "analysis_target",
+    ),
+  });
+  try {
+    const lock = JSON.parse(
+      await readFile(join(source.path, "package-lock.json"), "utf8"),
+    ) as { packages?: Record<string, { version?: unknown }> };
+    const typescriptVersion = lock.packages?.["node_modules/typescript"]?.version;
+    const request = createQualificationRequest({
+      schemaVersion: "1",
+      requestId: `qualification-${source.commitSha}`,
+      accountScopeId: account,
+      authorizationId: "phase-2-qualification-and-configuration-20260723-01",
+      repository: {
+        provider: "github",
+        owner: identity.owner,
+        name: identity.name,
+        fullName: `${identity.owner}/${identity.name}`,
+      },
+      requestedRevision: revision,
+      resolvedCommit: source.commitSha,
+      sourceSnapshotId: digestCanonical({
+        provider: "github",
+        owner: identity.owner.toLowerCase(),
+        repository: identity.name.toLowerCase(),
+        commitSha: source.commitSha,
+      }),
+      requestedCapabilities: [...PHASE_2_CAPABILITY_IDS],
+      requestedProfileId: "typescript-single-package-npm-v1",
+      requestedAt: new Date().toISOString(),
+    });
+    const configurationSources: ConfigurationSource[] = [{
+      authority: "repository_profile",
+      value: {
+        schemaVersion: "1",
+        sourceRoots: ["src"],
+        testRoots: ["test", "tests", "__tests__"],
+        generatedRoots: ["generated", "src/generated"],
+        excludedRoots: ["node_modules", "dist", "build", "coverage"],
+        requiredGates: ["typecheck", "build", "test"],
+        optionalGates: [],
+        networkProfile: "network-disabled",
+        runnerProfile: "isolated-typescript-runner",
+      },
+    }];
+    const tools: ToolRequirement[] = [
+      {
+        tool: "node",
+        requiredRange: "22.x",
+        resolvedVersion: "22.18.0",
+        executable: "/usr/local/bin/node",
+        source: "approved_runner",
+        status: "available",
+      },
+      {
+        tool: "npm",
+        requiredRange: "10.x-11.x",
+        resolvedVersion: "10.9.3",
+        executable: "/usr/local/bin/npm",
+        source: "approved_runner",
+        status: "available",
+      },
+      {
+        tool: "typescript",
+        requiredRange: typeof typescriptVersion === "string" ? typescriptVersion : "unresolved",
+        ...(typeof typescriptVersion === "string" ? { resolvedVersion: typescriptVersion } : {}),
+        executable: "/workspace/node_modules/.bin/tsc",
+        source: "project_local",
+        status: typeof typescriptVersion === "string" ? "available" : "missing",
+      },
+    ];
+    const preflight = await qualifyPhase2Repository({
+      repositoryPath: source.path,
+      request,
+      authorizationActive: true,
+      targetAccessAllowed: true,
+      configurationSources,
+      tools,
+      baseline: [],
+    });
+    let baseline: BaselineGateResult[] = [];
+    if (
+      preflight.profile.status === "matched" &&
+      preflight.configuration.status === "valid" &&
+      preflight.commandMappings.length > 0
+    ) {
+      try {
+        const session = await configuredDockerRunner().createSession(source.path);
+        baseline = await runQualificationBaseline({
+          session,
+          configuration: preflight.configuration.configuration!,
+          commandMappings: preflight.commandMappings,
+        });
+      } catch (error) {
+        const failureCategory = error instanceof Error ? error.message : "runner unavailable";
+        baseline = preflight.configuration.configuration!.requiredGates.map((gateId) => {
+          const material = {
+            gateId,
+            commandId: `qualification.${gateId}.v1`,
+            status: "unavailable" as const,
+            failureCategory,
+            outputTruncated: false,
+            sourceModified: false,
+            cleanupStatus: "removed" as const,
+          };
+          return { ...material, resultDigest: digestCanonical(material) };
+        });
+      }
+    }
+    const result = await qualifyPhase2Repository({
+      repositoryPath: source.path,
+      request,
+      authorizationActive: true,
+      targetAccessAllowed: true,
+      configurationSources,
+      tools,
+      baseline,
+    });
+    const store = new Phase2QualificationStore(account, pool);
+    await store.ensureAccountScope(account);
+    const record = await store.record(request, result, actor);
+    print({ ...record, result });
+  } finally {
+    await source.cleanup();
+  }
+}
+
 async function remediate(
   args: Arguments,
   store: MilestoneStore,
@@ -257,13 +421,15 @@ async function main(): Promise<void> {
   const args = parseArguments(process.argv.slice(2));
   const command = args.positionals[0];
   if (!command) {
-    throw new Error("A command is required: analyze, analysis, findings, finding, review, authorize, remediate, gates, publish, audit");
+    throw new Error("A command is required: qualify, analyze, analysis, findings, finding, review, authorize, remediate, gates, publish, audit");
   }
   await migrate();
   const accountScopeId = required(args, "account");
   const store = new MilestoneStore(accountScopeId, pool);
   const access = loadRepositoryAccessAuthorizer();
-  if (command === "analyze") {
+  if (command === "qualify") {
+    await qualify(args, access);
+  } else if (command === "analyze") {
     await analyze(args, store, access);
   } else if (command === "analysis") {
     print(await store.getAnalysisRun(required(args, "run")));

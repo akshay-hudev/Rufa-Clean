@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "authorization_id": "phase-2-qualification-and-configuration-20260723-01",
+  "runner_image": "dcav2-runner@sha256:7f347352497067cbd5b833b0c63046c89c358040078ade1b3c3fd29d0358f45f",
+  "selected_repositories": [
+    {
+      "canonical_identity": "akshay-hudev/test-only-usage",
+      "immutable_revision": "91d258b9b6c852e923b0021e9afe8222672caba4",
+      "reason_for_selection": "Primary compact npm TypeScript repository with build and test gates.",
+      "requested_role": "analysis_target",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch",
+        "isolated_build_and_test"
+      ],
+      "package_manager": "npm",
+      "lockfile_version": 3,
+      "workspace_status": "single_package_supported",
+      "baseline": {
+        "typecheck": "passed",
+        "build": "passed",
+        "test": "passed",
+        "source_modified": false
+      },
+      "qualification_status": "ready",
+      "qualification_digest": "eecec6e7f8dc8d9c6f05013a692cdd89924cfe16110d116b804f7882603ce17e",
+      "limitations": [],
+      "analysis_status": "not_run_phase_2_prohibition",
+      "external_writes": [],
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/swift-apply-form",
+      "immutable_revision": "51e9a90f5b586830af2dd173b4cc3af0e5719fef",
+      "reason_for_selection": "Larger React/Vite TypeScript repository with a different configuration shape.",
+      "requested_role": "analysis_target",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch",
+        "isolated_build_and_test"
+      ],
+      "package_manager": "npm",
+      "lockfile_version": 3,
+      "workspace_status": "single_package_supported",
+      "baseline": {
+        "typecheck": "passed",
+        "build": "passed",
+        "test": "unavailable",
+        "source_modified": false
+      },
+      "qualification_status": "ready_with_limited_gates",
+      "qualification_digest": "c3281d191c7e6c1826f123083e33d117b5f7de7d0b38e637c1975f391dfe58a3",
+      "limitations": [
+        "optional_test_mapping_unavailable"
+      ],
+      "analysis_status": "not_run_phase_2_prohibition",
+      "external_writes": [],
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-consumer",
+      "immutable_revision": "e85f11a783f69dfb411d643707c7012088211df6",
+      "reason_for_selection": "Small npm TypeScript consumer with deliberately limited baseline gates.",
+      "requested_role": "analysis_target",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch",
+        "isolated_build_and_test"
+      ],
+      "package_manager": "npm",
+      "lockfile_version": 3,
+      "workspace_status": "single_package_supported",
+      "baseline": {
+        "typecheck": "unavailable",
+        "build": "unavailable",
+        "test": "unavailable",
+        "failure_category": "dependency_install_failed",
+        "source_modified": false
+      },
+      "qualification_status": "baseline_broken",
+      "qualification_digest": "8f5833b72f78fc998e5ef74e639b0947efb00dc91fa018093e4aed007f4f5f5b",
+      "limitations": [
+        "required_baseline_gate_failed"
+      ],
+      "analysis_status": "not_run_phase_2_prohibition",
+      "external_writes": [],
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/query-test",
+      "immutable_revision": "151cd64dd1ba59e330b31806fe8570f207fd6d8d",
+      "reason_for_selection": "Large pnpm/Nx monorepo used to prove explicit unsupported-profile reporting.",
+      "requested_role": "analysis_target",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch"
+      ],
+      "package_manager": "pnpm",
+      "workspace_status": "detected_not_supported",
+      "package_count": 103,
+      "baseline": {},
+      "qualification_status": "unsupported",
+      "qualification_digest": "b0f15c4d878751ee44aa81b55e17fd175beeb5c5280473f03fc31b346a6d2b6f",
+      "limitations": [
+        "package_manager_unsupported",
+        "workspace_profile_not_supported",
+        "required_source_root_invalid",
+        "required_toolchain_unavailable"
+      ],
+      "analysis_status": "not_run_phase_2_prohibition",
+      "external_writes": [],
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-lib",
+      "immutable_revision": "a1bdd81ad38676b78760309c219d541daec47d77",
+      "reason_for_selection": "Optional deterministic smoke repository only; never primary capability evidence.",
+      "evidence_role": "optional_smoke_only",
+      "requested_role": "analysis_target",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch",
+        "isolated_build_and_test"
+      ],
+      "package_manager": "npm",
+      "lockfile_version": 3,
+      "workspace_status": "single_package_supported",
+      "baseline": {
+        "typecheck": "passed",
+        "build": "passed",
+        "test": "passed",
+        "source_modified": false
+      },
+      "qualification_status": "ready",
+      "qualification_digest": "73169441cd1d89a2864b91d4bfb3ea5805afd5a1e6a5fe121e3f1dd26ebda724",
+      "limitations": [],
+      "analysis_status": "not_run_phase_2_prohibition",
+      "external_writes": [],
+      "cleanup_result": "verified"
+    }
+  ],
+  "rejected_repositories": [
+    {
+      "canonical_identity": "akshay-hudev/Rufa-Clean",
+      "reason": "permanent_target_role_exclusion",
+      "operations_performed": [
+        "account_repository_discovery"
+      ],
+      "content_access_performed": false
+    }
+  ],
+  "failed_attempts_retained": [
+    {
+      "attempt": "initial_runner_resolution",
+      "result": "failed",
+      "reason": "DCA_RUNNER_IMAGE was absent from the process environment",
+      "fallback_used": false
+    }
+  ],
+  "paid_or_metered_services_used": [],
+  "external_writes": []
+}

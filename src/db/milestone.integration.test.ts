@@ -45,6 +45,7 @@ describeDatabase("PostgreSQL milestone ledger", () => {
       "0003_publication_attempts",
       "0004_publication_reconciliation",
       "0005_phase1_qualification",
+      "0006_phase2_qualification",
     ]);
     const store = new MilestoneStore("db-integration", pool);
     await store.ensureAccountScope("db-integration", "DB Integration");

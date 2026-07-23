@@ -1,5 +1,262 @@
 # DCAv2 Execution State
 
+## Completed Phase 2 qualification-and-configuration execution
+
+This section records the completed Phase 2 implementation.
+Historical sections below remain unchanged and non-authorizing.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-2-qualification-and-configuration-2026-07-23-01 |
+| Authorization ID | phase-2-qualification-and-configuration-20260723-01 |
+| Authorized phase | phase-2-qualification-and-configuration |
+| Authorization status | completed; inactive |
+| Execution status | complete |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | a2f75fbdcbb82c13e3724405cabceab5c6c56efb |
+| Upstream | origin/codex/phase-0-prerequisite-readiness |
+| Started | 2026-07-23T17:11:22Z |
+| Completed | 2026-07-23T17:52:57Z |
+| New branch or implementation commit permitted | no |
+| Rufa-Clean target or external-write operation permitted | no |
+| Remediation, classification, or publication permitted | no |
+| Automatic Phase 3A continuation | prohibited |
+
+### Starting repository and preservation record
+
+- Repository root: `/Users/apple/Desktop/Akshay@goAI/DCAv2`
+- Canonical identity: `akshay-hudev/Rufa-Clean`
+- Repository role: `implementation_repository`
+- Starting/current branch: `codex/phase-0-prerequisite-readiness`
+- Starting commit: `a2f75fbdcbb82c13e3724405cabceab5c6c56efb`
+- Pre-existing modified paths from the completed governance preparation:
+  `CODEX_EXECUTION_STATE.md`,
+  `codex/authorizations/current-phase-authorization.yaml`, and
+  `codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml`.
+- Pre-existing untracked path from the completed governance preparation:
+  `codex/tests/phase-2-tests.yaml`.
+- Those paths are approved Phase 2 governance inputs and must be preserved.
+- All Phase 0 and Phase 1 implementation, reports, authorization history, and
+  historical execution-state sections remain preserved.
+- No staged paths were present at Phase 2 activation.
+- No branch, commit, push, pull request, or external write was created during
+  activation.
+
+### Governing-file SHA-256 baseline
+
+| File | SHA-256 |
+| --- | --- |
+| `AGENTS.md` | `3f4a36ec5da7f6b464cc9b5865fef9a0cee4c63f9ae962aade5c14bf99d085df` |
+| `codex/core/01-instruction-precedence.md` | `606cbac5a6dca581cc66a7230fb4497eeecbd6bf381a9c4f971d0a726ab98d9b` |
+| `codex/core/03-safety-invariants.md` | `a2786ee9291ff56e929e197940bd39d6e8a46e719490636477d7901c7fc5e844` |
+| `codex/core/05-phase-authorization-protocol.md` | `685d9d16ae9c843fedbf2dbf0615d75bb41f844c8e9460841664896d4c0d3bda` |
+| `codex/core/06-autonomy-and-stop-conditions.md` | `96741da1b0ed7059a60faf23ad78fe0bdc0ac3e741cc12616055873dd351b9d9` |
+| `codex/core/07-source-control-policy.md` | `4a8f25a62e21eff79038fbdb453872dc530cc477d7b2f4310f86327458a54c9a` |
+| `codex/core/08-secret-handling-policy.md` | `e4a55cbcbe18ed1b76d68c4ccbfa9cc28bc568dd5d23a3d653f587302d21f366` |
+| `codex/core/09-prompt-injection-policy.md` | `399dfcdd11378b15c7294aa4e417f134931e7c7beb0a38ecee80cf2f7d622f98` |
+| `codex/core/10-reporting-and-state-policy.md` | `d98330e1efe04f648846feb51a75a5938fb859cd497dbc109b091af604e19b3b` |
+| `codex/access/github-repository-policy.yaml` | `328fee1d610ea96227d73704bf91e50bd7f093cc3ef66a72ba0aa6dd4b686beb` |
+| `codex/access/prohibited-repositories.yaml` | `a5033750a185644e509a751b1b27fc1ec54bc0d3812289d010d372da3a043954` |
+| `codex/authorizations/current-phase-authorization.yaml` | `5ffb21e4e92379546b8c649d9bc0a701053b2ba6e78ca4c8117a459abcad157e` |
+| `codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml` | `bbd802441794b10f3bee442925faa6ce05afd466b7fd6821cafd7b84ec73cd06` |
+| `codex/roadmap/phase-2-qualification-and-configuration.md` | `a1a5ec27fa16c986292d4146b9e8951c30a684481090e461c1cbc5f5e729be1e` |
+| `codex/tests/phase-2-tests.yaml` | `732bba1c11704f4e1d79c647ab31c9a986c3ecd0a844c723f21cf58ef09296b2` |
+
+The current authorization was activated from the exact approved request and is
+the only expected Phase 2 governing-file change. The Phase 2 roadmap and test
+manifest remain immutable.
+
+### Completion result
+
+- Implemented draft 2020-12 qualification request, configuration, and result
+  contracts; deterministic versioned profile matching; language, package
+  manager, workspace, root, build, tool, and command detection; configuration
+  precedence; structured command mappings; isolated baseline evaluation;
+  per-capability routing; and qualification freshness.
+- Added additive migration `0006_phase2_qualification` with immutable,
+  tenant-scoped requests, results, baseline results, capability routes, and a
+  hash-linked redacted audit chain.
+- Added the guarded `dcav2 qualify` CLI path. Repository-role authorization
+  occurs before credentials and source acquisition.
+- Complete configured suite: 40 test files and 250 tests passed.
+- Clean database-free suite: 32 files and 236 tests passed; eight files and 14
+  integration tests were accurately skipped when their database/runner inputs
+  were absent.
+- Focused Phase 2 suite: four files and 31 tests passed.
+- Representative evidence: `test-only-usage` ready; `swift-apply-form`
+  ready-with-limited-gates; `rufa-test-consumer` baseline-broken; `query-test`
+  unsupported pnpm/Nx monorepo; `rufa-test-lib` optional smoke ready.
+- Rufa-Clean was denied before target metadata expansion or content access.
+- No analysis, findings, classification, remediation, branch, commit, push,
+  pull request, publication, merge, or external write occurred.
+- Runner image:
+  `dcav2-runner@sha256:7f347352497067cbd5b833b0c63046c89c358040078ade1b3c3fd29d0358f45f`.
+- Fresh-install, upgrade, checksum, concurrency, rollback, immutability,
+  idempotency, tenant isolation, audit sequencing, and audit-chain checks
+  passed.
+- Six explicitly named `dcav2_phase2_` disposable databases were dropped;
+  verified remaining count: zero.
+- All acquired workspaces, Phase 2 test containers, registry proxy, and
+  internal registry network were removed.
+- Capability matrix: 43 capabilities, 41 functional, two partially supported,
+  42 validation-passed, and the pre-existing draft publisher partial.
+- Security matrix: 60 controls; applicable Phase 2 requirements are
+  evidence-backed by the passing suite.
+- Final npm advisory audit: zero vulnerabilities.
+- No paid or metered service, production system, hosted runner, hosted
+  database, or additional model was used.
+
+### Completion artifacts
+
+- `codex/reports/phase-2-qualification-and-configuration-report.md`
+- `codex/reports/phase-2-representative-qualification.json`
+- `codex/capability-matrix.yaml`
+- `codex/tests/security-control-matrix.yaml`
+- `codex/schemas/phase2-qualification-request.schema.json`
+- `codex/schemas/phase2-qualification-configuration.schema.json`
+- `codex/schemas/phase2-qualification-result.schema.json`
+
+### Phase boundary
+
+Phase 2 is complete. The current authorization is inactive. Phase 3A remains
+unauthorized and no Phase 3A implementation has begun.
+
+## Completed Phase 2 governance preparation
+
+This section records the governance-only preparation authorized by the human
+operator. It does not authorize Phase 2 implementation.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-2-governance-preparation-2026-07-23-01 |
+| Authorization ID | phase-2-governance-preparation-20260723-01 |
+| Authorization status | completed; inactive |
+| Roadmap phase activated | none |
+| Objective | Create and validate the Phase 2 test manifest and final bounded authorization request |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | a2f75fbdcbb82c13e3724405cabceab5c6c56efb |
+| Upstream | origin/codex/phase-0-prerequisite-readiness |
+| Starting worktree | clean |
+| Started | 2026-07-23T16:57:51Z |
+| Completed | 2026-07-23T17:08:27Z |
+| Preparation result | complete |
+| External operations permitted | no |
+| Source implementation permitted | no |
+| Commits or branch changes permitted | no |
+| Automatic Phase 2 continuation | prohibited |
+
+### Scope and preservation
+
+- Canonical implementation repository:
+  `akshay-hudev/Rufa-Clean`.
+- Repository role: `implementation_repository`.
+- Sanitized origin: `github.com/akshay-hudev/Rufa-Clean.git`.
+- The required branch already exists locally and remotely and must remain
+  `codex/phase-0-prerequisite-readiness`.
+- No staged, unstaged, or untracked paths existed at preparation start.
+- The completed Phase 1 authorization, implementation, reports, and historical
+  execution-state sections remain preserved in Git and this state record.
+- Writable governance artifacts are limited to this state file, the current
+  preparation authorization, the Phase 2 authorization request, and the new
+  Phase 2 test manifest.
+- Application source, dependencies, migrations, the Phase 2 roadmap, external
+  systems, credentials, Docker, PostgreSQL, commits, pushes, and pull requests
+  are outside this preparation.
+
+### Governing-file SHA-256 baseline
+
+| File | SHA-256 |
+| --- | --- |
+| `AGENTS.md` | `3f4a36ec5da7f6b464cc9b5865fef9a0cee4c63f9ae962aade5c14bf99d085df` |
+| `codex/core/01-instruction-precedence.md` | `606cbac5a6dca581cc66a7230fb4497eeecbd6bf381a9c4f971d0a726ab98d9b` |
+| `codex/core/03-safety-invariants.md` | `a2786ee9291ff56e929e197940bd39d6e8a46e719490636477d7901c7fc5e844` |
+| `codex/core/05-phase-authorization-protocol.md` | `685d9d16ae9c843fedbf2dbf0615d75bb41f844c8e9460841664896d4c0d3bda` |
+| `codex/core/06-autonomy-and-stop-conditions.md` | `96741da1b0ed7059a60faf23ad78fe0bdc0ac3e741cc12616055873dd351b9d9` |
+| `codex/core/07-source-control-policy.md` | `4a8f25a62e21eff79038fbdb453872dc530cc477d7b2f4310f86327458a54c9a` |
+| `codex/core/08-secret-handling-policy.md` | `e4a55cbcbe18ed1b76d68c4ccbfa9cc28bc568dd5d23a3d653f587302d21f366` |
+| `codex/core/09-prompt-injection-policy.md` | `399dfcdd11378b15c7294aa4e417f134931e7c7beb0a38ecee80cf2f7d622f98` |
+| `codex/core/10-reporting-and-state-policy.md` | `d98330e1efe04f648846feb51a75a5938fb859cd497dbc109b091af604e19b3b` |
+| `codex/access/github-repository-policy.yaml` | `328fee1d610ea96227d73704bf91e50bd7f093cc3ef66a72ba0aa6dd4b686beb` |
+| `codex/access/prohibited-repositories.yaml` | `a5033750a185644e509a751b1b27fc1ec54bc0d3812289d010d372da3a043954` |
+| `codex/authorizations/current-phase-authorization.yaml` | `7de9d139552d31732ea6f5063099c32671aec3c82c8643be6ff4ecdd60440273` |
+| `codex/roadmap/phase-2-qualification-and-configuration.md` | `a1a5ec27fa16c986292d4146b9e8951c30a684481090e461c1cbc5f5e729be1e` |
+| `codex/tests/phase-test-manifest.schema.json` | `516f437a248ec219b61415339eb01a3c4f281816b1a709efd29848b49169d7dd` |
+
+The current authorization change is expected and scoped to the explicit human
+governance-preparation instruction. All other baseline governing files remain
+immutable.
+
+### Current progress
+
+- Completed: authorization preflight, clean-worktree verification, branch and
+  upstream verification, full required policy reading, Phase 2 roadmap review,
+  test-manifest schema review, governance-preparation authorization record,
+  Phase 2 test manifest, bounded authorization request, and final validation.
+- Phase 2 manifest: 9 groups, 32 unique tests, and 15 roadmap capability IDs.
+- The request permits only Phase 2 qualification and isolated baseline probes
+  for eligible non-Rufa-Clean repositories. It denies analysis, findings,
+  remediation, publication, and all external writes.
+- Rufa-Clean branch creation, commit creation, non-default push, pull-request
+  creation/update, and publication are denied by exact canonical identity in
+  addition to all permanent target-role denials.
+- `rufa-test-lib` remains optional smoke evidence only.
+- External operations performed: none.
+- Local or external commits, branches, pushes, or pull requests created: none.
+- The temporary no-network schema validator was removed after validation; no
+  phase-created container, database, process, workspace, credential, or other
+  temporary resource remains.
+
+### Validation
+
+Passed:
+
+- YAML parsing with duplicate-key rejection for all 12 YAML files;
+- JSON parsing for all 34 JSON files;
+- Phase 2 manifest validation against
+  `codex/tests/phase-test-manifest.schema.json`;
+- current preparation authorization and Phase 2 request validation against
+  `codex/schemas/phase-authorization-v2.schema.json`;
+- Phase 2 test/group uniqueness and referenced-path validation;
+- 9 manifest groups, 32 tests, and 15 capability IDs indexed;
+- repository-role governance validation: 9 roles, 25 Phase 0 tests, 44 Phase 1
+  tests, and 60 security controls;
+- syntax checks for both governance validation scripts;
+- Markdown NUL and fenced-block structural checks for 86 files;
+- historical report hashes for both Phase 0 reconciliation reports and the
+  governance-correction report;
+- changed-path scope, required branch, unchanged commit, and clean-start
+  preservation checks;
+- `git diff --check`.
+
+The first optional validation attempt using an AJV module was unavailable
+because AJV is not an installed repository dependency. No dependency was
+installed. The schema checks were then completed with a temporary local,
+no-network validator covering the schema constructs used by the two governing
+schemas.
+
+### Prepared artifacts
+
+- `codex/tests/phase-2-tests.yaml`
+  (`732bba1c11704f4e1d79c647ab31c9a986c3ecd0a844c723f21cf58ef09296b2`)
+- `codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml`
+  (`bbd802441794b10f3bee442925faa6ce05afd466b7fd6821cafd7b84ec73cd06`)
+
+### Next authorization state
+
+The governance-preparation authorization is complete and no longer authorizes
+work. Phase 2 remains inactive.
+
+The proposed request is:
+
+`phase-2-qualification-and-configuration-20260723-01`
+
+It remains `requested` and non-authorizing until the human operator replies
+exactly:
+
+`APPROVED`
+
+Do not begin Phase 2 before that approval.
+
 ## Completed Phase 1 TypeScript vertical-slice execution
 
 This section records the active Phase 1 execution. Historical sections below

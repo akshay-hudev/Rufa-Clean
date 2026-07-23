@@ -54,6 +54,7 @@
   "devDependencies": {
     "@types/node": "^26.1.1",
     "@types/pg": "^8.20.0",
+    "ajv": "^8.18.0",
     "knip": "^6.26.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",

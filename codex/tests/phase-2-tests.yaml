@@ -1,0 +1,1256 @@
+$schema: ./phase-test-manifest.schema.json
+schema_version: "1.0.0"
+manifest_id: phase-2-tests
+phase_id: phase-2-qualification-and-configuration
+title: Phase 2 Qualification and Configuration Test Manifest
+purpose: >-
+  Defines the required governance, identity, revision, profile, detection,
+  configuration, command-mapping, baseline, routing, persistence, security,
+  external-representative, reporting, and cleanup evidence for the bounded
+  Phase 2 qualification-and-configuration capability. This manifest does not
+  authorize implementation, repository access, credentials, dependency
+  installation, remediation, publication, or destructive operations.
+document_status: active
+implementation_authorized_by_manifest: false
+capability_ids:
+  - repository.identity.validate.v1
+  - repository.revision.resolve.v1
+  - repository.profile.qualify.v1
+  - repository.language.detect.v1
+  - repository.package-manager.detect.v1
+  - repository.workspace.detect.v1
+  - repository.source-roots.discover.v1
+  - repository.test-roots.discover.v1
+  - repository.generated-roots.discover.v1
+  - repository.build-system.detect.v1
+  - repository.toolchain.requirements.v1
+  - repository.commands.discover.v1
+  - repository.configuration.validate.v1
+  - repository.baseline.evaluate.v1
+  - repository.capability-route.v1
+references:
+  - path: AGENTS.md
+    purpose: Defines repository-level operating instructions.
+  - path: codex/core/01-instruction-precedence.md
+    purpose: Defines instruction precedence and conflict handling.
+  - path: codex/core/03-safety-invariants.md
+    purpose: Defines permanent safety invariants.
+  - path: codex/core/04-accuracy-and-evidence-policy.md
+    purpose: Defines evidence and coverage accuracy requirements.
+  - path: codex/core/05-phase-authorization-protocol.md
+    purpose: Defines phase authorization requirements.
+  - path: codex/core/06-autonomy-and-stop-conditions.md
+    purpose: Defines bounded autonomy and mandatory stop behavior.
+  - path: codex/core/07-source-control-policy.md
+    purpose: Defines source-control boundaries.
+  - path: codex/core/08-secret-handling-policy.md
+    purpose: Defines secret-handling requirements.
+  - path: codex/core/09-prompt-injection-policy.md
+    purpose: Defines handling of untrusted repository content.
+  - path: codex/core/10-reporting-and-state-policy.md
+    purpose: Defines truthful reporting and execution-state requirements.
+  - path: codex/access/github-repository-policy.yaml
+    purpose: Defines identity-role-operation access decisions.
+  - path: codex/access/prohibited-repositories.yaml
+    purpose: Defines permanent repository-role exclusions.
+  - path: codex/engineering/database-evolution-policy.md
+    purpose: Defines additive migration requirements.
+  - path: codex/engineering/structured-command-policy.md
+    purpose: Defines approved structured-command execution.
+  - path: codex/engineering/runner-security-controls.md
+    purpose: Defines untrusted runner security controls.
+  - path: codex/engineering/testing-policy.md
+    purpose: Defines test execution and evidence requirements.
+  - path: codex/roadmap/phase-2-qualification-and-configuration.md
+    purpose: Defines Phase 2 scope and completion criteria.
+  - path: codex/authorizations/current-phase-authorization.yaml
+    purpose: Identifies whether Phase 2 execution is currently authorized.
+defaults:
+  default_runner_profile: isolated-typescript-runner
+  default_network_profile: network-disabled
+  default_timeout_seconds: 1200
+  default_output_limit_bytes: 2097152
+  default_retry_policy: no_retry
+  unavailable_test_result: not_passed
+  skipped_test_result: not_passed
+  unexpected_error_result: failed
+  cleanup_required: true
+fixtures:
+  - fixture_id: phase-2-local-dcav2
+    fixture_type: system_under_test
+    description: >-
+      The authorized local DCAv2 implementation repository under test. It is
+      never an analysis target, qualification target, or test-fixture
+      repository.
+    source_identity: akshay-hudev/Rufa-Clean
+    authorization_required: true
+    cleanup_required: false
+  - fixture_id: phase-2-supported-typescript
+    fixture_type: synthetic_repository
+    description: >-
+      A synthetic single-package npm TypeScript repository with immutable
+      source, supported tools, approved command mappings, and passing baseline.
+    source_identity: synthetic-phase-2-supported-typescript
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-2-tenant
+    cleanup_required: true
+  - fixture_id: phase-2-profile-variants
+    fixture_type: synthetic_repository
+    description: >-
+      Synthetic repositories covering npm, pnpm, and Yarn workspaces, mixed
+      package managers, multiple TypeScript projects, generated-only source,
+      unsupported versions, malformed configuration, and ambiguous roots.
+    source_identity: synthetic-phase-2-profile-variants
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-2-tenant
+    cleanup_required: true
+  - fixture_id: phase-2-hostile-content
+    fixture_type: synthetic_repository
+    description: >-
+      Synthetic malicious configuration, documentation, commands, symbolic
+      links, output, and secret canaries used to test containment and
+      instruction/data separation.
+    source_identity: synthetic-phase-2-hostile-content
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    contains_synthetic_secrets: true
+    tenant_scope: synthetic-phase-2-tenant
+    cleanup_required: true
+  - fixture_id: phase-2-database
+    fixture_type: database
+    description: >-
+      A disposable PostgreSQL-compatible fixture containing the Phase 1 schema,
+      multiple synthetic tenants, historical attempts, nullable legacy data,
+      and audit history.
+    source_identity: phase-2-postgresql-fixture
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-2-tenant
+    cleanup_required: true
+  - fixture_id: phase-2-external-representative
+    fixture_type: external_repository
+    description: >-
+      A bounded representative sample of eligible akshay-hudev repositories at
+      immutable revisions, excluding Rufa-Clean before target metadata or
+      content access. rufa-test-lib is optional smoke evidence only.
+    source_identity: dynamically-selected-eligible-akshay-hudev-repositories
+    authorization_required: true
+    tenant_scope: authorized-phase-2-tenant
+    cleanup_required: true
+
+test_groups:
+  - group_id: phase-2-authorization
+    title: Authorization and repository-role boundaries
+    purpose: >-
+      Verify exact Phase 2 activation, permission separation, permanent
+      Rufa-Clean target exclusions, and the Phase 3A boundary.
+    execution_order: 10
+    stop_group_on_failure: true
+    tests:
+      - test_id: p2-current-phase-authorization
+        title: Validate current Phase 2 authorization
+        objective: >-
+          Require an active exact Phase 2 authorization bound to the required
+          implementation branch, operations, manifest, credentials, tests, and
+          stop conditions before any Phase 2 implementation command.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [authorization.validate-phase-2]
+        fixture_ids: [phase-2-local-dcav2]
+        expected_results:
+          - result_id: exact-phase-2-authorization
+            description: Phase 2 runs only under a matching active human authorization.
+            status: passed
+            machine_assertion: unauthorized_phase_2_execution_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Schema-valid exact Phase 2 authorization and activation decision.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-operation-permission-separation
+        title: Preserve operation permission separation
+        objective: >-
+          Prove discovery does not imply clone, clone does not imply
+          qualification, qualification does not imply analysis or remediation,
+          and no Phase 2 permission implies publication.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.identity.validate.v1]
+        command_ids: [authorization.verify-operation-separation]
+        fixture_ids: [phase-2-supported-typescript]
+        expected_results:
+          - result_id: operation-permissions-separated
+            description: Every unauthorized successor operation is denied independently.
+            status: passed
+            machine_assertion: permission_inheritance_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Allow and deny decisions for each operation boundary.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-rufa-clean-target-exclusion
+        title: Enforce canonical Rufa-Clean target exclusions
+        objective: >-
+          Prove canonical identity blocks Rufa-Clean before qualification,
+          metadata expansion, content acquisition, fixture use, finding
+          generation, remediation, cross-repository participation, runtime,
+          contract, scale, branch, commit, push, pull-request, and publication
+          operations while authorized local implementation work remains valid.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.identity.validate.v1, repository.profile.qualify.v1]
+        command_ids: [repository-access.verify-rufa-clean-exclusions]
+        fixture_ids: [phase-2-local-dcav2]
+        expected_results:
+          - result_id: rufa-clean-denied-before-target-access
+            description: All target and external-write operations are denied by exact identity.
+            status: passed
+            machine_assertion: rufa_clean_target_content_access_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Secret-free identity, role, operation, authorization, and deny decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-phase-3a-remains-unauthorized
+        title: Preserve the Phase 3A boundary
+        objective: >-
+          Verify completion or failure of Phase 2 never starts Phase 3A without
+          a separate exact human authorization.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        command_ids: [authorization.verify-phase-3a-inactive]
+        fixture_ids: [phase-2-local-dcav2]
+        expected_results:
+          - result_id: phase-3a-inactive
+            description: No automatic next-phase transition occurs.
+            status: passed
+            machine_assertion: implicit_phase_3a_transition_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: Phase handoff record showing Phase 3A inactive.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-2-identity-revision-profile
+    title: Identity, immutable revision, and profile qualification
+    purpose: >-
+      Validate canonical repository identity, immutable source resolution, and
+      deterministic versioned profile matching before qualification continues.
+    execution_order: 20
+    stop_group_on_failure: true
+    tests:
+      - test_id: p2-repository-identity-validation
+        title: Validate canonical repository identity
+        objective: >-
+          Cover valid identity, case normalization, provider-ID mismatch,
+          mutable alias, malformed identity, wrong installation, unauthorized
+          repository, credential-bearing remote, and operation outside policy.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.identity.validate.v1]
+        command_ids: [qualification.test-repository-identity]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: identity-table-passes
+            description: Valid identities normalize and every invalid or unauthorized case fails closed.
+            status: passed
+            machine_assertion: identity_case_failures == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Table-driven canonical identity results and deny decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-immutable-revision-resolution
+        title: Resolve immutable revisions deterministically
+        objective: >-
+          Cover commits, branch and tag resolution, missing or ambiguous
+          revisions, force-moved branches, shallow-fetch misses, repository
+          mismatch, stale snapshots, and changed source after qualification.
+        category: determinism
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.revision.resolve.v1]
+        command_ids: [qualification.test-revision-resolution]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: revision-resolution-stable
+            description: Qualification binds only to the resolved immutable commit and snapshot.
+            status: passed
+            machine_assertion: mutable_only_qualification_count == 0
+        evidence_requirements:
+          - evidence_type: artifact_digest
+            description: Requested revisions, immutable commits, snapshot identities, and stale decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-versioned-profile-matching
+        title: Match versioned repository profiles
+        objective: >-
+          Cover the supported single-package npm TypeScript profile, npm/pnpm/
+          Yarn workspaces, mixed managers, multiple TypeScript projects,
+          unsupported language or platform, generated-only source, unsupported
+          framework conventions, ambiguity, and trusted profile override.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [qualification.test-profile-matching]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: profiles-deterministic
+            description: Supported profiles match exactly and mismatches never use a closest-profile fallback.
+            status: passed
+            machine_assertion: implicit_profile_fallback_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Versioned matched, ambiguous, configuration-required, and unsupported profile results.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-2-detection
+    title: Repository characteristic detection
+    purpose: >-
+      Detect language, package manager, workspace, roots, build system, and
+      toolchain requirements without overstating support.
+    execution_order: 30
+    stop_group_on_failure: false
+    tests:
+      - test_id: p2-language-detection
+        title: Detect languages and support separately
+        objective: >-
+          Cover TypeScript, JavaScript, TSX, declarations, generated source,
+          mixed Python, unknown extensions, vendored source, test-only
+          languages, empty repositories, and malformed configuration.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.language.detect.v1]
+        command_ids: [qualification.test-language-detection]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: language-detection-attributable
+            description: Detected languages retain evidence and remain distinct from support status.
+            status: passed
+            machine_assertion: language_support_conflation_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Language signals, categories, confidence, and support results.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-package-manager-detection
+        title: Detect package managers and conflicts
+        objective: >-
+          Cover supported and unsupported npm lockfiles, missing lockfiles,
+          packageManager declarations, npm/pnpm/Yarn conflicts, nested or stale
+          lockfiles, private registries, missing executables, and unsupported
+          versions.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.package-manager.detect.v1]
+        command_ids: [qualification.test-package-manager-detection]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: package-manager-conflicts-explicit
+            description: Package-manager signals and conflicts produce explicit deterministic outcomes.
+            status: passed
+            machine_assertion: silently_resolved_package_manager_conflicts == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Lockfile, declaration, version, conflict, and support evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-workspace-detection
+        title: Detect workspace boundaries
+        objective: >-
+          Detect npm, pnpm, and Yarn workspace indicators, nested workspaces,
+          project references, package counts, ambiguous boundaries, and valid
+          single-package repositories without claiming workspace support.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.workspace.detect.v1]
+        command_ids: [qualification.test-workspace-detection]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: workspace-detection-explicit
+            description: Workspace characteristics and current support status are separately reported.
+            status: passed
+            machine_assertion: unsupported_workspace_reported_ready_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Workspace mechanisms, roots, packages, ambiguity, and support status.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-root-discovery
+        title: Discover source, test, generated, and excluded roots safely
+        objective: >-
+          Cover conventional and configured roots, colocated and separate
+          tests, generated and dependency roots, nested packages, missing or
+          ambiguous roots, normalized separators, symlink escape, and cycles.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.source-roots.discover.v1
+          - repository.test-roots.discover.v1
+          - repository.generated-roots.discover.v1
+        command_ids: [qualification.test-root-discovery]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants, phase-2-hostile-content]
+        expected_results:
+          - result_id: roots-attributable-and-confined
+            description: Roots are repository-relative and attributable; escapes and cycles are rejected.
+            status: passed
+            machine_assertion: unsafe_root_acceptance_count == 0
+        evidence_requirements:
+          - evidence_type: coverage_record
+            description: Included, excluded, generated, test, unresolved, and unsafe-root evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-build-system-detection
+        title: Detect build and test systems without execution
+        objective: >-
+          Identify build systems, targets, test frameworks, lint tools,
+          generated outputs, network requirements, and support status while
+          retaining all repository-defined commands as untrusted observations.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.build-system.detect.v1]
+        command_ids: [qualification.test-build-system-detection]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: build-systems-detected-not-executed
+            description: Build and test metadata is reported without direct command execution.
+            status: passed
+            machine_assertion: discovered_command_direct_execution_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Attributable detected build, test, lint, and generated-output metadata.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-toolchain-resolution
+        title: Resolve required toolchains deterministically
+        objective: >-
+          Cover supported project-local and runner-image tools, missing or
+          wrong versions, ambiguity, paths outside policy, host-global fallback,
+          corrupt installation, unsupported architecture, version failure, and
+          executable replacement between validation and execution.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.toolchain.requirements.v1]
+        command_ids: [qualification.test-toolchain-resolution]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: toolchain-resolution-stable
+            description: Required tools resolve to approved identities and host-global fallback never occurs.
+            status: passed
+            machine_assertion: host_global_fallback_count == 0
+        evidence_requirements:
+          - evidence_type: artifact_digest
+            description: Tool requirements, paths, versions, image digest, and failure statuses.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-2-configuration-commands
+    title: Configuration authority and structured command mapping
+    purpose: >-
+      Enforce configuration precedence and ensure discovered command text never
+      becomes executable authority.
+    execution_order: 40
+    stop_group_on_failure: true
+    tests:
+      - test_id: p2-configuration-precedence
+        title: Enforce configuration precedence
+        objective: >-
+          Prove lower-precedence repository configuration cannot weaken safety,
+          disable role exclusions, broaden network or credentials, enable
+          analysis/remediation/publication, or mark missing gates passed.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.configuration.validate.v1]
+        command_ids: [qualification.test-configuration-precedence]
+        fixture_ids: [phase-2-profile-variants, phase-2-hostile-content]
+        expected_results:
+          - result_id: trusted-precedence-enforced
+            description: Higher-authority restrictions dominate every conflicting lower-authority value.
+            status: passed
+            machine_assertion: lower_precedence_security_override_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Source-attributed configuration merge and conflict decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-configuration-validation
+        title: Validate complete, incomplete, invalid, conflicting, and stale configuration
+        objective: >-
+          Cover valid configuration, missing or unknown fields, invalid types,
+          conflicting roots, duplicate mappings, stale or unsupported versions,
+          publication/credential/denylist attacks, safe suggestions, and
+          synthetic secret redaction.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.configuration.validate.v1]
+        command_ids: [qualification.test-configuration-validation]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants, phase-2-hostile-content]
+        expected_results:
+          - result_id: configuration-statuses-explicit
+            description: Every configuration case returns a precise status and missing-field set.
+            status: passed
+            machine_assertion: silently_ignored_invalid_configuration_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Schema, normalization, compatibility, conflict, and redaction cases.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-command-discovery-non-executable
+        title: Keep command discovery non-executable
+        objective: >-
+          Observe package, build, test, CI, and documentation commands,
+          including shell metacharacters, arbitrary strings, missing or
+          duplicate scripts, nested scripts, and trust-zone attacks, without
+          executing discovered text.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.commands.discover.v1]
+        command_ids: [qualification.test-command-discovery]
+        fixture_ids: [phase-2-supported-typescript, phase-2-hostile-content]
+        expected_results:
+          - result_id: discovered-commands-remain-data
+            description: Command text is bounded evidence only and never passed to a trusted shell.
+            status: passed
+            machine_assertion: raw_discovered_shell_execution_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Command source, raw name, trust status, mapping status, and non-execution proof.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-approved-command-mapping
+        title: Require approved structured command mappings
+        objective: >-
+          Verify approved executable, validated arguments, working directory,
+          environment, runner, network, filesystem, timeout, resource, and
+          authorization fields are present before a baseline probe may run.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.commands.discover.v1]
+        command_ids: [qualification.test-command-mapping]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: only-approved-mappings-runnable
+            description: Unmapped or malformed required commands return configuration-required or unsupported.
+            status: passed
+            machine_assertion: unapproved_command_execution_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: Mapping validation decisions and denied execution attempts.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-2-baseline-routing
+    title: Baseline readiness, routing, status, digest, and freshness
+    purpose: >-
+      Preserve baseline failures and deterministically route each capability
+      using exact qualification inputs.
+    execution_order: 50
+    stop_group_on_failure: false
+    tests:
+      - test_id: p2-baseline-evaluation
+        title: Evaluate baseline gates truthfully
+        objective: >-
+          Cover all gates passing, optional and required gates unavailable,
+          type-check/build/test failures, timeout, resource exhaustion,
+          malformed output, truncation, cleanup failure, source mutation,
+          network attempts, and pre-existing failure classification.
+        category: integration
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.baseline.evaluate.v1]
+        command_ids: [qualification.test-baseline-evaluation]
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants, phase-2-hostile-content]
+        expected_results:
+          - result_id: baseline-failures-preserved
+            description: Every gate result remains explicit and required failures block readiness.
+            status: passed
+            machine_assertion: failed_gate_reported_passed_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Structured gate results, limits, bounded output, and cleanup statuses.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Probe containers, workspaces, processes, and generated outputs are reconciled.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+      - test_id: p2-qualification-statuses
+        title: Preserve explicit qualification statuses
+        objective: >-
+          Verify ready, ready-with-limited-gates, configuration-required,
+          baseline-broken, unsupported, inaccessible, failed, stale,
+          security-blocked, and authorization-rejected remain distinct.
+        category: regression
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [qualification.test-status-model]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: status-model-unambiguous
+            description: Only ready satisfies every required prerequisite and no failure becomes absence.
+            status: passed
+            machine_assertion: invalid_ready_status_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Status cases, blockers, warnings, and exact missing prerequisites.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-capability-routing
+        title: Route capabilities deterministically
+        objective: >-
+          Cover inventory, evidence, detection-only, incomplete-coverage
+          classification, baseline/tool/security remediation blocks,
+          publication authorization blocks, unsupported shapes, stale
+          qualification, configuration requirements, and version mismatch.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.capability-route.v1]
+        command_ids: [qualification.test-capability-routing]
+        fixture_ids: [phase-2-supported-typescript, phase-2-profile-variants]
+        expected_results:
+          - result_id: capability-routing-explainable
+            description: Detection, classification, remediation, and publication readiness remain separate.
+            status: passed
+            machine_assertion: readiness_dimension_conflation_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: Per-capability route, reasons, blockers, limits, and prerequisites.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-qualification-digest-freshness
+        title: Bind qualification digest and freshness
+        objective: >-
+          Verify changes to commit, manifest, lockfile, relevant configuration,
+          tool version, runner image, command mapping, profile, security policy,
+          authorization, or gate definitions invalidate the result.
+        category: determinism
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1, repository.capability-route.v1]
+        command_ids: [qualification.test-digest-freshness]
+        fixture_ids: [phase-2-supported-typescript]
+        expected_results:
+          - result_id: qualification-staleness-enforced
+            description: Equivalent inputs produce one digest and sensitive input changes produce stale results.
+            status: passed
+            machine_assertion: stale_qualification_reuse_count == 0
+        evidence_requirements:
+          - evidence_type: artifact_digest
+            description: Canonical input digests, output digests, and invalidation decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-2-security
+    title: Runner containment and hostile input
+    purpose: >-
+      Verify untrusted qualification content cannot escape the runner, obtain
+      trusted credentials, alter authority, or leak synthetic secrets.
+    execution_order: 60
+    stop_group_on_failure: true
+    tests:
+      - test_id: p2-runner-isolation
+        title: Enforce qualification runner isolation
+        objective: >-
+          Verify non-root execution, capability drop, no privileged mode,
+          no Docker socket, host-filesystem confinement, network policy, cloud
+          metadata denial, sanitized environment, resource/output/time limits,
+          process-tree termination, and cleanup.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.baseline.evaluate.v1]
+        command_ids: [security.test-phase-2-runner]
+        runner_profile: isolated-typescript-runner
+        network_profile: network-disabled
+        fixture_ids: [phase-2-hostile-content]
+        expected_results:
+          - result_id: qualification-runner-contained
+            description: All required runner controls are actively enforced in the tested profile.
+            status: passed
+            machine_assertion: runner_containment_failure_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Hostile-runner control results tied to exact image digest and profile.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: All test-created containers, networks, processes, and workspaces are removed.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+      - test_id: p2-prompt-injection-resistance
+        title: Keep repository content untrusted
+        objective: >-
+          Prove malicious configuration, documentation, nested agent files,
+          commands, provider metadata, and output cannot change precedence,
+          authorization, credentials, networks, mappings, gates, status,
+          governance, remediation, or publication.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.configuration.validate.v1, repository.commands.discover.v1]
+        command_ids: [security.test-phase-2-prompt-injection]
+        fixture_ids: [phase-2-hostile-content]
+        expected_results:
+          - result_id: hostile-content-remains-data
+            description: No hostile instruction changes trusted state or causes an unauthorized operation.
+            status: passed
+            machine_assertion: hostile_instruction_effect_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Hostile cases and unchanged authorization, policy, and external-operation state.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-secret-canary-protection
+        title: Prevent qualification secret disclosure
+        objective: >-
+          Verify provider and publisher credentials are absent from baseline
+          commands and synthetic canaries do not appear in structured results,
+          bounded logs, suggestions, audit events, reports, or artifacts.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.configuration.validate.v1, repository.baseline.evaluate.v1]
+        command_ids: [security.test-phase-2-secret-canaries]
+        fixture_ids: [phase-2-hostile-content]
+        expected_results:
+          - result_id: canaries-not-disclosed
+            description: Synthetic secrets remain unavailable or redacted across every trust boundary.
+            status: passed
+            machine_assertion: synthetic_secret_disclosure_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Canary scan result without recording the canary values.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-2-persistence-audit
+    title: Additive persistence, tenant isolation, and audit
+    purpose: >-
+      Validate Phase 2 state against fresh and upgraded disposable databases
+      while preserving historical attempts and audit integrity.
+    execution_order: 70
+    stop_group_on_failure: true
+    tests:
+      - test_id: p2-additive-migrations
+        title: Validate fresh and upgrade migrations
+        objective: >-
+          Cover fresh installation, Phase 1 upgrade, existing qualification
+          records, nullable legacy data, migration failure and retry, duplicate
+          attempts, projection rebuild, and audit preservation without
+          rewriting historical migrations.
+        category: migration
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [database.test-phase-2-migrations]
+        fixture_ids: [phase-2-database]
+        expected_results:
+          - result_id: phase-2-migrations-additive
+            description: Fresh and upgrade paths pass and historical migration checksums remain unchanged.
+            status: passed
+            machine_assertion: rewritten_historical_migration_count == 0
+        evidence_requirements:
+          - evidence_type: database_record
+            description: Secret-free fresh, upgrade, failure, retry, and checksum results.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Only authorization-created disposable databases are dropped and absence is verified.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+      - test_id: p2-tenant-isolation
+        title: Enforce qualification tenant isolation
+        objective: >-
+          Verify requests, attempts, results, profiles, configuration, tool
+          results, baseline results, routes, and projections cannot be read or
+          mutated across synthetic tenant boundaries.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [database.test-phase-2-tenant-isolation]
+        fixture_ids: [phase-2-database]
+        expected_results:
+          - result_id: qualification-tenant-isolation
+            description: Cross-tenant reads and writes are denied for every Phase 2 entity.
+            status: passed
+            machine_assertion: cross_tenant_access_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Tenant-isolation cases across Phase 2 persistence operations.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: The disposable tenant-isolation database is removed.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+      - test_id: p2-audit-completeness
+        title: Preserve complete append-only qualification audit
+        objective: >-
+          Verify request, denial, role exclusion, profile, configuration,
+          tool, baseline, completion, failure, stale, retry, tenant, redaction,
+          and cleanup events retain sequence and hash-chain integrity.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [database.test-phase-2-audit]
+        fixture_ids: [phase-2-database]
+        expected_results:
+          - result_id: phase-2-audit-complete
+            description: Failed and successful attempts remain append-only, attributable, tenant-scoped, and secret-free.
+            status: passed
+            machine_assertion: missing_or_mutable_phase_2_audit_events == 0
+        evidence_requirements:
+          - evidence_type: audit_event
+            description: Independently verified Phase 2 event sequence and hash chain.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: The disposable audit database is removed.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+  - group_id: phase-2-external
+    title: Representative eligible-repository qualification
+    purpose: >-
+      Demonstrate bounded qualification generalization beyond one synthetic
+      fixture without analyzing, remediating, or publishing.
+    execution_order: 80
+    stop_group_on_failure: false
+    tests:
+      - test_id: p2-external-representative-qualification
+        title: Qualify representative eligible repositories
+        objective: >-
+          Discover and select approximately three to five structurally useful
+          eligible akshay-hudev repositories when available, bind immutable
+          revisions, qualify them in isolation, preserve unsupported or failed
+          outcomes, and exclude Rufa-Clean before target metadata access.
+        category: external
+        requirement: conditional
+        execution_mode: external
+        activation:
+          default_active: false
+          all_of:
+            - active authorization permits GitHub discovery, metadata, clone, fetch, qualification, and isolated baseline probes
+            - configured GitHub App credential status is VALID
+            - network access to GitHub is available
+          reason: External source-provider access requires current explicit authorization and usable credentials.
+        capability_ids:
+          - repository.identity.validate.v1
+          - repository.revision.resolve.v1
+          - repository.profile.qualify.v1
+        external_operations:
+          - system_type: source_provider
+            system_identity: github.com/akshay-hudev
+            environment: external-read-only
+            operation: discover_metadata_acquire_and_qualify_eligible_repositories
+            authorization_required: true
+            production_access: denied
+            credential_capability: github-app-read
+            network_profile: github-readonly
+            cleanup_required: true
+          - system_type: package_registry
+            system_identity: registry.npmjs.org
+            environment: external-public-read-only
+            operation: download_public_dependencies_for_isolated_baseline_when_required
+            authorization_required: true
+            production_access: denied
+            network_profile: npm-public-install-only
+            cleanup_required: true
+        credential_capabilities: [github-app-read]
+        fixture_ids: [phase-2-external-representative]
+        expected_results:
+          - result_id: representative-qualification-truthful
+            description: Eligible immutable revisions are qualified and every rejected or unsupported repository retains its reason.
+            status: passed
+            machine_assertion: rufa_clean_target_access_count == 0 && external_write_count == 0
+        evidence_requirements:
+          - evidence_type: external_operation_record
+            description: Secret-free discovery, acquisition, immutable revision, qualification, and cleanup records.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+          - evidence_type: coverage_record
+            description: Selection, rejection, profile, limitation, and generalization evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: external_state_reconciliation_required
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: All acquired external workspaces and credential references are removed.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+  - group_id: phase-2-reporting
+    title: Capability, security, reporting, and cleanup
+    purpose: >-
+      Require evidence-backed matrices, truthful completion reporting,
+      reproducible state, and verified cleanup.
+    execution_order: 90
+    stop_group_on_failure: true
+    tests:
+      - test_id: p2-capability-security-matrix
+        title: Validate capability and security evidence
+        objective: >-
+          Require every Phase 2 capability and relevant security control to
+          reference actual test evidence, valid phase/test/control IDs, valid
+          paths, exact supported scope, and truthful status.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids:
+          - repository.identity.validate.v1
+          - repository.revision.resolve.v1
+          - repository.profile.qualify.v1
+          - repository.language.detect.v1
+          - repository.package-manager.detect.v1
+          - repository.workspace.detect.v1
+          - repository.source-roots.discover.v1
+          - repository.test-roots.discover.v1
+          - repository.generated-roots.discover.v1
+          - repository.build-system.detect.v1
+          - repository.toolchain.requirements.v1
+          - repository.commands.discover.v1
+          - repository.configuration.validate.v1
+          - repository.baseline.evaluate.v1
+          - repository.capability-route.v1
+        command_ids: [governance.validate-phase-2-evidence]
+        fixture_ids: [phase-2-local-dcav2]
+        expected_results:
+          - result_id: matrices-evidence-backed
+            description: All referenced IDs and paths resolve and no documentation-only control is reported validated.
+            status: passed
+            machine_assertion: invalid_or_unsupported_status_claim_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Capability, security-control, identifier, schema, and path validation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-phase-report-truthfulness
+        title: Produce a truthful Phase 2 report
+        objective: >-
+          Report every acceptance criterion, test, repository, profile,
+          limitation, migration, security control, external operation,
+          changed file, credential status, and cleanup result without treating
+          unavailable, unsupported, failed, or skipped work as passed.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.profile.qualify.v1]
+        command_ids: [reporting.validate-phase-2-report]
+        fixture_ids: [phase-2-local-dcav2]
+        expected_results:
+          - result_id: phase-2-report-complete
+            description: The report is schema-valid, evidence-backed, bounded, and secret-free.
+            status: passed
+            machine_assertion: false_pass_or_unsupported_claim_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: Phase report schema, reference, redaction, and evidence reconciliation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-execution-state-handoff
+        title: Record a reproducible Phase 2 handoff
+        objective: >-
+          Record authorization, branch, commits, worktree, governance hashes,
+          commands, tests, profiles, unsupported scope, migrations, external
+          operations, cleanup, limitations, and the smallest next human action.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        command_ids: [reporting.validate-phase-2-state]
+        fixture_ids: [phase-2-local-dcav2]
+        expected_results:
+          - result_id: phase-2-state-reproducible
+            description: Another authorized session can resume from retained evidence without hidden context.
+            status: passed
+            machine_assertion: missing_required_handoff_field_count == 0
+        evidence_requirements:
+          - evidence_type: changed_file_record
+            description: Validated execution-state handoff and changed-file reconciliation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p2-final-cleanup
+        title: Verify Phase 2 resource cleanup
+        objective: >-
+          Reconcile and remove only Phase 2-created containers, networks,
+          processes, workspaces, generated dependency homes, disposable
+          databases, and temporary credential references while preserving
+          pre-existing resources and all user work.
+        category: integration
+        requirement: required
+        execution_mode: automated
+        command_ids: [cleanup.verify-phase-2]
+        fixture_ids:
+          - phase-2-supported-typescript
+          - phase-2-profile-variants
+          - phase-2-hostile-content
+          - phase-2-database
+          - phase-2-external-representative
+        expected_results:
+          - result_id: phase-2-cleanup-complete
+            description: No owned temporary resource remains and no unowned resource is altered.
+            status: passed
+            machine_assertion: owned_resource_leak_count == 0 && unowned_resource_mutation_count == 0
+        evidence_requirements:
+          - evidence_type: cleanup_record
+            description: Resource inventory, ownership, cleanup action, and verified final state.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: Final zero-owned-resource reconciliation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+completion_policy:
+  required_tests: all_active_required_tests_must_pass
+  conditional_tests: all_activated_conditional_tests_must_pass
+  informational_tests: do_not_block
+  unavailable_tests: block_phase
+  skipped_tests: block_phase
+  failed_cleanup: block_phase
+  unknown_external_state: block_retry_and_completion
+  security_failures: block_phase
+  phase_completion_requires_current_authorization: true
+  allow_completion_with_known_failures: false
+  required_capability_statuses:
+    - functional
+  notes: >-
+    Phase 2 is complete only when every active required test and every activated
+    conditional test passes. Detection of an unsupported profile is valid
+    behavior, but no unsupported profile may be reported ready or functional.
+reporting:
+  record_each_test: true
+  record_unavailable_tests: true
+  record_skipped_tests: true
+  record_cleanup: true
+  record_external_operations: true
+  record_test_inputs: true
+  record_test_environment: true
+  redact_secrets: true
+  prohibit_false_pass: true
+  required_report_schema: codex/schemas/phase-report.schema.json
+  required_audit_event_types:
+    - phase-test-started
+    - phase-test-completed
+    - phase-test-failed
+    - phase-test-blocked
+    - phase-test-unavailable
+    - phase-test-skipped
+    - qualification-requested
+    - repository-access-allowed
+    - repository-access-denied
+    - repository-role-exclusion-enforced
+    - immutable-revision-resolved
+    - source-acquisition-completed
+    - repository-profile-selected
+    - configuration-validated
+    - configuration-rejected
+    - tool-resolved
+    - tool-unavailable
+    - baseline-gate-completed
+    - capability-routed
+    - qualification-completed
+    - qualification-failed
+    - qualification-stale
+    - phase-cleanup-completed
+    - phase-cleanup-failed
+metadata:
+  owner: dcav2-governance
+  created_at: 2026-07-23T16:57:51Z
+  reviewers:
+    - human-phase-authorizer
+    - human-security-reviewer
+  notes: >-
+    This manifest is normative test configuration only. It does not activate
+    Phase 2 or grant repository, credential, dependency-installation,
+    external-operation, source-modification, remediation, publication, merge,
+    infrastructure, or destructive-operation authority.

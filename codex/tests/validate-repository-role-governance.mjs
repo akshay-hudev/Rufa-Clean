@@ -210,9 +210,10 @@ if (!phase1RufaRule) {
 
 const phase0 = parseYaml("codex/tests/phase-0-tests.yaml");
 const phase1 = parseYaml("codex/tests/phase-1-tests.yaml");
+const phase2 = parseYaml("codex/tests/phase-2-tests.yaml");
 const security = parseYaml("codex/tests/security-control-matrix.yaml");
 
-for (const manifest of [phase0, phase1]) {
+for (const manifest of [phase0, phase1, phase2]) {
   for (const reference of manifest.references ?? []) {
     if (!fs.existsSync(path.join(root, reference.path))) {
       failures.push(`${manifest.manifest_id}: missing referenced path ${reference.path}`);
@@ -305,6 +306,7 @@ function testsById(manifest) {
 const manifests = new Map([
   ["codex/tests/phase-0-tests.yaml", testsById(phase0)],
   ["codex/tests/phase-1-tests.yaml", testsById(phase1)],
+  ["codex/tests/phase-2-tests.yaml", testsById(phase2)],
 ]);
 
 const expectedAssertions = {
@@ -566,6 +568,7 @@ for (const [report, expectedHash] of [
 for (const [manifest, fixtureId] of [
   [phase0, "phase-0-local-repository"],
   [phase1, "phase-1-local-dcav2"],
+  [phase2, "phase-2-local-dcav2"],
 ]) {
   const implementationSubject = (manifest.fixtures ?? []).find(
     (fixture) => fixture.fixture_id === fixtureId,
@@ -589,4 +592,5 @@ console.log("governance validation passed");
 console.log(`roles validated: ${requiredRoles.length}`);
 console.log(`phase-0 tests indexed: ${manifests.get("codex/tests/phase-0-tests.yaml").size}`);
 console.log(`phase-1 tests indexed: ${manifests.get("codex/tests/phase-1-tests.yaml").size}`);
+console.log(`phase-2 tests indexed: ${manifests.get("codex/tests/phase-2-tests.yaml").size}`);
 console.log(`security controls indexed: ${(security.controls ?? []).length}`);
