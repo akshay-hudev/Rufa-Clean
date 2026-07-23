@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import type { RepositoryAccessAuthorizer } from "../access/repository-access";
 import { assertAuthorizationCurrent } from "./policy";
 import type { MilestoneStore } from "./store";
 
@@ -39,6 +40,7 @@ export async function publishVerifiedDraft(input: {
   attemptId: string;
   baseBranch: string;
   actorIdentity: string;
+  access: RepositoryAccessAuthorizer;
 }): Promise<{ status: "draft_pr_created" | "already_published"; prUrl: string }> {
   const existing = await input.store.existingPublication(input.attemptId);
   if (existing?.status === "draft_pr_created" && existing.prUrl) {
@@ -52,6 +54,15 @@ export async function publishVerifiedDraft(input: {
   }
   const context = await input.store.publicationContext(input.attemptId);
   const finding = context.finding;
+  const accessRequest = {
+    repository: finding.repository,
+    role: "publication_target" as const,
+  };
+  input.access.assert({ ...accessRequest, operation: "branch_create" });
+  input.access.assert({ ...accessRequest, operation: "commit_create" });
+  input.access.assert({ ...accessRequest, operation: "push_non_default_branch" });
+  input.access.assert({ ...accessRequest, operation: "pull_request_create" });
+  input.access.assert({ ...accessRequest, operation: "publish" });
   const latestAuthorization = await input.store.latestAuthorization(finding.findingId);
   const latestDisposition = await input.store.latestDisposition(finding.findingId);
   if (context.status !== "verified") {

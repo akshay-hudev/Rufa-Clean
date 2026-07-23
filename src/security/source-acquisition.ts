@@ -3,6 +3,10 @@ import { access, chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import type {
+  RepositoryAccessAuthorizer,
+  RepositoryRole,
+} from "../access/repository-access";
 import { runProcess } from "../remediation/process";
 import { allowlistedEnvironment } from "./environment";
 import type { ShortLivedCredential } from "./github-credentials";
@@ -35,6 +39,8 @@ export async function acquireGitHubSource(input: {
   repository: string;
   revision: string;
   expectedCommitSha?: string;
+  access: RepositoryAccessAuthorizer;
+  role: RepositoryRole;
   credentialProvider: CredentialProvider;
 }, dependencies: SourceAcquisitionDependencies = {}): Promise<AcquiredSource> {
   const owner = requireSlug(input.owner, "owner");
@@ -42,6 +48,11 @@ export async function acquireGitHubSource(input: {
   if (!input.revision.trim() || input.revision.startsWith("-")) {
     throw new Error("A safe branch, tag, or commit revision is required");
   }
+  const accessRequest = {
+    repository: { provider: "github" as const, owner, name: repository },
+    role: input.role,
+  };
+  input.access.assert({ ...accessRequest, operation: "clone" });
   const root = await mkdtemp(join(tmpdir(), "dcav2-source-"));
   const checkout = join(root, "repository");
   const askPass = join(root, `askpass-${randomBytes(6).toString("hex")}.js`);
@@ -64,6 +75,7 @@ export async function acquireGitHubSource(input: {
   };
 
   try {
+    input.access.assert({ ...accessRequest, operation: "credential_read" });
     const credential = await input.credentialProvider();
     token = credential.token;
     if (!token || Date.parse(credential.expiresAt) <= Date.now()) {
@@ -95,6 +107,7 @@ export async function acquireGitHubSource(input: {
       throw new Error(`Git clone failed: ${redact(clone.stderr || clone.stdout, token)}`);
     }
     if (input.expectedCommitSha) {
+      input.access.assert({ ...accessRequest, operation: "fetch" });
       if (!/^[a-f0-9]{40}$/i.test(input.expectedCommitSha)) {
         throw new Error("expectedCommitSha must be a full immutable commit SHA");
       }

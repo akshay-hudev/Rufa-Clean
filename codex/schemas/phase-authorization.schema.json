@@ -994,7 +994,7 @@
         "cannot_weaken_safety_invariants": {
           "const": true
         },
-        "cannot_remove_prohibited_repositories": {
+        "cannot_remove_permanent_repository_role_exclusions": {
           "const": true
         },
         "notes": {
@@ -1020,7 +1020,7 @@
               "required_reviewers",
               "expiration",
               "cannot_weaken_safety_invariants",
-              "cannot_remove_prohibited_repositories"
+              "cannot_remove_permanent_repository_role_exclusions"
             ],
             "anyOf": [
               {

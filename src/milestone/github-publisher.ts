@@ -3,6 +3,7 @@ import { access, chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { RepositoryAccessAuthorizer } from "../access/repository-access";
 import { runProcess } from "../remediation/process";
 import { allowlistedEnvironment } from "../security/environment";
 import { publisherRepositoryCredential } from "../security/github-credentials";
@@ -13,12 +14,24 @@ function redact(value: string, secret: string): string {
 }
 
 export class GitHubDraftPublisher implements DraftPullRequestGateway {
+  constructor(private readonly access: RepositoryAccessAuthorizer) {}
+
   async createDraftPullRequest(input: DraftPullRequestInput): Promise<DraftPullRequestResult> {
+    const accessRequest = {
+      repository: { provider: "github" as const, owner: input.owner, name: input.repository },
+      role: "publication_target" as const,
+    };
+    this.access.assert({ ...accessRequest, operation: "credential_read" });
+    this.access.assert({ ...accessRequest, operation: "clone" });
     const root = await mkdtemp(join(tmpdir(), "dcav2-publisher-"));
     const checkout = join(root, "repository");
     const patchPath = join(root, "removal.patch");
     const askPass = join(root, `askpass-${randomBytes(6).toString("hex")}.js`);
-    const credential = await publisherRepositoryCredential(input.repository);
+    const credential = await publisherRepositoryCredential(
+      input.owner,
+      input.repository,
+      this.access,
+    );
     const token = credential.token;
     try {
       await writeFile(askPass, "#!/usr/bin/env node\nconst p=process.argv[2]||'';process.stdout.write(p.toLowerCase().includes('username')?'x-access-token':(process.env.DCA_GIT_PASSWORD||''));\n", { mode: 0o700 });
@@ -53,15 +66,19 @@ export class GitHubDraftPublisher implements DraftPullRequestGateway {
       if (changedFiles.length !== 1 || changedFiles[0] !== input.expectedFile) {
         throw new Error(`Publisher patch changed an unexpected file set: ${changedFiles.join(", ") || "none"}`);
       }
+      this.access.assert({ ...accessRequest, operation: "branch_create" });
       await git(["checkout", "-b", input.branchName]);
       await git(["config", "user.name", "DCAv2 Remediation Bot"]);
       await git(["config", "user.email", "dcav2-remediation[bot]@users.noreply.github.com"]);
       await git(["add", "--", input.expectedFile]);
+      this.access.assert({ ...accessRequest, operation: "commit_create" });
       await git(["commit", "-m", input.title]);
+      this.access.assert({ ...accessRequest, operation: "push_non_default_branch" });
       await git(["push", "--set-upstream", "origin", input.branchName]);
 
       const { Octokit } = await import("octokit");
       const octokit = new Octokit({ auth: token });
+      this.access.assert({ ...accessRequest, operation: "pull_request_create" });
       const existing = await octokit.request("GET /repos/{owner}/{repo}/pulls", {
         owner: input.owner,
         repo: input.repository,

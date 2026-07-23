@@ -1342,8 +1342,8 @@
 "authorization_failure": {
 "const": "deny"
 },
-"prohibited_repository_match": {
-"const": "deny_before_content_access"
+"excluded_repository_target_role_match": {
+"const": "deny_before_target_operation"
 },
 "credential_failure": {
 "enum": [

@@ -169,7 +169,7 @@ Initial event types should include applicable records such as:
 - `repository_access_requested`;
 - `repository_access_allowed`;
 - `repository_access_denied`;
-- `prohibited_repository_excluded`;
+- `repository_target_role_excluded`;
 - `repository_identity_validated`;
 - `repository_identity_rejected`.
 

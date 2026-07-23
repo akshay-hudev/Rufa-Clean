@@ -1,3 +1,7 @@
+import type {
+  RepositoryAccessAuthorizer,
+  RepositoryRole,
+} from "../access/repository-access";
 import type { IsolatedRunnerSession } from "../security/docker-runner";
 import type { CanonicalAnalysisResult, RepositoryIdentity } from "./types";
 
@@ -12,7 +16,17 @@ export async function runIsolatedAnalysis(input: {
   accountScopeId: string;
   repository: RepositoryIdentity;
   commitSha: string;
+  access: RepositoryAccessAuthorizer;
+  role?: Extract<RepositoryRole, "analysis_target" | "test_fixture">;
 }): Promise<CanonicalAnalysisResult> {
+  const role = input.role ?? "analysis_target";
+  const request = {
+    repository: input.repository,
+    role,
+  };
+  input.access.assert({ ...request, operation: "static_analysis" });
+  input.access.assert({ ...request, operation: "semantic_analysis" });
+  input.access.assert({ ...request, operation: "generate_findings" });
   try {
     const install = await input.session.runInstall("npm", [
       "ci", "--ignore-scripts", "--include=dev", "--no-audit", "--no-fund",

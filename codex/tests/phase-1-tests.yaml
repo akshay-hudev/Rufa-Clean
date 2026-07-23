@@ -51,7 +51,7 @@ references:
   - path: codex/access/github-repository-policy.yaml
     purpose: Defines repository-operation access policy.
   - path: codex/access/prohibited-repositories.yaml
-    purpose: Defines repositories that must never receive content access.
+    purpose: Defines permanent repository-role and operation exclusions.
   - path: codex/architecture/evidence-model.md
     purpose: Defines normalized evidence and provenance.
   - path: codex/architecture/coverage-model.md
@@ -88,9 +88,11 @@ defaults:
   cleanup_required: true
 fixtures:
   - fixture_id: phase-1-local-dcav2
-    fixture_type: local_repository
+    fixture_type: system_under_test
     description: >-
-      The local DCAv2 repository at the exact source revision and worktree state recorded for the authorized Phase 1 execution.
+      The authorized DCAv2 implementation repository under test at the exact
+      source revision and worktree state recorded for Phase 1. It is not an
+      analysis target or test-fixture repository.
     source_identity: local-dcav2-repository
     authorization_required: true
     cleanup_required: false

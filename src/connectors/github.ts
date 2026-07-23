@@ -1,11 +1,19 @@
 import { readFileSync } from "node:fs";
 
+import type {
+  RepositoryAccessAuthorizer,
+  RepositoryRole,
+} from "../access/repository-access";
+
 export interface RawRepo {
   full_name: string;
   default_branch: string;
   private: boolean;
   archived: boolean;
   pushed_at: string | null;
+  updated_at: string | null | undefined;
+  language: string | null | undefined;
+  size: number | undefined;
 }
 
 const PAGE_SIZE = 100;
@@ -47,6 +55,10 @@ interface FileContent {
 
 interface PullRequestResponse {
   html_url: string;
+}
+
+interface CommitResponse {
+  sha: string;
 }
 
 let installationOctokit: Promise<GitHubClient> | undefined;
@@ -126,9 +138,15 @@ function pageFromCursor(cursor?: string): number {
 }
 
 export async function listRepositories(
+  access: RepositoryAccessAuthorizer,
   cursor?: string,
 ): Promise<{ repos: RawRepo[]; nextCursor?: string }> {
+  const allowedOwners = new Set(
+    access.authorizedDiscoveryOwners().map((owner) => owner.toLowerCase()),
+  );
   const page = pageFromCursor(cursor);
+  // The account-scoped decision is evaluated before the installation client
+  // can issue or refresh a credential.
   const octokit = await getOctokit();
   const response = await octokit.request<InstallationRepositoriesResponse>(
     "GET /installation/repositories",
@@ -140,13 +158,18 @@ export async function listRepositories(
 
   await respectRateLimit(response.headers);
 
-  const repos: RawRepo[] = response.data.repositories.map((repo) => ({
-    full_name: repo.full_name,
-    default_branch: repo.default_branch,
-    private: repo.private,
-    archived: repo.archived,
-    pushed_at: repo.pushed_at,
-  }));
+  const repos: RawRepo[] = response.data.repositories
+    .filter((repo) => allowedOwners.has(repo.full_name.split("/")[0]?.toLowerCase() ?? ""))
+    .map((repo) => ({
+      full_name: repo.full_name,
+      default_branch: repo.default_branch,
+      private: repo.private,
+      archived: repo.archived,
+      pushed_at: repo.pushed_at,
+      updated_at: repo.updated_at,
+      language: repo.language,
+      size: repo.size,
+    }));
 
   if (response.headers.link?.includes('rel="next"')) {
     return { repos, nextCursor: String(page + 1) };
@@ -175,7 +198,26 @@ function errorHeaders(error: unknown): Record<string, string | undefined> | unde
   return (response as { headers: Record<string, string | undefined> }).headers;
 }
 
-export async function listRootFiles(owner: string, repo: string): Promise<string[]> {
+function assertMetadataAccess(
+  access: RepositoryAccessAuthorizer,
+  owner: string,
+  repo: string,
+  role: RepositoryRole,
+): void {
+  access.assert({
+    repository: { provider: "github", owner, name: repo },
+    role,
+    operation: "metadata_read",
+  });
+}
+
+export async function listRootFiles(
+  owner: string,
+  repo: string,
+  access: RepositoryAccessAuthorizer,
+  role: RepositoryRole,
+): Promise<string[]> {
+  assertMetadataAccess(access, owner, repo, role);
   try {
     const octokit = await getOctokit();
     const rootResponse = await octokit.request<ContentEntry[] | ContentEntry>(
@@ -242,7 +284,13 @@ export async function listRootFiles(owner: string, repo: string): Promise<string
   }
 }
 
-export async function listLanguages(owner: string, repo: string): Promise<Record<string, number>> {
+export async function listLanguages(
+  owner: string,
+  repo: string,
+  access: RepositoryAccessAuthorizer,
+  role: RepositoryRole,
+): Promise<Record<string, number>> {
+  assertMetadataAccess(access, owner, repo, role);
   try {
     const octokit = await getOctokit();
     const response = await octokit.request<Record<string, number>>(
@@ -269,7 +317,10 @@ export async function readFileContents(
   owner: string,
   repo: string,
   paths: string[],
+  access: RepositoryAccessAuthorizer,
+  role: RepositoryRole,
 ): Promise<Record<string, string>> {
+  assertMetadataAccess(access, owner, repo, role);
   const octokit = await getOctokit();
   const contents: Record<string, string> = {};
 
@@ -306,6 +357,26 @@ export async function readFileContents(
   return contents;
 }
 
+export async function resolveCommit(
+  owner: string,
+  repo: string,
+  revision: string,
+  access: RepositoryAccessAuthorizer,
+  role: RepositoryRole,
+): Promise<string> {
+  assertMetadataAccess(access, owner, repo, role);
+  const octokit = await getOctokit();
+  const response = await octokit.request<CommitResponse>(
+    "GET /repos/{owner}/{repo}/commits/{ref}",
+    { owner, repo, ref: revision },
+  );
+  await respectRateLimit(response.headers);
+  if (!/^[a-f0-9]{40}$/i.test(response.data.sha)) {
+    throw new Error(`GitHub returned an invalid immutable commit for ${owner}/${repo}`);
+  }
+  return response.data.sha.toLowerCase();
+}
+
 export async function createPullRequest(input: {
   owner: string;
   repo: string;
@@ -314,7 +385,12 @@ export async function createPullRequest(input: {
   head: string;
   base: string;
   draft?: boolean;
-}): Promise<string> {
+}, access: RepositoryAccessAuthorizer): Promise<string> {
+  access.assert({
+    repository: { provider: "github", owner: input.owner, name: input.repo },
+    role: "publication_target",
+    operation: "pull_request_create",
+  });
   const octokit = await getOctokit();
   const response = await octokit.request<PullRequestResponse>(
     "POST /repos/{owner}/{repo}/pulls",

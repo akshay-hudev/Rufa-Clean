@@ -770,7 +770,7 @@
         "authorized_scope",
         "executed_scope",
         "scope_exceeded",
-        "prohibited_repositories_accessed",
+        "excluded_repository_target_operations_performed",
         "production_access_performed"
       ],
       "properties": {
@@ -813,7 +813,7 @@
         "scope_exceeded": {
           "const": false
         },
-        "prohibited_repositories_accessed": {
+        "excluded_repository_target_operations_performed": {
           "const": false
         },
         "production_access_performed": {
@@ -2604,7 +2604,7 @@
         "category": {
           "enum": [
             "credential_exposure",
-            "prohibited_repository_access",
+            "excluded_repository_target_operation",
             "tenant_isolation_failure",
             "runner_escape",
             "publisher_violation",

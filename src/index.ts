@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { pool } from "./db/client";
 import { migrate } from "./db/migrate";
 import { runSync } from "./discovery/sync";

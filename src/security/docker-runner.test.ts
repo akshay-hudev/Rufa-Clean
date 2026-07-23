@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +32,17 @@ afterEach(async () => {
 describe("DockerIsolatedRunner", () => {
   it("rejects mutable image tags", () => {
     expect(() => new DockerIsolatedRunner("dcav2-runner:latest")).toThrow(/pinned/);
+  });
+
+  it("rejects source paths that traverse symbolic links", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dca-runner-test-"));
+    roots.push(root);
+    const linked = `${root}-link`;
+    roots.push(linked);
+    await symlink(root, linked);
+    await expect(
+      new DockerIsolatedRunner(PINNED_IMAGE).createSession(linked),
+    ).rejects.toThrow(/symbolic link/);
   });
 
   it("creates a constrained non-root container and seals network before execution", async () => {

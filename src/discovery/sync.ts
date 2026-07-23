@@ -1,3 +1,7 @@
+import {
+  loadRepositoryAccessAuthorizer,
+  type RepositoryAccessAuthorizer,
+} from "../access/repository-access";
 import { pool } from "../db/client";
 import * as github from "../connectors/github";
 import { classifyByMarkers } from "./classify";
@@ -39,14 +43,16 @@ function classificationContentPaths(fileList: string[]): string[] {
   });
 }
 
-export async function runSync(): Promise<void> {
+export async function runSync(
+  access: RepositoryAccessAuthorizer = loadRepositoryAccessAuthorizer(),
+): Promise<void> {
   let cursor: string | undefined;
   let totalRepos = 0;
   let upsertedCount = 0;
   let errorCount = 0;
 
   do {
-    const page = await github.listRepositories(cursor);
+    const page = await github.listRepositories(access, cursor);
     totalRepos += page.repos.length;
 
     for (const repo of page.repos) {
@@ -55,13 +61,37 @@ export async function runSync(): Promise<void> {
       try {
         const parsed = parseFullName(repo.full_name);
         repoSlug = parsed.repoSlug;
-        const rootFiles = await github.listRootFiles(parsed.orgSlug, parsed.repoSlug);
+        const request = {
+          repository: {
+            provider: "github" as const,
+            owner: parsed.orgSlug,
+            name: parsed.repoSlug,
+          },
+          role: "analysis_target" as const,
+        };
+        // Qualification is the first repository-specific decision. Excluded
+        // identities are rejected before content or language metadata access.
+        access.assert({ ...request, operation: "qualify" });
+        access.assert({ ...request, operation: "metadata_read" });
+        const rootFiles = await github.listRootFiles(
+          parsed.orgSlug,
+          parsed.repoSlug,
+          access,
+          "analysis_target",
+        );
         const classificationFiles = await github.readFileContents(
           parsed.orgSlug,
           parsed.repoSlug,
           classificationContentPaths(rootFiles),
+          access,
+          "analysis_target",
         );
-        const languageBytes = await github.listLanguages(parsed.orgSlug, parsed.repoSlug);
+        const languageBytes = await github.listLanguages(
+          parsed.orgSlug,
+          parsed.repoSlug,
+          access,
+          "analysis_target",
+        );
         const classification = classifyByMarkers(rootFiles, classificationFiles);
         const primaryLanguages = toPrimaryLanguages(languageBytes);
         const buildSystem = detectBuildSystem(rootFiles);

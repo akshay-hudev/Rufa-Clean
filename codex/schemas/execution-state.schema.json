@@ -627,7 +627,7 @@
         "worktree",
         "preexisting_work_preserved",
         "destructive_git_operations_performed",
-        "prohibited_repository_accessed"
+        "excluded_repository_target_operation_performed"
       ],
       "properties": {
         "repository_identity": {
@@ -683,7 +683,7 @@
         "automatic_ready_transition_performed": {
           "const": false
         },
-        "prohibited_repository_accessed": {
+        "excluded_repository_target_operation_performed": {
           "const": false
         },
         "local_commits": {
@@ -2369,7 +2369,7 @@
         "category": {
           "enum": [
             "credential_exposure",
-            "prohibited_repository_access",
+            "excluded_repository_target_operation",
             "tenant_isolation_failure",
             "runner_escape",
             "publisher_violation",

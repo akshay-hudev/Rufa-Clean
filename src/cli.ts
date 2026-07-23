@@ -1,6 +1,12 @@
+import "dotenv/config";
+
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import {
+  loadRepositoryAccessAuthorizer,
+  type RepositoryAccessAuthorizer,
+} from "./access/repository-access";
 import { pool } from "./db/client";
 import { migrate } from "./db/migrate";
 import { MILESTONE_POLICY_VERSION, type AuthorizationDecision, type HumanDisposition } from "./milestone/types";
@@ -75,7 +81,11 @@ function authorization(value: string): AuthorizationDecision {
   return value as AuthorizationDecision;
 }
 
-async function analyze(args: Arguments, store: MilestoneStore): Promise<void> {
+async function analyze(
+  args: Arguments,
+  store: MilestoneStore,
+  access: RepositoryAccessAuthorizer,
+): Promise<void> {
   const account = required(args, "account");
   const identity = repository(required(args, "repo"));
   const revision = required(args, "revision");
@@ -85,7 +95,14 @@ async function analyze(args: Arguments, store: MilestoneStore): Promise<void> {
     owner: identity.owner,
     repository: identity.name,
     revision,
-    credentialProvider: () => readOnlyRepositoryCredential(identity.name),
+    access,
+    role: "analysis_target",
+    credentialProvider: () => readOnlyRepositoryCredential(
+      identity.owner,
+      identity.name,
+      access,
+      "analysis_target",
+    ),
   });
   try {
     try {
@@ -95,6 +112,7 @@ async function analyze(args: Arguments, store: MilestoneStore): Promise<void> {
         accountScopeId: account,
         repository: { provider: "github", owner: identity.owner, name: identity.name },
         commitSha: source.commitSha,
+        access,
       });
       const runId = await store.recordAnalysis(result, actor);
       print({ runId, result });
@@ -119,7 +137,11 @@ async function analyze(args: Arguments, store: MilestoneStore): Promise<void> {
   }
 }
 
-async function remediate(args: Arguments, store: MilestoneStore): Promise<void> {
+async function remediate(
+  args: Arguments,
+  store: MilestoneStore,
+  access: RepositoryAccessAuthorizer,
+): Promise<void> {
   const findingId = required(args, "finding");
   const actor = required(args, "actor");
   const revision = required(args, "revision");
@@ -134,7 +156,14 @@ async function remediate(args: Arguments, store: MilestoneStore): Promise<void> 
     repository: finding.repository.name,
     revision,
     expectedCommitSha: finding.commitSha,
-    credentialProvider: () => readOnlyRepositoryCredential(finding.repository.name),
+    access,
+    role: "remediation_target",
+    credentialProvider: () => readOnlyRepositoryCredential(
+      finding.repository.owner,
+      finding.repository.name,
+      access,
+      "remediation_target",
+    ),
   });
   try {
     const analysisSession = await configuredDockerRunner().createSession(source.path);
@@ -143,6 +172,7 @@ async function remediate(args: Arguments, store: MilestoneStore): Promise<void> 
       accountScopeId: finding.accountScopeId,
       repository: finding.repository,
       commitSha: source.commitSha,
+      access,
     });
     await store.recordAnalysis(freshAnalysis, actor);
     const freshFinding = freshAnalysis.findings.find((candidate) =>
@@ -171,6 +201,7 @@ async function remediate(args: Arguments, store: MilestoneStore): Promise<void> 
         policyVersion: freshFinding.policyVersion,
         exactOccurrence: freshFinding.occurrence,
       },
+      access,
     });
     const attemptId = await store.recordRemediation(result, actor);
     print({ attemptId, result });
@@ -186,9 +217,11 @@ async function main(): Promise<void> {
     throw new Error("A command is required: analyze, analysis, findings, finding, review, authorize, remediate, gates, publish, audit");
   }
   await migrate();
-  const store = new MilestoneStore();
+  const accountScopeId = required(args, "account");
+  const store = new MilestoneStore(accountScopeId, pool);
+  const access = loadRepositoryAccessAuthorizer();
   if (command === "analyze") {
-    await analyze(args, store);
+    await analyze(args, store, access);
   } else if (command === "analysis") {
     print(await store.getAnalysisRun(required(args, "run")));
   } else if (command === "findings") {
@@ -212,16 +245,17 @@ async function main(): Promise<void> {
     });
     print({ remediationAuthorizationId: id });
   } else if (command === "remediate") {
-    await remediate(args, store);
+    await remediate(args, store, access);
   } else if (command === "gates") {
     print(await store.getRemediationAttempt(required(args, "attempt")));
   } else if (command === "publish") {
     print(await publishVerifiedDraft({
       store,
-      gateway: new GitHubDraftPublisher(),
+      gateway: new GitHubDraftPublisher(access),
       attemptId: required(args, "attempt"),
       baseBranch: required(args, "base"),
       actorIdentity: required(args, "actor"),
+      access,
     }));
   } else if (command === "audit") {
     print(await store.auditChain(required(args, "account")));

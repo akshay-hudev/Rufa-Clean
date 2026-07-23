@@ -315,11 +315,12 @@ Repository identity must be revalidated before any external write.
 
 ## 12. Repository-access policy
 
-Before source acquisition, DCAv2 must validate:
+Before a repository-specific operation, DCAv2 must validate:
 
 - active phase authorization;
 - repository-access policy;
-- prohibited-repository policy;
+- repository-role exclusion policy;
+- requested repository role;
 - requested operation;
 - provider identity;
 - account or installation scope;
@@ -327,10 +328,14 @@ Before source acquisition, DCAv2 must validate:
 - credential capability;
 - network profile.
 
-Denylist evaluation must occur before content retrieval.
+Role-exclusion evaluation must occur before the matching target operation. A
+repository excluded for an analysis-target role must not proceed to target
+metadata expansion, clone, fetch, qualification, analysis, or finding
+generation. A repository excluded for remediation or publication must not
+proceed to the corresponding operation.
 
-A denied repository must not proceed to metadata expansion, clone, fetch,
-qualification, analysis, remediation, or publication.
+An authorized implementation-repository operation is independent and does not
+inherit, grant, or trigger any target role.
 
 ---
 

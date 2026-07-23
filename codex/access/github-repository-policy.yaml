@@ -56,6 +56,12 @@ repository_roles:
   runtime_evidence_target:
     description: Repository whose runtime evidence informs dead-code decisions.
     use: authorization_required
+  contract_analysis_target:
+    description: Repository included in contract or microservice analysis.
+    use: authorization_required
+  scale_test_subject:
+    description: Repository used as a scale-validation subject.
+    use: authorization_required
 
 standing_access:
   description: >-

@@ -218,6 +218,7 @@
         },
         "fixture_type": {
           "enum": [
+            "system_under_test",
             "synthetic_repository",
             "local_repository",
             "external_repository",

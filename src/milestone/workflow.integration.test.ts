@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DockerIsolatedRunner } from "../security/docker-runner";
+import { testRepositoryAccess } from "../test-support/repository-access";
 import { runIsolatedAnalysis } from "./isolated-analysis";
 import { publishVerifiedDraft, type DraftPullRequestGateway } from "./publisher";
 import { remediateInIsolation } from "./remediate";
@@ -44,7 +45,7 @@ describeWorkflow("standalone milestone workflow", () => {
       import("../db/migrate.js"), import("../db/client.js"), import("./store.js"),
     ]);
     await migrate();
-    const store = new MilestoneStore(pool);
+    const store = new MilestoneStore("workflow-integration", pool);
     const accountScopeId = "workflow-integration";
     const actor = "integration-operator";
     const commitSha = "c".repeat(40);
@@ -53,6 +54,7 @@ describeWorkflow("standalone milestone workflow", () => {
     const analysis = await runIsolatedAnalysis({
       session: await new DockerIsolatedRunner(image!).createSession(root),
       accountScopeId, repository, commitSha,
+      access: testRepositoryAccess, role: "test_fixture",
     });
     await store.recordAnalysis(analysis, actor);
     const finding = analysis.findings.find((candidate) => candidate.occurrence.name === "workflowDead");
@@ -70,6 +72,7 @@ describeWorkflow("standalone milestone workflow", () => {
     const fresh = await runIsolatedAnalysis({
       session: await new DockerIsolatedRunner(image!).createSession(root),
       accountScopeId, repository, commitSha,
+      access: testRepositoryAccess, role: "test_fixture",
     });
     expect(fresh.findings[0]?.evidenceDigest).toBe(finding!.evidenceDigest);
     const authorization = await store.latestAuthorization(finding!.findingId);
@@ -84,6 +87,7 @@ describeWorkflow("standalone milestone workflow", () => {
         policyVersion: fresh.findings[0]!.policyVersion,
         exactOccurrence: fresh.findings[0]!.occurrence,
       },
+      access: testRepositoryAccess,
     });
     expect(remediation.status, remediation.failure).toBe("verified");
     const attemptId = await store.recordRemediation(remediation, actor);
@@ -95,6 +99,7 @@ describeWorkflow("standalone milestone workflow", () => {
     };
     const publication = await publishVerifiedDraft({
       store, gateway, attemptId, baseBranch: "main", actorIdentity: "publisher",
+      access: testRepositoryAccess,
     });
     expect(publication.status).toBe("draft_pr_created");
     expect(gateway.createDraftPullRequest).toHaveBeenCalledOnce();

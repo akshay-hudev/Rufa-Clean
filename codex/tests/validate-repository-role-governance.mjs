@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -135,6 +134,10 @@ validateDocument(
   "codex/authorizations/phase-0-reconciliation-authorization-request.yaml",
   "codex/schemas/phase-authorization-v2.schema.json",
 );
+validateDocument(
+  "codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml",
+  "codex/schemas/phase-authorization-v2.schema.json",
+);
 
 const phase0 = parseYaml("codex/tests/phase-0-tests.yaml");
 const phase1 = parseYaml("codex/tests/phase-1-tests.yaml");
@@ -165,6 +168,8 @@ const requiredRoles = [
   "publication_target",
   "cross_repository_graph_participant",
   "runtime_evidence_target",
+  "contract_analysis_target",
+  "scale_test_subject",
 ];
 for (const role of requiredRoles) {
   if (!rolePolicy.repository_roles?.includes(role)) {
@@ -334,6 +339,10 @@ for (const [documentPath, schemaPath] of [
     "codex/authorizations/phase-0-reconciliation-authorization-request.yaml",
     "codex/schemas/phase-authorization-v2.schema.json",
   ],
+  [
+    "codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml",
+    "codex/schemas/phase-authorization-v2.schema.json",
+  ],
 ]) {
   if (!fs.existsSync(path.join(root, schemaPath))) {
     failures.push(`${documentPath}: schema path does not resolve: ${schemaPath}`);
@@ -360,7 +369,9 @@ for (const file of markdownFiles) {
 
 const legacyConflationPatterns = [
   /absolute prohibited repository/i,
+  /absolute prohibited-repository/i,
   /prohibited repository must not be/i,
+  /repositories that must never receive content access/i,
   /deny before content access/i,
   /must not be cloned, inspected/i,
 ];
@@ -372,13 +383,80 @@ for (const file of [
     .map((entry) => `codex/${entry}`)
     .filter(
       (entry) =>
-        entry !== "codex/reports/phase-0-reconciliation-report.md",
+        ![
+          "codex/reports/phase-0-reconciliation-report.md",
+          "codex/reports/phase-0-reconciliation-report-02.md",
+          "codex/reports/governance-correction-repository-role-exclusions-20260723.md",
+        ].includes(entry),
     ),
 ]) {
   const content = read(file);
   for (const pattern of legacyConflationPatterns) {
     if (pattern.test(content)) {
       failures.push(`${file}: legacy identity-only denial wording remains`);
+    }
+  }
+}
+
+const runtimeEnforcement = {
+  "src/security/github-credentials.ts": ["operation: \"credential_read\""],
+  "src/security/source-acquisition.ts": [
+    "operation: \"clone\"",
+    "operation: \"credential_read\"",
+    "operation: \"fetch\"",
+  ],
+  "src/connectors/github.ts": [
+    "authorizedDiscoveryOwners",
+    "operation: \"metadata_read\"",
+    "operation: \"pull_request_create\"",
+  ],
+  "src/discovery/sync.ts": [
+    "operation: \"qualify\"",
+    "operation: \"metadata_read\"",
+  ],
+  "src/indexing/sync.ts": [
+    "operation: \"static_analysis\"",
+    "operation: \"semantic_analysis\"",
+    "operation: \"generate_findings\"",
+    "operation: \"include_cross_repository\"",
+  ],
+  "src/milestone/isolated-analysis.ts": [
+    "operation: \"static_analysis\"",
+    "operation: \"semantic_analysis\"",
+    "operation: \"generate_findings\"",
+  ],
+  "src/milestone/remediate.ts": [
+    "operation: \"reproduce_finding\"",
+    "operation: \"prepare_patch\"",
+    "operation: \"transform_source\"",
+    "operation: \"remediate\"",
+  ],
+  "src/milestone/publisher.ts": [
+    "operation: \"branch_create\"",
+    "operation: \"commit_create\"",
+    "operation: \"push_non_default_branch\"",
+    "operation: \"pull_request_create\"",
+    "operation: \"publish\"",
+  ],
+  "src/milestone/github-publisher.ts": [
+    "operation: \"credential_read\"",
+    "operation: \"clone\"",
+    "operation: \"branch_create\"",
+    "operation: \"commit_create\"",
+    "operation: \"push_non_default_branch\"",
+    "operation: \"pull_request_create\"",
+  ],
+  "src/cli.ts": ["loadRepositoryAccessAuthorizer"],
+};
+for (const [file, markers] of Object.entries(runtimeEnforcement)) {
+  if (!fs.existsSync(path.join(root, file))) {
+    failures.push(`runtime access enforcement: missing ${file}`);
+    continue;
+  }
+  const content = read(file);
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      failures.push(`runtime access enforcement: ${file} missing ${marker}`);
     }
   }
 }
@@ -396,25 +474,34 @@ if (
   failures.push("historical Phase 0 report changed");
 }
 
-const statusLines = execFileSync(
-  "git",
-  ["status", "--porcelain=v1", "--untracked-files=all"],
-  { cwd: root, encoding: "utf8" },
-)
-  .trimEnd()
-  .split("\n")
-  .filter(Boolean);
-for (const line of statusLines) {
-  const file = line.slice(3);
-  if (
-    file === "OPEARTING_GUIDE.MD" ||
-    file === "AGENTS.md" ||
-    file === "CODEX_EXECUTION_STATE.md" ||
-    file.startsWith("codex/")
-  ) {
-    continue;
+for (const [report, expectedHash] of [
+  [
+    "codex/reports/phase-0-reconciliation-report-02.md",
+    "0b3490dbc919dd22a297351c6880f3caffb2770f3073e042556e781ff9930eb0",
+  ],
+  [
+    "codex/reports/governance-correction-repository-role-exclusions-20260723.md",
+    "0af47b76d8f90b0493ffb0ced37688fc38c637b04ef4b5948e447c908398afb1",
+  ],
+]) {
+  const actualHash = crypto.createHash("sha256").update(read(report)).digest("hex");
+  if (actualHash !== expectedHash) {
+    failures.push(`historical report changed: ${report}`);
   }
-  failures.push(`changed path outside governance correction scope: ${file}`);
+}
+
+for (const [manifest, fixtureId] of [
+  [phase0, "phase-0-local-repository"],
+  [phase1, "phase-1-local-dcav2"],
+]) {
+  const implementationSubject = (manifest.fixtures ?? []).find(
+    (fixture) => fixture.fixture_id === fixtureId,
+  );
+  if (implementationSubject?.fixture_type !== "system_under_test") {
+    failures.push(
+      `${manifest.manifest_id}: implementation repository must be system_under_test`,
+    );
+  }
 }
 
 if (failures.length > 0) {

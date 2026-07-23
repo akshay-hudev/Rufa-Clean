@@ -30,7 +30,7 @@ default_rules:
   authorization_ambiguous: deny
   authorization_expired: deny
   authorization_revoked: deny
-  prohibited_repository_result: deny_before_content_access
+  excluded_repository_target_role_result: deny_before_target_operation
   secret_values_in_evidence: reject
   failed_analyzer_result: never_interpret_as_absence
   incomplete_coverage_result: never_interpret_as_complete
@@ -87,8 +87,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/01-instruction-precedence.md
       - codex/core/03-safety-invariants.md
@@ -125,8 +125,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/05-phase-authorization-protocol.md
       - codex/authorizations/current-phase-authorization.yaml
@@ -163,8 +163,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/05-phase-authorization-protocol.md
       - codex/access/external-operation-policy.md
@@ -201,8 +201,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/access/github-repository-policy.yaml
       - codex/access/external-operation-policy.md
@@ -241,8 +241,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/access/prohibited-repositories.yaml
       - codex/core/03-safety-invariants.md
@@ -279,8 +279,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/07-source-control-policy.md
       - codex/core/03-safety-invariants.md
@@ -359,8 +359,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/08-secret-handling-policy.md
       - codex/engineering/runner-security-controls.md
@@ -399,8 +399,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/08-secret-handling-policy.md
       - codex/core/10-reporting-and-state-policy.md
@@ -436,8 +436,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/09-prompt-injection-policy.md
       - codex/core/01-instruction-precedence.md
@@ -473,8 +473,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/structured-command-policy.md
       - codex/core/09-prompt-injection-policy.md
@@ -509,8 +509,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/trust-boundaries.md
       - codex/engineering/runner-security-controls.md
@@ -547,8 +547,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/runner-security-controls.md
     threats:
@@ -584,8 +584,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/runner-security-controls.md
       - codex/engineering/structured-command-policy.md
@@ -619,8 +619,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/runner-security-controls.md
       - codex/access/external-operation-policy.md
@@ -656,8 +656,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/runner-security-controls.md
       - codex/engineering/structured-command-policy.md
@@ -694,8 +694,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/runner-security-controls.md
       - codex/core/06-autonomy-and-stop-conditions.md
@@ -730,8 +730,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/08-secret-handling-policy.md
       - codex/engineering/runner-security-controls.md
@@ -766,8 +766,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/trust-boundaries.md
       - codex/architecture/trusted-publisher-policy.md
@@ -858,8 +858,8 @@ controls:
       - phase-4-python
       - phase-5-additional-language
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/structured-command-policy.md
       - codex/engineering/runner-security-controls.md
@@ -903,8 +903,8 @@ controls:
       - phase-4-python
       - phase-5-additional-language
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/runner-security-controls.md
       - codex/engineering/structured-command-policy.md
@@ -971,8 +971,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/evidence-model.md
       - codex/architecture/coverage-model.md
@@ -1009,8 +1009,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/coverage-model.md
       - codex/core/04-accuracy-and-evidence-policy.md
@@ -1631,8 +1631,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/audit-policy.md
       - codex/core/10-reporting-and-state-policy.md
@@ -1667,8 +1667,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/audit-policy.md
       - codex/core/10-reporting-and-state-policy.md
@@ -1700,8 +1700,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/audit-policy.md
       - codex/core/08-secret-handling-policy.md
@@ -1737,8 +1737,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/trust-boundaries.md
       - codex/architecture/audit-policy.md
@@ -1772,8 +1772,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/database-evolution-policy.md
       - codex/architecture/audit-policy.md
@@ -1808,8 +1808,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/access/external-operation-policy.md
       - codex/core/05-phase-authorization-protocol.md
@@ -2339,8 +2339,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/10-reporting-and-state-policy.md
       - codex/core/04-accuracy-and-evidence-policy.md
@@ -2376,8 +2376,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/10-reporting-and-state-policy.md
       - codex/core/05-phase-authorization-protocol.md
@@ -2528,7 +2528,7 @@ assessment_rules:
     - required_evidence_is_missing
     - secret_exposure_is_detected
     - tenant_isolation_fails
-    - prohibited_repository_content_is_accessed
+    - excluded_repository_target_operation_is_performed
     - unauthorized_external_operation_occurs
     - audit_integrity_fails
   stale_when:

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { RepositoryAccessAuthorizer } from "../access/repository-access";
 import { runProcess } from "../remediation/process";
 import type { GateCommandResult, GateResult } from "../remediation/types";
 import type { IsolatedRunnerSession } from "../security/docker-runner";
@@ -133,6 +134,7 @@ export async function remediateInIsolation(input: {
   finding: FindingBundle;
   authorization: BoundAuthorization & { id: string };
   freshIdentity: FreshRemediationIdentity;
+  access: RepositoryAccessAuthorizer;
 }): Promise<VerifiedRemediation> {
   const artifactRoot = await mkdtemp(join(tmpdir(), "dcav2-remediation-artifacts-"));
   const generator = { name: "PolyglotPiranha" as const, version: "0.4.8" as const, ruleSetVersion: "simple-top-level-function-v1" as const };
@@ -142,6 +144,14 @@ export async function remediateInIsolation(input: {
     failure: "baseline did not run",
   };
   try {
+    const accessRequest = {
+      repository: input.finding.repository,
+      role: "remediation_target" as const,
+    };
+    input.access.assert({ ...accessRequest, operation: "reproduce_finding" });
+    input.access.assert({ ...accessRequest, operation: "prepare_patch" });
+    input.access.assert({ ...accessRequest, operation: "transform_source" });
+    input.access.assert({ ...accessRequest, operation: "remediate" });
     assertAuthorizationCurrent(input.authorization, input.finding, input.freshIdentity);
     const manifest = JSON.parse(await readFile(join(input.sourcePath, "package.json"), "utf8")) as { scripts?: Record<string, string> };
     const originalContent = await readFile(join(input.sourcePath, input.finding.occurrence.filePath));

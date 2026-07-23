@@ -1,5 +1,10 @@
 import { readFile } from "node:fs/promises";
 
+import type {
+  RepositoryAccessAuthorizer,
+  RepositoryRole,
+} from "../access/repository-access";
+
 export interface ShortLivedCredential {
   token: string;
   expiresAt: string;
@@ -19,9 +24,17 @@ function requiredEnv(name: string): string {
 }
 
 async function repositoryToken(
+  owner: string,
   repositoryName: string,
   permissions: Record<string, "read" | "write">,
+  access: RepositoryAccessAuthorizer,
+  role: RepositoryRole,
 ): Promise<ShortLivedCredential> {
+  access.assert({
+    repository: { provider: "github", owner, name: repositoryName },
+    role,
+    operation: "credential_read",
+  });
   const { App } = await import("octokit");
   const installationId = Number(requiredEnv("GITHUB_INSTALLATION_ID"));
   if (!Number.isSafeInteger(installationId) || installationId <= 0) {
@@ -47,13 +60,24 @@ async function repositoryToken(
 }
 
 export async function readOnlyRepositoryCredential(
+  owner: string,
   repositoryName: string,
+  access: RepositoryAccessAuthorizer,
+  role: RepositoryRole,
 ): Promise<ShortLivedCredential> {
-  return repositoryToken(repositoryName, { contents: "read" });
+  return repositoryToken(owner, repositoryName, { contents: "read" }, access, role);
 }
 
 export async function publisherRepositoryCredential(
+  owner: string,
   repositoryName: string,
+  access: RepositoryAccessAuthorizer,
 ): Promise<ShortLivedCredential> {
-  return repositoryToken(repositoryName, { contents: "write", pull_requests: "write" });
+  return repositoryToken(
+    owner,
+    repositoryName,
+    { contents: "write", pull_requests: "write" },
+    access,
+    "publication_target",
+  );
 }

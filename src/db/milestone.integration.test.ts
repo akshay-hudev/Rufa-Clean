@@ -38,7 +38,7 @@ describeDatabase("PostgreSQL milestone ledger", () => {
     await migrate();
     const versions = await pool.query<{ version: string }>("SELECT version FROM schema_migrations ORDER BY version");
     expect(versions.rows.map((row) => row.version)).toEqual(["0001_legacy_baseline", "0002_milestone_ledger", "0003_publication_attempts"]);
-    const store = new MilestoneStore(pool);
+    const store = new MilestoneStore("db-integration", pool);
     await store.ensureAccountScope("db-integration", "DB Integration");
     const value = finding();
     const analysis: CanonicalAnalysisResult = {
@@ -92,7 +92,19 @@ describeDatabase("PostgreSQL milestone ledger", () => {
       expect(Number(audit[index]!.sequence)).toBe(index + 1);
       expect(audit[index]!.previous_event_hash).toBe(index === 0 ? null : audit[index - 1]!.event_hash);
     }
+    expect(await store.verifyAuditChain(value.accountScopeId)).toEqual({
+      valid: true,
+      eventCount: audit.length,
+    });
+    const tampered = audit.map((event) => ({ ...event }));
+    tampered[0]!.event_hash = "0".repeat(64);
+    const { verifyAuditChain } = await import("../milestone/audit.js");
+    expect(verifyAuditChain(value.accountScopeId, tampered as never).valid).toBe(false);
     expect(await store.getAnalysisRun(runId)).toEqual(expect.objectContaining({ status: "succeeded" }));
+    const otherTenant = new MilestoneStore("other-tenant", pool);
+    await expect(otherTenant.getFinding(value.findingId)).rejects.toThrow(/account scope/);
+    await expect(otherTenant.getAnalysisRun(runId)).rejects.toThrow(/account scope/);
+    await expect(otherTenant.auditChain(value.accountScopeId)).rejects.toThrow(/Tenant isolation/);
     await pool.end();
   }, 60_000);
 });

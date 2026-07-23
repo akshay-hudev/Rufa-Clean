@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { simpleGit } from "simple-git";
 
+import { testRepositoryAccess } from "../test-support/repository-access";
 import { acquireGitHubSource } from "./source-acquisition";
 
 const roots: string[] = [];
@@ -64,6 +65,8 @@ describe("source acquisition", () => {
       repository: "repository",
       revision: "main",
       expectedCommitSha: expected,
+      access: testRepositoryAccess,
+      role: "test_fixture",
       credentialProvider: async () => ({ token: "sentinel-token", expiresAt: "2099-01-01T00:00:00Z" }),
     }, { remoteUrl: () => origin });
     expect(acquired.path).not.toContain(process.cwd());

@@ -2,22 +2,35 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import type { Pool } from "pg";
+
 import { pool } from "./client";
 
-export async function migrate(): Promise<void> {
-  await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
-    version text PRIMARY KEY,
-    checksum text NOT NULL,
-    applied_at timestamptz NOT NULL DEFAULT now()
-  )`);
-  const migrations = [
+export interface MigrationDefinition {
+  version: string;
+  path: string;
+}
+
+export function defaultMigrations(): MigrationDefinition[] {
+  return [
     { version: "0001_legacy_baseline", path: join(__dirname, "../../src/db/schema.sql") },
     { version: "0002_milestone_ledger", path: join(__dirname, "../../src/db/migrations/0002_milestone_ledger.sql") },
     { version: "0003_publication_attempts", path: join(__dirname, "../../src/db/migrations/0003_publication_attempts.sql") },
   ];
-  const client = await pool.connect();
+}
+
+export async function migrate(
+  database: Pool = pool,
+  migrations: readonly MigrationDefinition[] = defaultMigrations(),
+): Promise<void> {
+  const client = await database.connect();
   try {
     await client.query("SELECT pg_advisory_lock(hashtext('dcav2-schema-migrations'))");
+    await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+      version text PRIMARY KEY,
+      checksum text NOT NULL,
+      applied_at timestamptz NOT NULL DEFAULT now()
+    )`);
     for (const migration of migrations) {
       const sql = await readFile(migration.path, "utf8");
       const checksum = createHash("sha256").update(sql).digest("hex");

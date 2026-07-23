@@ -4,6 +4,10 @@ import { dirname, join, relative, sep } from "node:path";
 
 import { PoolClient } from "pg";
 
+import {
+  loadRepositoryAccessAuthorizer,
+  type RepositoryAccessAuthorizer,
+} from "../access/repository-access";
 import { pool } from "../db/client";
 import { knipAnalyzer } from "./analyzers/knip";
 import {
@@ -544,7 +548,10 @@ async function runScipAnalysis(
   return { repositoryId, documents, matchedDefinitions };
 }
 
-export async function runIndexing(repositoryId: string): Promise<ScipRepositoryIndex | null> {
+export async function runIndexing(
+  repositoryId: string,
+  access: RepositoryAccessAuthorizer = loadRepositoryAccessAuthorizer(),
+): Promise<ScipRepositoryIndex | null> {
   const repositoryResult = await pool.query<RepositoryRow>(
     `SELECT vcs_provider, org_slug, repo_slug, default_branch
        FROM repositories
@@ -556,7 +563,20 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
     throw new Error(`Repository not found: ${repositoryId}`);
   }
 
-  const clone = await cloneRepository(repositoryForClone(repository));
+  const cloneMetadata = repositoryForClone(repository);
+  const accessRequest = {
+    repository: {
+      provider: "github" as const,
+      owner: cloneMetadata.org_slug,
+      name: cloneMetadata.repo_slug,
+    },
+    role: "analysis_target" as const,
+  };
+  access.assert({ ...accessRequest, operation: "qualify" });
+  access.assert({ ...accessRequest, operation: "static_analysis" });
+  access.assert({ ...accessRequest, operation: "semantic_analysis" });
+  access.assert({ ...accessRequest, operation: "generate_findings" });
+  const clone = await cloneRepository(cloneMetadata, access);
   const summary: IndexingSummary = {
     filesFound: 0,
     filesEnumerated: 0,
@@ -672,7 +692,9 @@ export async function runIndexing(repositoryId: string): Promise<ScipRepositoryI
   return scipIndex;
 }
 
-export async function runAllIndexing(): Promise<void> {
+export async function runAllIndexing(
+  access: RepositoryAccessAuthorizer = loadRepositoryAccessAuthorizer(),
+): Promise<void> {
   const repositoryResult = await pool.query<InventoryRepositoryRow>(
     `SELECT id, vcs_provider, org_slug, repo_slug, default_branch
       FROM repositories
@@ -686,7 +708,7 @@ export async function runAllIndexing(): Promise<void> {
 
   for (const repository of repositoryResult.rows) {
     try {
-      const scipIndex = await runIndexing(repository.id);
+      const scipIndex = await runIndexing(repository.id, access);
       if (scipIndex) {
         scipIndexes.push(scipIndex);
       }
@@ -714,6 +736,19 @@ export async function runAllIndexing(): Promise<void> {
   );
 
   for (const index of scipIndexes) {
+    const participant = repositoryResult.rows.find((repository) => repository.id === index.repositoryId);
+    if (!participant?.org_slug || !participant.repo_slug) {
+      throw new Error(`Cross-repository participant identity is unresolved: ${index.repositoryId}`);
+    }
+    access.assert({
+      repository: {
+        provider: "github",
+        owner: participant.org_slug,
+        name: participant.repo_slug,
+      },
+      role: "cross_repository_graph_participant",
+      operation: "include_cross_repository",
+    });
     const resolution = await resolveCrossRepoReferences(
       index.repositoryId,
       index.documents,

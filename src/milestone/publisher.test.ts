@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 
+import { testRepositoryAccess } from "../test-support/repository-access";
 import type { MilestoneStore } from "./store";
 import { publishVerifiedDraft, type DraftPullRequestGateway } from "./publisher";
 import type { FindingBundle } from "./types";
@@ -44,7 +45,7 @@ function setup() {
 describe("trusted publisher", () => {
   it("creates only a draft after independent persisted-state validation", async () => {
     const { store, gateway } = setup();
-    const result = await publishVerifiedDraft({ store, gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator" });
+    const result = await publishVerifiedDraft({ store, gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator", access: testRepositoryAccess });
     expect(result.status).toBe("draft_pr_created");
     expect(gateway.createDraftPullRequest).toHaveBeenCalledWith(expect.objectContaining({ baseBranch: "main", expectedFile: "src/dead.ts" }));
     expect(vi.mocked(gateway.createDraftPullRequest).mock.calls[0]?.[0].body).toContain("no automatic merge operation");
@@ -53,7 +54,7 @@ describe("trusted publisher", () => {
   it("is idempotent after successful publication", async () => {
     const { store, gateway } = setup();
     vi.mocked(store.existingPublication).mockResolvedValue({ status: "draft_pr_created", prUrl: "https://github.test/pr/1" });
-    const result = await publishVerifiedDraft({ store, gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator" });
+    const result = await publishVerifiedDraft({ store, gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator", access: testRepositoryAccess });
     expect(result.status).toBe("already_published");
     expect(gateway.createDraftPullRequest).not.toHaveBeenCalled();
   });
@@ -61,18 +62,18 @@ describe("trusted publisher", () => {
   it("blocks revoked authorization and tampered patches", async () => {
     const revoked = setup();
     vi.mocked(revoked.store.latestAuthorization).mockResolvedValue({ ...revoked.authorization, decision: "revoked" });
-    await expect(publishVerifiedDraft({ store: revoked.store, gateway: revoked.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator" })).rejects.toThrow(/not active/);
+    await expect(publishVerifiedDraft({ store: revoked.store, gateway: revoked.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator", access: testRepositoryAccess })).rejects.toThrow(/not active/);
 
     const tampered = setup();
     const context = await tampered.store.publicationContext("attempt-id");
     vi.mocked(tampered.store.publicationContext).mockResolvedValue({ ...context, patchSha256: "0".repeat(64) });
-    await expect(publishVerifiedDraft({ store: tampered.store, gateway: tampered.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator" })).rejects.toThrow(/patch hash/);
+    await expect(publishVerifiedDraft({ store: tampered.store, gateway: tampered.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator", access: testRepositoryAccess })).rejects.toThrow(/patch hash/);
   });
 
   it("blocks publication when the latest human disposition is no longer confirmed_dead", async () => {
     const changed = setup();
     vi.mocked(changed.store.latestDisposition).mockResolvedValue({ id: "new-review", decision: "confirmed_alive" });
-    await expect(publishVerifiedDraft({ store: changed.store, gateway: changed.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator" })).rejects.toThrow(/latest human disposition/);
+    await expect(publishVerifiedDraft({ store: changed.store, gateway: changed.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator", access: testRepositoryAccess })).rejects.toThrow(/latest human disposition/);
     expect(changed.gateway.createDraftPullRequest).not.toHaveBeenCalled();
   });
 });

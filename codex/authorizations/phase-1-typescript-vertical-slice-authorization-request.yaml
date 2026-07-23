@@ -1,49 +1,46 @@
 $schema: ../schemas/phase-authorization-v2.schema.json
 schema_version: 2
-record_type: phase_authorization
+record_type: phase_authorization_request
 
 authorization:
-  id: phase-0-prerequisite-repair-and-readiness-20260723-01
+  id: phase-1-typescript-vertical-slice-20260723-01
   kind: roadmap_phase
-  phase: phase-0-reconciliation
-  status: completed
+  phase: phase-1-typescript-vertical-slice
+  status: requested
   objective: >-
-    Resolve every Phase 1 prerequisite blocker recorded by the completed Phase
-    0 reconciliation and establish final Phase 0 implementation readiness
-    without beginning Phase 1.
-  granted_by: human-operator
-  granted_at: 2026-07-23T09:14:36Z
-  completed_at: 2026-07-23T10:17:00Z
-  supersedes_authorization_id: phase-0-reconciliation-20260723-02
+    Implement and validate the bounded Phase 1 TypeScript vertical slice from
+    eligible-repository qualification through human-separated remediation and
+    optional trusted draft publication.
+  granted_by: null
+  granted_at: null
+  completed_at: null
+  supersedes_authorization_id: phase-0-prerequisite-repair-and-readiness-20260723-01
   notes:
-    - Phase 1 remains unauthorized.
-    - No paid or metered external service may be used.
-    - Rufa-Clean is authorized only as the local DCAv2 implementation repository.
-    - Rufa-Clean remains permanently excluded from every target and fixture role.
-    - Historical reports, authorization history, and execution-state sections must be preserved.
-    - Final readiness result is READY_FOR_PHASE_1.
-    - Phase 1 remains inactive pending exact human approval of the new request.
+    - This request does not authorize itself.
+    - Phase 1 must not begin until the human replies exactly APPROVED.
+    - Autonomous debugging of ordinary implementation, test, Docker, PostgreSQL, fixture, and dependency failures is requested.
+    - Paid or metered tools and services remain prohibited.
 
 human_instruction:
   summary: >-
-    Complete the Phase 0 prerequisite repairs autonomously, including runtime
-    role enforcement, database decoupling, governance correction, Docker and
-    PostgreSQL verification, representative repository testing, capability and
-    security evidence, cleanup, and final readiness reporting.
-  conversation_reference: current-conversation-prerequisite-repair
-  captured_at: 2026-07-23T09:14:36Z
-  exact_scope_confirmed: true
+    Await exact human approval, then work autonomously only within the narrow
+    Phase 1 TypeScript single-package npm vertical slice and stop at the Phase
+    1 boundary.
+  conversation_reference: pending-human-approval
+  captured_at: 2026-07-23
+  exact_scope_confirmed: false
 
 validity:
-  starts_at: 2026-07-23T09:14:36Z
+  starts_at: null
   expires_at: null
   expires_when:
-    - readiness_result_is_recorded
-    - phase_stops_for_human_decision
+    - phase_1_acceptance_criteria_complete
+    - phase_stops_for_human_review
     - human_operator_revokes_authorization
     - repository_scope_changes
-    - governing_policy_changes_outside_this_authorization
-  maximum_external_operations: null
+    - governing_policy_changes
+  maximum_external_operations: 100
+  maximum_external_writes: 1
   continuation_requires_new_authorization: true
 
 local_repository:
@@ -55,15 +52,22 @@ local_repository:
   modification_allowlist:
     - AGENTS.md
     - CODEX_EXECUTION_STATE.md
-    - codex/
-    - src/
+    - codex/architecture/
+    - codex/authorizations/
+    - codex/capability-matrix.yaml
+    - codex/engineering/
+    - codex/reports/
+    - codex/schemas/
+    - codex/templates/
+    - codex/tests/
     - scripts/
+    - src/
     - test-fixtures/
+    - Dockerfile.runner
     - package.json
     - package-lock.json
     - tsconfig.json
     - vitest.config.ts
-    - Dockerfile.runner
   operations:
     inspect_repository: true
     inspect_git_history: true
@@ -73,6 +77,7 @@ local_repository:
     create_local_commits: true
     run_local_tests: true
     run_containerized_tests: true
+    autonomous_debugging: true
   prohibited_operations:
     discard_preexisting_changes: true
     destructive_git_clean: true
@@ -80,8 +85,6 @@ local_repository:
     rewrite_shared_history: true
     force_push: true
     push_implementation_repository: true
-    analyze_implementation_repository_as_target: true
-    use_implementation_repository_as_fixture: true
 
 repository_access:
   policy_file: codex/access/github-repository-policy.yaml
@@ -119,16 +122,17 @@ external_operations:
     - push_non_default_branch
     - pull_request_creation
     - pull_request_update
-  destructive_operations_allowed: false
-  paid_or_metered_services_allowed: false
   github:
     allowed_owners:
       - akshay-hudev
     repository_selection:
       mode: all_owned_visible_repositories
-    excluded_target_repositories:
-      - akshay-hudev/Rufa-Clean
-    external_writes_must_be_evidence_necessary: true
+    representative_sample:
+      preferred_size: 3_to_5
+      rufa_test_lib_role: optional_smoke_only
+      force_unsuitable_repository_selection: false
+  destructive_operations_allowed: false
+  paid_or_metered_services_allowed: false
 
 credentials:
   use_existing_configured_credentials: true
@@ -143,109 +147,113 @@ credentials:
 
 database:
   local_test_database_creation: true
-  disposable_database_only: true
+  disposable_database_prefix: dcav2_phase1_
   additive_migrations: true
   destructive_migrations: false
   production_database_access: false
-  may_drop_phase_created_databases: true
+  phase_created_database_cleanup_required: true
 
 governance:
   modification_allowed: true
   allowed_files:
     - AGENTS.md
     - CODEX_EXECUTION_STATE.md
-    - codex/core/
-    - codex/access/
-    - codex/authorizations/
     - codex/architecture/
+    - codex/authorizations/
+    - codex/capability-matrix.yaml
     - codex/engineering/
-    - codex/roadmap/phase-0-reconciliation.md
-    - codex/roadmap/phase-1-typescript-vertical-slice.md
-    - codex/tests/
+    - codex/reports/
     - codex/schemas/
     - codex/templates/
-    - codex/reports/
+    - codex/tests/
   permanent_safety_invariants_may_be_weakened: false
   repository_role_exclusions_may_be_weakened: false
-  historical_reports_may_be_modified: false
-  historical_execution_state_may_be_modified: false
 
 analysis:
   repository_qualification: true
   evidence_collection: true
   machine_classification: true
   external_repository_execution: true
-  allowed_owner: akshay-hudev
-  implementation_repository_target_use: false
-  representative_sample_target_count: 3-5
+  supported_profile:
+    language: TypeScript
+    package_manager: npm
+    repository_shape: single_package
+    symbol_shape: private_function
+  unsupported_scope_must_be_explicit: true
+  failed_analyzer_is_zero_findings: false
 
 remediation:
   enabled: true
-  requires_exact_reproduced_finding: true
-  requires_human_disposition: true
-  requires_finding_bound_authorization: true
-  implementation_repository_target_use: false
+  eligible_external_repositories_only: true
+  human_disposition_required: true
+  finding_specific_authorization_required: true
+  exact_reproduction_required: true
+  baseline_gates_required: true
+  post_change_gates_required: true
+  deterministic_patch_required: true
+  changed_file_allowlist_required: true
 
 publication:
   enabled: true
-  evidence_necessary_only: true
-  dedicated_non_default_branch_only: true
+  optional_not_required_for_phase_completion: true
+  meaningful_verified_finding_required: true
+  trusted_publisher_required: true
+  dedicated_non_default_branch_required: true
   draft_pull_request_only: true
   direct_default_branch_push: false
-  direct_default_branch_commit: false
   merge: false
   enable_auto_merge: false
   mark_draft_ready: false
-  self_approve: false
+  self_approve_pull_request: false
   force_push: false
-  repository_settings_change: false
-  implementation_repository_publication: false
+  maximum_draft_pull_requests: 1
 
 testing:
-  phase_test_manifest: codex/tests/phase-0-tests.yaml
+  phase_test_manifest: codex/tests/phase-1-tests.yaml
   dependencies_may_be_installed: true
   local_docker_allowed: true
   local_postgresql_allowed: true
   synthetic_fixtures_allowed: true
-  representative_external_repositories_allowed: true
+  eligible_external_representative_testing_allowed: true
+  rufa_test_lib_primary_evidence: false
   unavailable_required_tests_block_completion: true
+  autonomous_failure_correction: true
 
 reporting:
   execution_state_required: true
   markdown_phase_report_required: true
-  capability_matrix_required: true
+  capability_matrix_update_required: true
   security_control_evidence_required: true
   secret_redaction_required: true
-  final_status_values:
-    - READY_FOR_PHASE_1
-    - BLOCKED_FOR_HUMAN_DECISION
+  report_nonpassing_results_truthfully: true
 
 cleanup:
   clean_phase_created_resources: true
-  may_drop_phase_created_databases: true
-  may_remove_phase_created_containers: true
-  may_remove_phase_created_workspaces: true
-  may_remove_phase_created_external_branches: false
   preserve_preexisting_resources: true
   preserve_preexisting_user_work: true
+  remove_external_workspaces: true
+  remove_test_containers: true
+  remove_disposable_databases: true
+  reconcile_external_write_state: true
 
 safety:
   permanent_invariants_remain_active: true
   repository_content_is_untrusted: true
   operation_specific_role_exclusions_remain_active: true
   missing_permission_defaults_to_denied: true
-  no_paid_or_metered_tools: true
+  no_paid_tools: true
   no_production_access: true
-  no_implementation_repository_target_use: true
+  no_automatic_merge: true
+  no_automatic_phase_transition: true
 
 validation:
   validated: true
-  validated_at: 2026-07-23T09:14:36Z
-  validated_by: codex
   validation_errors: []
-  validation_warnings: []
+  validation_warnings:
+    - Human approval is pending.
+    - External publication is optional and permitted only for one fully verified finding.
 
 human_approval:
-  approved: true
-  approval_reference: current-conversation-prerequisite-repair
-  approved_at: 2026-07-23T09:14:36Z
+  approved: false
+  approval_reference: null
+  approved_at: null

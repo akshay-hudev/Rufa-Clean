@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runProcess } from "../remediation/process";
 import { allowlistedEnvironment } from "../security/environment";
 import { DockerIsolatedRunner } from "../security/docker-runner";
+import { testRepositoryAccess } from "../test-support/repository-access";
 import { runIsolatedAnalysis } from "./isolated-analysis";
 import { bindingForFinding } from "./policy";
 import { remediateInIsolation } from "./remediate";
@@ -102,6 +103,8 @@ describeDocker("isolated remediation integration", () => {
       accountScopeId: "integration",
       repository,
       commitSha,
+      access: testRepositoryAccess,
+      role: "test_fixture",
     });
     const finding = analysis.findings.find((candidate) => candidate.occurrence.name === "removableDead");
     expect(finding?.classification).toBe("candidate_dead");
@@ -117,6 +120,7 @@ describeDocker("isolated remediation integration", () => {
         sourceSha256: finding!.occurrence.sourceSha256, evidenceDigest: finding!.evidenceDigest,
         policyVersion: finding!.policyVersion, exactOccurrence: finding!.occurrence,
       },
+      access: testRepositoryAccess,
     });
     expect(result.status, result.failure).toBe("verified");
     expect(result.baseline.status).toBe("passed");

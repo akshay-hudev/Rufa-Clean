@@ -29,6 +29,8 @@ repository_roles:
   - publication_target
   - cross_repository_graph_participant
   - runtime_evidence_target
+  - contract_analysis_target
+  - scale_test_subject
 
 decisions:
   - id: github-akshay-hudev-rufa-clean-role-policy
@@ -80,6 +82,13 @@ decisions:
         - collect_dead_code_runtime_evidence
         - interpret_dead_code_runtime_evidence
         - classify_using_runtime_evidence
+      contract_analysis_target:
+        - include_in_contract_analysis
+        - include_in_microservice_analysis
+        - derive_contract_liveness_evidence
+      scale_test_subject:
+        - include_in_scale_test
+        - derive_scale_capability_evidence
     notes: >-
       This repository contains or is associated with the DCAv2 implementation.
       Normal local implementation development is possible only under explicit
@@ -117,6 +126,8 @@ enforcement:
   before_remediation_scheduling: true
   before_cross_repository_graph_inclusion: true
   before_runtime_evidence_processing: true
+  before_contract_or_microservice_analysis: true
+  before_scale_testing: true
   before_automated_remediation_publication: true
   implementation_access_requires_current_authorization: true
 

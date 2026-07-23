@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "authorization_id": "phase-0-prerequisite-repair-and-readiness-20260723-01",
+  "runner_image": "dcav2-runner@sha256:ed90977c9d9432db87a3f4a96fbbbe420fb8daa78ee01ce9a2a2e673f40cbee3",
+  "registry_network": "temporary_internal_allowlist_proxy",
+  "selected_repositories": [
+    {
+      "canonical_identity": "akshay-hudev/swift-apply-form",
+      "immutable_base_commit": "51e9a90f5b586830af2dd173b4cc3af0e5719fef",
+      "reason": "realistic TypeScript React single-package repository larger than smoke fixtures",
+      "requested_role": "analysis_target",
+      "operations_performed": ["qualification","credential_read","clone","fetch","isolated_analysis_attempt"],
+      "language": "TypeScript",
+      "package_manager": "npm",
+      "build_command": "vite build",
+      "test_command": null,
+      "analysis_status": "unsupported",
+      "limitation": "multiple root TypeScript configurations (tsconfig.app.json and tsconfig.node.json)",
+      "finding_count": null,
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/test-only-usage",
+      "immutable_base_commit": "91d258b9b6c852e923b0021e9afe8222672caba4",
+      "reason": "TypeScript repository with an available test command and test-only relationships",
+      "requested_role": "analysis_target",
+      "operations_performed": ["qualification","credential_read","clone","fetch","static_analysis","semantic_analysis","generate_findings"],
+      "language": "TypeScript",
+      "package_manager": "npm",
+      "build_command": "tsc",
+      "test_command": "node dist/helper.test.js",
+      "analysis_status": "succeeded",
+      "coverage_status": "complete_for_supported_scope",
+      "analyzed_files": 2,
+      "finding_count": 1,
+      "finding_classifications": {"unsupported": 1},
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/reexport-chain",
+      "immutable_base_commit": "513c328c629b3492b5d1a2ca86cdb64811a9e8a0",
+      "reason": "TypeScript repository with a distinct re-export relationship shape",
+      "requested_role": "analysis_target",
+      "operations_performed": ["qualification","credential_read","clone","fetch","static_analysis","semantic_analysis","generate_findings"],
+      "language": "TypeScript",
+      "package_manager": "npm",
+      "build_command": "tsc",
+      "test_command": null,
+      "analysis_status": "succeeded",
+      "coverage_status": "complete_for_supported_scope",
+      "analyzed_files": 3,
+      "finding_count": 1,
+      "finding_classifications": {"unsupported": 1},
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/barrel-file",
+      "immutable_base_commit": "c2016855f30998d1c33819aea23eed0a086c3007",
+      "reason": "TypeScript repository exercising barrel-file source relationships",
+      "requested_role": "analysis_target",
+      "operations_performed": ["qualification","credential_read","clone","fetch","static_analysis","semantic_analysis","generate_findings"],
+      "language": "TypeScript",
+      "package_manager": "npm",
+      "build_command": "tsc",
+      "test_command": null,
+      "analysis_status": "succeeded",
+      "coverage_status": "complete_for_supported_scope",
+      "analyzed_files": 4,
+      "finding_count": 2,
+      "finding_classifications": {"unsupported": 2},
+      "cleanup_result": "verified"
+    }
+  ],
+  "rejected_repositories": [
+    {"canonical_identity":"akshay-hudev/query-test","reason":"pnpm monorepos are outside the current supported runner profile"},
+    {"canonical_identity":"akshay-hudev/rufa-test-lib","reason":"optional smoke fixture intentionally not used as primary or supporting representative evidence"},
+    {"canonical_identity":"akshay-hudev/Rufa-Clean","reason":"permanent target-role exclusion; no qualification, metadata, acquisition, or analysis performed"}
+  ],
+  "external_branches": [],
+  "external_commits": [],
+  "external_pushes": [],
+  "external_pull_requests": []
+}

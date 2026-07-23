@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ProcessResult } from "../remediation/types";
 import type { IsolatedCommandResult, IsolatedRunnerSession } from "../security/docker-runner";
+import { testRepositoryAccess } from "../test-support/repository-access";
 import { sha256 } from "./canonical";
 import { bindingForFinding } from "./policy";
 import { remediateInIsolation } from "./remediate";
@@ -133,6 +134,7 @@ function invocation(root: string, finding: FindingBundle, session: IsolatedRunne
       sourceSha256: finding.occurrence.sourceSha256, evidenceDigest: finding.evidenceDigest,
       policyVersion: finding.policyVersion, exactOccurrence: finding.occurrence,
     },
+    access: testRepositoryAccess,
   };
 }
 

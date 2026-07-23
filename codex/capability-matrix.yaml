@@ -1,0 +1,469 @@
+$schema: ./schemas/capability-matrix.schema.json
+schema_version: "1.0.0"
+matrix_id: dcav2-phase-0-readiness-capabilities
+title: DCAv2 Phase 0 Readiness Capability Matrix
+purpose: >-
+  Records evidence-backed capability status at the Phase 0 prerequisite
+  boundary. This matrix is descriptive and grants no execution authority.
+document_status: active
+implementation_authorized_by_matrix: false
+generated_at: "2026-07-23T09:45:00Z"
+source_revision:
+  repository: akshay-hudev/Rufa-Clean
+  commit: 834c5f99a21e5baefa1cdd4f92922efff26689c4
+  worktree_status: modified
+  captured_at: "2026-07-23T09:45:00Z"
+references:
+  - path: codex/tests/phase-0-tests.yaml
+    purpose: Phase 0 test identities and acceptance evidence.
+  - path: codex/reports/phase-0-representative-analysis.json
+    purpose: Representative eligible-repository evidence.
+  - path: codex/tests/security-control-matrix.yaml
+    purpose: Security-control identities and evidence-backed status.
+status_vocabulary:
+  support_statuses:
+    - planned
+    - experimental
+    - detection_only
+    - partially_supported
+    - functional
+    - blocked
+    - unsupported
+  implementation_statuses:
+    - not_started
+    - in_progress
+    - partial
+    - implemented
+    - blocked
+    - not_applicable
+  validation_statuses:
+    - not_run
+    - passed
+    - failed
+    - partial
+    - blocked
+    - unavailable
+    - stale
+    - not_applicable
+  scale_statuses:
+    - not_validated
+    - validated_within_profile
+    - validated_with_limitations
+    - partially_validated
+    - failed
+    - blocked
+    - stale
+    - not_applicable
+  lifecycle_statuses:
+    - proposed
+    - active
+    - deprecated
+    - superseded
+    - retired
+defaults:
+  unknown_support_status: blocked
+  missing_validation_status: not_run
+  unavailable_test_result: not_passed
+  skipped_test_result: not_passed
+  stale_evidence_result: stale
+  authorization_inference: prohibited
+  perfect_detection_claim: prohibited
+  phase_transition_authority: none
+  unsupported_scope_result: unsupported
+  failed_required_control_result: blocked
+capabilities:
+  - &phase0_capability
+    capability_id: governance.reconciliation.phase-0.v1
+    title: Phase 0 governance reconciliation
+    description: Validates governance, phase boundaries, schemas, and retained history.
+    domain: governance
+    version: 1
+    lifecycle_status: active
+    support_status: functional
+    implementation_status: implemented
+    validation_status: passed
+    introduced_in_phase: phase-0-reconciliation
+    last_validated_in_phase: phase-0-reconciliation
+    authorization_required: true
+    trust_boundary: &governance_boundary
+      execution_zone: governance
+      repository_content_trusted: false
+      structured_output_validation_required: true
+      prohibited_credentials:
+        - repository-runner-credentials
+      network_profiles:
+        - network-disabled
+    scope: &system_scope
+      scope_type: system
+      bounded: true
+      open_world_behavior: preserve_unknown_scope
+      excluded_shapes:
+        - phase-1-implementation
+      notes: Only Phase 0 prerequisite readiness is represented.
+    operations: &descriptive_operations
+      detection_supported: false
+      classification_supported: false
+      remediation_supported: false
+      publication_supported: false
+      deployment_supported: false
+      infrastructure_modification_supported: false
+      destructive_operations_supported: false
+      external_reads_supported: false
+      external_writes_supported: false
+    security_control_ids:
+      - gov-instruction-precedence
+      - reporting-execution-state-nonauthority
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-required-governance-files
+          - p0-structured-governance-parse
+          - p0-instruction-precedence-consistency
+          - p0-roadmap-does-not-authorize
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-governance-runner
+    evidence: &current_evidence
+      evidence_required: true
+      current_evidence_available: true
+      evidence_status: current
+      evidence_identities:
+        - evidence_id: phase0-governance-validation
+          evidence_type: test_report
+          description: Governance validator and structured-document validation output.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+      implementation_revision:
+        repository: akshay-hudev/Rufa-Clean
+        commit: 834c5f99a21e5baefa1cdd4f92922efff26689c4
+        worktree_status: modified
+    limitations: &phase0_limitation
+      - limitation_id: phase0-boundary
+        description: Does not authorize or claim completion of Phase 1.
+        effect: other
+        affects_support_status: false
+        reported_to_users: true
+    scale_validation:
+      status: not_applicable
+    reporting: &truthful_reporting
+      limitations_visible: true
+      unsupported_scope_visible: true
+      failed_tests_visible: true
+      unavailable_tests_visible: true
+      fixture_only_behavior_labeled: true
+      perfect_detection_claimed: false
+  - <<: *phase0_capability
+    capability_id: governance.authorization.default-deny.v1
+    title: Default-deny phase and operation authorization
+    description: Requires active human authorization and explicit per-operation permission.
+    domain: authorization
+    security_control_ids:
+      - gov-phase-authorization
+      - gov-operation-permission-separation
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-current-authorization-default-deny
+          - p0-external-operations-default-deny
+          - p0-phase-1-remains-unauthorized
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-governance-runner
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: phase0-authorization-runtime-tests
+          evidence_type: authorization_record
+          description: Active authorization schema validation and inactive-authorization denial tests.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+  - <<: *phase0_capability
+    capability_id: governance.repository-access-policy.v1
+    title: Operation-specific repository access enforcement
+    description: Enforces identity, role, operation, policy, and current authorization before repository operations.
+    domain: repository-access
+    operations:
+      <<: *descriptive_operations
+      detection_supported: true
+      classification_supported: true
+      external_reads_supported: true
+    security_control_ids:
+      - access-repository-policy
+      - access-repository-role-exclusion
+      - credential-capability-scoping
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-repository-policy-operation-specific
+          - p0-repository-role-exclusion-matrix
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-unit-and-github-app
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: repository-access-runtime-suite
+          evidence_type: policy_decision
+          description: Runtime decision tests and secret-free repository inventory.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+  - <<: *phase0_capability
+    capability_id: repository.current-system-inventory.v1
+    title: Current implementation and repository inventory
+    description: Inventories executable surfaces, migrations, repositories, and current limitations.
+    domain: inventory
+    security_control_ids:
+      - reporting-truthfulness
+      - access-repository-policy
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-current-system-inventory
+          - p0-evidence-and-coverage-gap-analysis
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-and-github-app-read-only
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: phase0-repository-inventory
+          evidence_type: external_operation_record
+          description: codex/reports/phase-0-repository-inventory.json
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+  - <<: *phase0_capability
+    capability_id: repository.baseline-validation.v1
+    title: Database-free implementation baseline
+    description: Compiles and runs pure tests without dotenv, DATABASE_URL, or database connections.
+    domain: verification
+    security_control_ids:
+      - supply-no-host-global-fallback
+      - reporting-truthfulness
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-existing-test-baseline
+          - p0-working-tree-preservation
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-database-free-runner
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: database-free-unit-suite
+          evidence_type: test_report
+          description: Clean environment unit suite and lazy database-client regression tests.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+  - <<: *phase0_capability
+    capability_id: runner.typescript-tool-resolution.reproduce.v1
+    title: Isolated TypeScript runner and tool resolution
+    description: Runs npm TypeScript snapshots under bounded Docker isolation with explicit unsupported outcomes.
+    domain: verification
+    support_status: partially_supported
+    implementation_status: implemented
+    validation_status: passed
+    operations:
+      <<: *descriptive_operations
+      detection_supported: true
+      classification_supported: true
+      external_reads_supported: true
+    trust_boundary:
+      execution_zone: untrusted_runner
+      repository_content_trusted: false
+      structured_output_validation_required: true
+      prohibited_credentials:
+        - github-app-private-key
+        - github-installation-token
+        - database-url
+        - publisher-credential
+      network_profiles:
+        - registry-proxy-then-network-none
+      runner_profiles:
+        - digest-pinned-docker-runner
+    scope:
+      scope_type: single_package
+      bounded: true
+      open_world_behavior: complete_only_when_all_required_dimensions_complete
+      languages:
+        - TypeScript
+      package_managers:
+        - npm
+      target_shapes:
+        - single-root-tsconfig
+      excluded_shapes:
+        - multiple-root-tsconfig
+        - pnpm
+        - yarn
+        - monorepo
+      maximum_tested_scope:
+        repositories: 4
+        files: 4
+        notes: Three successful representative snapshots and one explicit unsupported result.
+    security_control_ids:
+      - runner-trust-separation
+      - runner-privilege-restrictions
+      - runner-filesystem-confinement
+      - runner-network-egress
+      - runner-resource-limits
+      - runner-process-cleanup
+      - package-lifecycle-script-boundary
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-typescript-compiler-resolution-reproduction
+          - p0-runner-failure-semantics
+          - p0-runner-isolation-baseline
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-docker-29.5.3
+        report_identity: codex/reports/phase-0-representative-analysis.json
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: digest-pinned-runner-tests
+          evidence_type: test_report
+          description: Docker isolation, hostile repository, compiler, analysis, and remediation test results.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+    limitations:
+      - limitation_id: multi-tsconfig-unsupported
+        description: Multiple root TypeScript configurations are rejected explicitly.
+        effect: partial_coverage
+        affects_support_status: true
+        reported_to_users: true
+        resolution_phase: phase-1-typescript-vertical-slice
+      - limitation_id: npm-only-profile
+        description: pnpm, yarn, and monorepo profiles are not claimed by this capability.
+        effect: partial_coverage
+        affects_support_status: true
+        reported_to_users: true
+    scale_validation:
+      status: not_validated
+  - <<: *phase0_capability
+    capability_id: security.prompt-injection-governance.v1
+    title: Prompt-injection and hostile-content resistance
+    description: Treats repository content and runner output as untrusted data without authority.
+    domain: security
+    security_control_ids:
+      - injection-untrusted-content
+      - command-structured-registry
+      - runner-trust-separation
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-prompt-injection-does-not-gain-authority
+          - p0-structured-command-authority
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-and-isolated-runner
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: hostile-content-suite
+          evidence_type: security_control_result
+          description: Hostile repository and structured-command boundary tests.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+  - <<: *phase0_capability
+    capability_id: security.secret-handling-governance.v1
+    title: Secret minimization and canary protection
+    description: Keeps controller credentials out of untrusted runners, logs, and retained evidence.
+    domain: security
+    security_control_ids:
+      - secret-minimization
+      - secret-export-scanning
+      - credential-trusted-component-separation
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-secret-canary-protection
+          - p0-runner-isolation-baseline
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-and-isolated-runner
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: secret-free-runner-suite
+          evidence_type: security_control_result
+          description: Credential status checks, canary isolation, environment allowlisting, and redaction tests.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+  - <<: *phase0_capability
+    capability_id: reporting.phase-0-completion.v1
+    title: Truthful Phase 0 readiness reporting
+    description: Retains history and reports pass, failure, unsupported scope, and cleanup accurately.
+    domain: reporting
+    security_control_ids:
+      - reporting-truthfulness
+      - reporting-execution-state-nonauthority
+    test_references:
+      - manifest_path: codex/tests/phase-0-tests.yaml
+        test_ids:
+          - p0-phase-report-truthfulness
+          - p0-execution-state-handoff
+          - p0-final-cleanup-state
+          - p0-phase-1-remains-unauthorized
+        status: passed
+        executed_at: "2026-07-23T09:45:00Z"
+        environment_identity: local-governance-runner
+    evidence:
+      <<: *current_evidence
+      evidence_identities:
+        - evidence_id: phase0-prerequisite-repair-report
+          evidence_type: test_report
+          description: codex/reports/phase-0-prerequisite-repair-readiness-report.md
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+matrix_summary:
+  total_capabilities: 9
+  planned: 0
+  experimental: 0
+  detection_only: 0
+  partially_supported: 1
+  functional: 8
+  blocked: 0
+  unsupported: 0
+  deprecated: 0
+  superseded: 0
+  validation_passed: 9
+  validation_failed: 0
+  validation_not_run: 0
+  scale_validated: 0
+  summary_generated_from_capabilities: true
+reporting:
+  record_each_capability: true
+  record_support_status: true
+  record_implementation_status: true
+  record_validation_status: true
+  record_scale_status: true
+  record_limitations: true
+  record_blockers: true
+  record_evidence: true
+  record_security_controls: true
+  record_untested_scope: true
+  record_fixture_only_behavior: true
+  redact_secrets: true
+  prohibit_false_pass: true
+  prohibit_unbounded_support_claims: true
+  matrix_does_not_authorize_execution: true
+  required_report_schema: codex/schemas/phase-report.schema.json

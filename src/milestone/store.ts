@@ -1,6 +1,11 @@
 import type { Pool, PoolClient } from "pg";
 
 import { pool as defaultPool } from "../db/client";
+import {
+  redactAuditValue,
+  verifyAuditChain,
+  type AuditChainVerification,
+} from "./audit";
 import { canonicalJson, digestCanonical } from "./canonical";
 import { assertDispositionAllowed, bindingForFinding, type BoundAuthorization } from "./policy";
 import type {
@@ -51,6 +56,8 @@ async function appendAudit(
     actorIdentity: string;
   },
 ): Promise<void> {
+  const payload = redactAuditValue(input.payload);
+  const actorIdentity = redactAuditValue(input.actorIdentity) as string;
   const scope = await client.query<{ id: string }>(
     "SELECT id FROM account_scopes WHERE id = $1 FOR UPDATE",
     [input.accountScopeId],
@@ -75,9 +82,9 @@ async function appendAudit(
     eventType: input.eventType,
     subjectType: input.subjectType,
     subjectId: input.subjectId,
-    payload: input.payload,
+    payload,
     previousEventHash,
-    actorIdentity: input.actorIdentity,
+    actorIdentity,
     createdAt,
   });
   await client.query(
@@ -87,7 +94,7 @@ async function appendAudit(
      ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)`,
     [
       input.accountScopeId, sequence, input.eventType, input.subjectType, input.subjectId,
-      canonicalJson(input.payload), previousEventHash, eventHash, input.actorIdentity, createdAt,
+      canonicalJson(payload), previousEventHash, eventHash, actorIdentity, createdAt,
     ],
   );
 }
@@ -101,9 +108,44 @@ function requireText(value: string, label: string): string {
 }
 
 export class MilestoneStore {
-  constructor(private readonly database: Pool = defaultPool) {}
+  constructor(
+    private readonly accountScopeId: string,
+    private readonly database: Pool = defaultPool,
+  ) {
+    requireText(accountScopeId, "account scope");
+  }
+
+  private requireScope(accountScopeId: string): void {
+    if (accountScopeId !== this.accountScopeId) {
+      throw new Error("Tenant isolation denied cross-account access");
+    }
+  }
+
+  private async requireFinding(findingId: string): Promise<void> {
+    const result = await this.database.query(
+      "SELECT 1 FROM milestone_findings WHERE finding_id = $1 AND account_scope_id = $2",
+      [findingId, this.accountScopeId],
+    );
+    if (!result.rows[0]) {
+      throw new Error(`Finding not found in account scope: ${findingId}`);
+    }
+  }
+
+  private async requireAttempt(attemptId: string): Promise<void> {
+    const result = await this.database.query(
+      `SELECT 1
+         FROM remediation_attempts AS attempt
+         JOIN milestone_findings AS finding ON finding.finding_id = attempt.finding_id
+        WHERE attempt.id = $1 AND finding.account_scope_id = $2`,
+      [attemptId, this.accountScopeId],
+    );
+    if (!result.rows[0]) {
+      throw new Error(`Remediation attempt not found in account scope: ${attemptId}`);
+    }
+  }
 
   async ensureAccountScope(id: string, displayName = id): Promise<void> {
+    this.requireScope(id);
     await this.database.query(
       `INSERT INTO account_scopes (id, display_name) VALUES ($1, $2)
        ON CONFLICT (id) DO NOTHING`,
@@ -115,6 +157,7 @@ export class MilestoneStore {
     result: CanonicalAnalysisResult,
     actorIdentity: string,
   ): Promise<string> {
+    this.requireScope(result.accountScopeId);
     const client = await this.database.connect();
     try {
       await client.query("BEGIN");
@@ -205,6 +248,7 @@ export class MilestoneStore {
     failure: string;
     actorIdentity: string;
   }): Promise<string> {
+    this.requireScope(input.accountScopeId);
     const client = await this.database.connect();
     try {
       await client.query("BEGIN");
@@ -259,6 +303,13 @@ export class MilestoneStore {
   }
 
   async getAnalysisRun(runId: string): Promise<unknown> {
+    const scoped = await this.database.query(
+      "SELECT 1 FROM analysis_runs WHERE id = $1 AND account_scope_id = $2",
+      [runId, this.accountScopeId],
+    );
+    if (!scoped.rows[0]) {
+      throw new Error(`Analysis run not found in account scope: ${runId}`);
+    }
     const result = await this.database.query(
       `SELECT id, account_scope_id, repository_provider, repository_owner,
               repository_name, commit_sha, policy_version, status,
@@ -273,6 +324,7 @@ export class MilestoneStore {
   }
 
   async getFinding(findingId: string): Promise<FindingBundle> {
+    await this.requireFinding(findingId);
     const result = await this.database.query<FindingRow>(
       "SELECT finding_bundle FROM milestone_findings WHERE finding_id = $1",
       [findingId],
@@ -285,6 +337,7 @@ export class MilestoneStore {
   }
 
   async listFindings(accountScopeId: string): Promise<FindingBundle[]> {
+    this.requireScope(accountScopeId);
     const result = await this.database.query<FindingRow>(
       `SELECT finding_bundle FROM milestone_findings
         WHERE account_scope_id = $1
@@ -420,6 +473,7 @@ export class MilestoneStore {
   }
 
   async latestAuthorization(findingId: string): Promise<(BoundAuthorization & { id: string })> {
+    await this.requireFinding(findingId);
     const result = await this.database.query<AuthorizationRow>(
       `SELECT id, decision, finding_id, repository_provider, repository_owner,
               repository_name, commit_sha, source_sha256, evidence_digest,
@@ -450,6 +504,7 @@ export class MilestoneStore {
   }
 
   async latestDisposition(findingId: string): Promise<{ id: string; decision: HumanDisposition }> {
+    await this.requireFinding(findingId);
     const result = await this.database.query<{ id: string; decision: HumanDisposition }>(
       `SELECT id, decision
          FROM human_review_decisions
@@ -579,6 +634,7 @@ export class MilestoneStore {
     baseline: unknown;
     postChange: unknown;
   }> {
+    await this.requireAttempt(attemptId);
     const result = await this.database.query<{
       status: string;
       finding_bundle: FindingBundle;
@@ -656,6 +712,7 @@ export class MilestoneStore {
   }
 
   async getRemediationAttempt(attemptId: string): Promise<unknown> {
+    await this.requireAttempt(attemptId);
     const result = await this.database.query(
       `SELECT attempt.id, attempt.finding_id, attempt.authorization_id,
               attempt.status, attempt.base_commit_sha, attempt.failure, attempt.created_at,
@@ -688,6 +745,7 @@ export class MilestoneStore {
   }
 
   async existingPublication(attemptId: string): Promise<{ status: string; prUrl: string | null } | undefined> {
+    await this.requireAttempt(attemptId);
     const result = await this.database.query<{ status: string; pr_url: string | null }>(
       `SELECT status, pr_url
          FROM pull_request_publications
@@ -712,6 +770,8 @@ export class MilestoneStore {
     actorIdentity: string;
     accountScopeId: string;
   }): Promise<void> {
+    this.requireScope(input.accountScopeId);
+    await this.requireAttempt(input.attemptId);
     const idempotencyKey = digestCanonical({
       attemptId: input.attemptId,
       owner: input.owner,
@@ -752,6 +812,7 @@ export class MilestoneStore {
   }
 
   async auditChain(accountScopeId: string): Promise<unknown[]> {
+    this.requireScope(accountScopeId);
     const result = await this.database.query(
       `SELECT sequence, event_type, subject_type, subject_id, payload,
               previous_event_hash, event_hash, actor_identity, created_at
@@ -763,7 +824,15 @@ export class MilestoneStore {
     return result.rows;
   }
 
+  async verifyAuditChain(accountScopeId: string): Promise<AuditChainVerification> {
+    return verifyAuditChain(
+      accountScopeId,
+      await this.auditChain(accountScopeId) as Parameters<typeof verifyAuditChain>[1],
+    );
+  }
+
   async withFindingLock<T>(findingId: string, operation: () => Promise<T>): Promise<T> {
+    await this.requireFinding(findingId);
     const client = await this.database.connect();
     try {
       await client.query("SELECT pg_advisory_lock(hashtext($1))", [findingId]);

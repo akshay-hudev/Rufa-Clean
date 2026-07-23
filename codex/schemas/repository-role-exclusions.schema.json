@@ -41,7 +41,9 @@
         "remediation_target",
         "publication_target",
         "cross_repository_graph_participant",
-        "runtime_evidence_target"
+        "runtime_evidence_target",
+        "contract_analysis_target",
+        "scale_test_subject"
       ]
     },
     "decisions": {
@@ -83,7 +85,9 @@
               "remediation_target",
               "publication_target",
               "cross_repository_graph_participant",
-              "runtime_evidence_target"
+              "runtime_evidence_target",
+              "contract_analysis_target",
+              "scale_test_subject"
             ]
           }
         }

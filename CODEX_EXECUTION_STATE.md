@@ -1,5 +1,111 @@
 # DCAv2 Execution State
 
+## Completed Phase 0 prerequisite-repair execution
+
+This section records the completed prerequisite repair. Historical sections
+below remain unchanged and non-authorizing. This record does not authorize
+Phase 1.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-0-prerequisite-repair-2026-07-23-01 |
+| Authorization ID | phase-0-prerequisite-repair-and-readiness-20260723-01 |
+| Authorized phase | phase-0-reconciliation |
+| Execution status | completed; inactive |
+| Final readiness | READY_FOR_PHASE_1 |
+| Starting branch | main |
+| Working branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | 834c5f99a21e5baefa1cdd4f92922efff26689c4 |
+| Upstream at start | origin/main; ahead 0 / behind 0 |
+| Starting worktree | clean |
+| Started | 2026-07-23T09:14:36Z |
+| Completed | 2026-07-23T10:17:00Z |
+| Phase 1 authorization | requested; inactive; awaiting human approval |
+| Automatic Phase 1 continuation | prohibited |
+
+### Starting repository and preservation record
+
+- Repository root: `/Users/apple/Desktop/Akshay@goAI/DCAv2`
+- Sanitized origin: `github.com/akshay-hudev/Rufa-Clean.git`
+- Repository role: `implementation_repository`
+- Pre-existing modified, staged, and untracked paths: none
+- `OPEARTING_GUIDE.MD`: preserve the current committed treatment
+- Historical Phase 0 and governance-correction reports: immutable
+- External operations before this authorization: none attributed to this
+  execution
+
+### Governing-file SHA-256 baseline
+
+| File | SHA-256 |
+| --- | --- |
+| `AGENTS.md` | `3f4a36ec5da7f6b464cc9b5865fef9a0cee4c63f9ae962aade5c14bf99d085df` |
+| `codex/core/01-instruction-precedence.md` | `606cbac5a6dca581cc66a7230fb4497eeecbd6bf381a9c4f971d0a726ab98d9b` |
+| `codex/core/03-safety-invariants.md` | `a2786ee9291ff56e929e197940bd39d6e8a46e719490636477d7901c7fc5e844` |
+| `codex/core/05-phase-authorization-protocol.md` | `685d9d16ae9c843fedbf2dbf0615d75bb41f844c8e9460841664896d4c0d3bda` |
+| `codex/core/06-autonomy-and-stop-conditions.md` | `96741da1b0ed7059a60faf23ad78fe0bdc0ac3e741cc12616055873dd351b9d9` |
+| `codex/core/07-source-control-policy.md` | `4a8f25a62e21eff79038fbdb453872dc530cc477d7b2f4310f86327458a54c9a` |
+| `codex/core/08-secret-handling-policy.md` | `e4a55cbcbe18ed1b76d68c4ccbfa9cc28bc568dd5d23a3d653f587302d21f366` |
+| `codex/core/09-prompt-injection-policy.md` | `399dfcdd11378b15c7294aa4e417f134931e7c7beb0a38ecee80cf2f7d622f98` |
+| `codex/core/10-reporting-and-state-policy.md` | `d98330e1efe04f648846feb51a75a5938fb859cd497dbc109b091af604e19b3b` |
+| `codex/access/github-repository-policy.yaml` | `58ee056a2da99470e01188a7a829bd2c5eaabf8a1e50c8334a7580f240b74439` |
+| `codex/access/prohibited-repositories.yaml` | `51828a8b442526ebb4990707310560b4153750c759217f07fdc33bccf0a93a0c` |
+| `codex/roadmap/phase-0-reconciliation.md` | `ce70c3005c21c5162d1a6e430c094fcdd252cbdf8c60093b9a281de54bfa3f6e` |
+| `codex/tests/phase-0-tests.yaml` | `363de0acd783135bedefc780bf6396996cdbb45d995bcb2c0f64e79c122a7f57` |
+| `codex/tests/security-control-matrix.yaml` | `66e08d9374295f53d6ace82033d1d821ff325a759dc8f13aaf90db31924a557e` |
+
+The current authorization file is intentionally replaced by the newly granted
+authorization and is not expected to retain its completed-record hash. The
+superseded completed authorization remains preserved in Git history.
+
+### Completion evidence
+
+- Runtime identity + role + operation + authorization enforcement is active
+  across discovery, metadata, credentials, acquisition, indexing, analysis,
+  finding generation, remediation, cross-repository participation, and
+  publication.
+- Rufa-Clean remained solely the authorized implementation repository; no
+  target, fixture, remediation, runtime, contract, scale, or publication
+  operation was performed against it.
+- Database-free unit baseline: 27 test files passed, 196 tests passed, four
+  Docker-only tests skipped because the clean baseline intentionally omitted
+  runner configuration.
+- Final exact-source complete local suite with Docker and PostgreSQL: 34 test
+  files passed, 209 tests passed, including explicit missing-compiler and
+  malformed-tsconfig cases.
+- Docker runner image:
+  `dcav2-runner@sha256:ed90977c9d9432db87a3f4a96fbbbe420fb8daa78ee01ce9a2a2e673f40cbee3`.
+- PostgreSQL fresh-install, upgrade, concurrency, checksum, rollback,
+  immutability, audit-chain, disposition/authorization separation, idempotency,
+  and tenant-isolation tests passed.
+- Eligible-owner discovery inventoried 21 repositories. Representative
+  analyses used immutable commits for `swift-apply-form`, `test-only-usage`,
+  `reexport-chain`, and `barrel-file`. Three succeeded within supported scope;
+  `swift-apply-form` was truthfully unsupported because it has multiple root
+  tsconfigs.
+- `rufa-test-lib` was not used as evidence.
+- No external branch, commit, push, pull request, or external write occurred.
+- No paid or metered service, hosted runner, hosted database, or production
+  system was used.
+- Capability matrix: nine Phase 0 capability IDs validated; eight functional,
+  one implemented/validated but partially supported.
+- All acquired workspaces, test containers, the registry proxy/network, and
+  five explicitly named disposable databases were removed and cleanup was
+  verified.
+- Credential values were never recorded. GitHub configuration was reported
+  only as `SET` or `VALID`; the tracked credential-pattern scan returned zero
+  files.
+
+### Completion artifacts
+
+- `codex/reports/phase-0-prerequisite-repair-readiness-report.md`
+- `codex/reports/phase-0-repository-inventory.json`
+- `codex/reports/phase-0-representative-analysis.json`
+- `codex/capability-matrix.yaml`
+- `codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml`
+
+The Phase 1 request is non-authorizing until the human operator replies exactly
+`APPROVED`.
+
 ## Current Phase 0 reconciliation handoff
 
 This is the current execution state. The governance correction, the original

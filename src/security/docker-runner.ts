@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { access, realpath } from "node:fs/promises";
+import { access, lstat, realpath } from "node:fs/promises";
 
 import { runProcess } from "../remediation/process";
 import type { ProcessResult } from "../remediation/types";
@@ -78,6 +78,9 @@ export class DockerIsolatedRunner {
   async createSession(sourcePath: string): Promise<IsolatedRunnerSession> {
     requireSafeAbsolutePath(sourcePath);
     await access(sourcePath);
+    if ((await lstat(sourcePath)).isSymbolicLink()) {
+      throw new Error("Isolated runner source path must not be a symbolic link");
+    }
     const canonicalSource = await realpath(sourcePath);
     const containerName = `dcav2-${randomBytes(10).toString("hex")}`;
     const dockerRaw = async (args: string[], timeoutMs = this.limits.timeoutMs): Promise<ProcessResult> => {

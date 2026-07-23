@@ -339,10 +339,11 @@ Testing must use synthetic identities or authorized safe fixtures.
 
 ---
 
-## 13. Prohibited-repository validation
+## 13. Repository-role exclusion validation
 
-Phase 0 must confirm that the absolute prohibited-repository rule remains
-present and enforceable.
+Phase 0 must confirm that permanent repository-role and operation exclusions
+remain present and enforceable without turning repository identity into a
+universal content-access denial.
 
 The validation should test applicable operations such as:
 
