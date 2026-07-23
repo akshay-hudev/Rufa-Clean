@@ -77,6 +77,9 @@ export interface FindingBundle {
   packageJsonSha256: string;
   packageLockSha256: string;
   tsconfigSha256: string;
+  packageIdentity: string;
+  moduleIdentity: string;
+  functionIdentity: string;
   occurrence: ExactSymbolOccurrence;
   nativeScipIdentity?: string;
   analyzers: Array<{

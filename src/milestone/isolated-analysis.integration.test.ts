@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DockerIsolatedRunner } from "../security/docker-runner";
 import { testRepositoryAccess } from "../test-support/repository-access";
+import { writeOfflineTypeScriptPackage } from "../test-support/offline-typescript";
 import { runIsolatedAnalysis } from "./isolated-analysis";
 
 const image = process.env.DCA_RUNNER_IMAGE;
@@ -15,8 +16,11 @@ beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), "dcav2-isolated-analysis-"));
   await chmod(root, 0o755);
   await mkdir(join(root, "src"), { recursive: true });
-  await writeFile(join(root, "package.json"), JSON.stringify({ name: "isolated-analysis-fixture", version: "1.0.0", private: true }));
-  await writeFile(join(root, "package-lock.json"), JSON.stringify({ name: "isolated-analysis-fixture", version: "1.0.0", lockfileVersion: 3, requires: true, packages: { "": { name: "isolated-analysis-fixture", version: "1.0.0" } } }));
+  await writeOfflineTypeScriptPackage(root, {
+    name: "isolated-analysis-fixture",
+    version: "1.0.0",
+    private: true,
+  });
   await writeFile(join(root, "tsconfig.json"), JSON.stringify({ compilerOptions: { target: "ES2022", module: "commonjs", strict: true }, include: ["src/**/*.ts"] }));
   await writeFile(join(root, "src/dead.ts"), "function isolatedDead() { return 1; }\n");
 });
@@ -88,20 +92,11 @@ describeDocker("isolated analyzer integration", () => {
     await chmod(malformedRoot, 0o755);
     await mkdir(join(malformedRoot, "src"), { recursive: true });
     try {
-      await writeFile(
-        join(malformedRoot, "package.json"),
-        JSON.stringify({ name: "malformed-tsconfig", version: "1.0.0", private: true }),
-      );
-      await writeFile(
-        join(malformedRoot, "package-lock.json"),
-        JSON.stringify({
-          name: "malformed-tsconfig",
-          version: "1.0.0",
-          lockfileVersion: 3,
-          requires: true,
-          packages: { "": { name: "malformed-tsconfig", version: "1.0.0" } },
-        }),
-      );
+      await writeOfflineTypeScriptPackage(malformedRoot, {
+        name: "malformed-tsconfig",
+        version: "1.0.0",
+        private: true,
+      });
       await writeFile(join(malformedRoot, "tsconfig.json"), "{ not valid json");
       await writeFile(join(malformedRoot, "src/dead.ts"), "function malformedDead() { return 1; }\n");
       await expect(runIsolatedAnalysis({

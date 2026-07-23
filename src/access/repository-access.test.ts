@@ -143,6 +143,40 @@ describe("repository access authorization", () => {
     }).reason).toBe("role_operation_mismatch");
   });
 
+  it("applies exact canonical-identity write denials before broad owner permission", () => {
+    const input = documents();
+    const authorization = input.authorization as Record<string, any>;
+    authorization.external_operations.github.canonical_repository_rules = [{
+      canonical_repository_identity: "akshay-hudev/Rufa-Clean",
+      match: "exact_case_normalized",
+      operations: {
+        branch_creation: "denied",
+        commit_creation: "denied",
+        push_non_default_branch: "denied",
+        pull_request_creation: "denied",
+        pull_request_update: "denied",
+      },
+    }];
+    const access = createRepositoryAccessAuthorizer(input);
+    for (const operation of [
+      "branch_create",
+      "commit_create",
+      "push_non_default_branch",
+      "pull_request_create",
+      "pull_request_update",
+      "publish",
+    ] as const) {
+      expect(access.decide({
+        repository: rufa,
+        role: "publication_target",
+        operation,
+      })).toEqual(expect.objectContaining({
+        allowed: false,
+        reason: "identity_operation_denied",
+      }));
+    }
+  });
+
   it("does not let analysis permission imply remediation or publication", () => {
     expect(decision({
       role: "analysis_target",

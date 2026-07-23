@@ -317,6 +317,16 @@ export async function analyzeTypeScriptSnapshot(input: AnalysisInput): Promise<C
   for (const shape of shapes) {
     shapeNameCounts.set(shape.name, (shapeNameCounts.get(shape.name) ?? 0) + 1);
   }
+  const packageJsonSha256 = sha256(configured.packageJson);
+  const packageLockSha256 = sha256(configured.packageLock);
+  const tsconfigSha256 = sha256(configured.tsconfig);
+  const packageIdentity = digestCanonical({
+    namespace: "dcav2-package-v1",
+    repository: input.repository,
+    commitSha: input.commitSha.toLowerCase(),
+    packageJsonSha256,
+    packageLockSha256,
+  });
   const findings: FindingBundle[] = [];
   for (const shape of shapes.sort((left, right) =>
     left.file.path.localeCompare(right.file.path) || left.byteStart - right.byteStart
@@ -372,6 +382,22 @@ export async function analyzeTypeScriptSnapshot(input: AnalysisInput): Promise<C
       sourceSha256: shape.file.hash,
       declarationSha256: sha256(shape.file.content.slice(shape.byteStart, shape.byteEnd)),
     };
+    const moduleIdentity = digestCanonical({
+      namespace: "dcav2-typescript-module-v1",
+      repository: input.repository,
+      commitSha: input.commitSha.toLowerCase(),
+      packageIdentity,
+      filePath: shape.file.path,
+      sourceSha256: shape.file.hash,
+    });
+    const functionIdentity = digestCanonical({
+      namespace: "dcav2-typescript-function-v1",
+      repository: input.repository,
+      commitSha: input.commitSha.toLowerCase(),
+      packageIdentity,
+      moduleIdentity,
+      occurrence,
+    });
     const supportingEvidence = [
       "tree_sitter_declaration_identified",
       ...(definitions.length === 1 ? ["exact_scip_definition_matched"] : []),
@@ -390,9 +416,12 @@ export async function analyzeTypeScriptSnapshot(input: AnalysisInput): Promise<C
       accountScopeId: input.accountScopeId,
       repository: input.repository,
       commitSha: input.commitSha.toLowerCase(),
-      packageJsonSha256: sha256(configured.packageJson),
-      packageLockSha256: sha256(configured.packageLock),
-      tsconfigSha256: sha256(configured.tsconfig),
+      packageJsonSha256,
+      packageLockSha256,
+      tsconfigSha256,
+      packageIdentity,
+      moduleIdentity,
+      functionIdentity,
       occurrence,
       ...(definition ? { nativeScipIdentity: definition.symbolString } : {}),
       analyzers: [

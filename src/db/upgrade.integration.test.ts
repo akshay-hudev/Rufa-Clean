@@ -35,6 +35,8 @@ describeDatabase("PostgreSQL representative upgrade", () => {
         "0001_legacy_baseline",
         "0002_milestone_ledger",
         "0003_publication_attempts",
+        "0004_publication_reconciliation",
+        "0005_phase1_qualification",
       ]);
     } finally {
       await database.end();

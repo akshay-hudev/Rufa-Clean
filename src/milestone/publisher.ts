@@ -46,11 +46,21 @@ export async function publishVerifiedDraft(input: {
   if (existing?.status === "draft_pr_created" && existing.prUrl) {
     return { status: "already_published", prUrl: existing.prUrl };
   }
+  if (existing?.status === "unknown_external_state") {
+    throw new Error(
+      "Publication reconciliation required: a prior provider write has unknown external state",
+    );
+  }
   const preliminary = await input.store.publicationContext(input.attemptId);
   return input.store.withFindingLock(preliminary.finding.findingId, async () => {
   const publishedWhileWaiting = await input.store.existingPublication(input.attemptId);
   if (publishedWhileWaiting?.status === "draft_pr_created" && publishedWhileWaiting.prUrl) {
     return { status: "already_published" as const, prUrl: publishedWhileWaiting.prUrl };
+  }
+  if (publishedWhileWaiting?.status === "unknown_external_state") {
+    throw new Error(
+      "Publication reconciliation required: a prior provider write has unknown external state",
+    );
   }
   const context = await input.store.publicationContext(input.attemptId);
   const finding = context.finding;
@@ -135,7 +145,7 @@ export async function publishVerifiedDraft(input: {
     const failure = error instanceof Error ? error.message : String(error);
     await input.store.recordPublication({
       attemptId: input.attemptId,
-      status: "failed",
+      status: "unknown_external_state",
       owner: finding.repository.owner,
       repository: finding.repository.name,
       baseCommitSha: finding.commitSha,

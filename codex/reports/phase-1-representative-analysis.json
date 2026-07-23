@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "authorization_id": "phase-1-typescript-vertical-slice-20260723-01",
+  "runner_image": "dcav2-runner@sha256:7f347352497067cbd5b833b0c63046c89c358040078ade1b3c3fd29d0358f45f",
+  "selected_repositories": [
+    {
+      "canonical_identity": "akshay-hudev/test-only-usage",
+      "immutable_base_commit": "91d258b9b6c852e923b0021e9afe8222672caba4",
+      "requested_role": "analysis_target",
+      "evidence_role": "primary_representative_reference_and_test_behavior",
+      "selection_reason": "Eligible non-Rufa single-package npm TypeScript repository with build and test commands.",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch",
+        "isolated_build_and_test",
+        "static_analysis",
+        "semantic_analysis",
+        "generate_findings"
+      ],
+      "qualification_status": "ready",
+      "qualification_digest": "16258d30659e532dd046661e794873d3cdd41b10783d0b24aa223732c7586e82",
+      "package_identity": "bf2ea0371e48ee98c0486596a09937dcfc06a5ef226311f49a87994100905c1a",
+      "module_count": 2,
+      "analysis_status": "succeeded",
+      "coverage_status": "complete_for_supported_scope",
+      "finding_count": 1,
+      "finding_classifications": {
+        "unsupported": 1
+      },
+      "findings": [
+        {
+          "finding_id": "b5b1e3473e80b285d1934392f433de60286dac2add00d0641f398f17c8849a8c",
+          "function_identity": "6bc1ec69bde21d54efdb46b4997fe67dda583627b59a9c5724f33cf7d5801283",
+          "name": "computeThing",
+          "file": "src/helper.ts",
+          "classification": "unsupported",
+          "evidence_digest": "5eb8320e1c43a64c11c9f718e513911d5bbe32ff352dca77cc33e37db92c1a38"
+        }
+      ],
+      "external_writes": [],
+      "cleanup_result": "verified"
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-lib",
+      "immutable_base_commit": "a1bdd81ad38676b78760309c219d541daec47d77",
+      "requested_role": "test_fixture",
+      "evidence_role": "optional_smoke_finding_only",
+      "selection_reason": "Optional deterministic smoke fixture; not primary general-capability evidence.",
+      "operations_performed": [
+        "qualification",
+        "credential_read",
+        "clone",
+        "fetch",
+        "isolated_build_and_test",
+        "static_analysis",
+        "semantic_analysis",
+        "generate_findings"
+      ],
+      "qualification_status": "ready",
+      "qualification_digest": "5075c3a0ad2e783e66474805b32fe7c0ef17830a2e6a5ab0a4a686baedc11233",
+      "package_identity": "9b30a0d0a1a019400108671bbaf71237f01c995c290222d26c8e052737bfafb9",
+      "module_count": 1,
+      "analysis_status": "succeeded",
+      "coverage_status": "complete_for_supported_scope",
+      "finding_count": 3,
+      "finding_classifications": {
+        "unsupported": 2,
+        "candidate_dead": 1
+      },
+      "findings": [
+        {
+          "finding_id": "c6e48aa7a9ae40d7db93721ff652f1a433b797f82e36d90df1666baf68b4c3de",
+          "function_identity": "747480726f46e793bdb27ee48fb68151391001f278b273392cdc4c0524a7936e",
+          "name": "addNumbers",
+          "file": "src/index.ts",
+          "classification": "unsupported",
+          "evidence_digest": "7efabf7a742410df2dcfc1dab5b792f4296b083de05253459c4bfd3ea0ba3f3e"
+        },
+        {
+          "finding_id": "1d0e42ca96435ec30a9ea222605eee9a4b0573d1a5a28cbedf4cd7dbe8b9a7ba",
+          "function_identity": "6fd328db70e620d411922fd997bdfc4906f6e44e184805e1c8a6df7517c0d4db",
+          "name": "multiplyNumbers",
+          "file": "src/index.ts",
+          "classification": "unsupported",
+          "evidence_digest": "55c8cf518e6f0d2d7b710b030054138f6c7504270462e2c950d86358357924ee"
+        },
+        {
+          "finding_id": "ce1fc0e8f7eb05614b1292759fc05e9ddf76efaa8096f185aed2ec3ee94c500d",
+          "function_identity": "5296361ef6ec4e253215b12d7b86a4b0d8079e7415c9fb3f3eff1f322ab75bca",
+          "name": "normalizeLegacyReference",
+          "file": "src/index.ts",
+          "classification": "candidate_dead",
+          "evidence_digest": "5d8fc13ae7eacae99ad5615bf81b0681eeb6408448b58c5d0e8c1f22fd448e6d"
+        }
+      ],
+      "external_writes": [],
+      "cleanup_result": "verified"
+    }
+  ],
+  "rejected_repositories": [
+    {
+      "canonical_identity": "akshay-hudev/Rufa-Clean",
+      "reason": "permanent_target_role_exclusion",
+      "operations_performed": []
+    },
+    {
+      "canonical_identity": "akshay-hudev/swift-apply-form",
+      "reason": "multiple_root_typescript_configurations_and_no_test_command",
+      "operations_performed": [
+        "prior_inventory_review"
+      ]
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-consumer",
+      "reason": "required_test_gate_unavailable",
+      "operations_performed": [
+        "prior_inventory_review"
+      ]
+    }
+  ],
+  "external_writes": []
+}

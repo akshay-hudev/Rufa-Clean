@@ -133,11 +133,15 @@ fixtures:
     contains_synthetic_secrets: true
     tenant_scope: synthetic-phase-1-tenant
     cleanup_required: true
-  - fixture_id: phase-1-external-rufa-test-lib
+  - fixture_id: phase-1-external-eligible-representative
     fixture_type: external_repository
     description: >-
-      The separately authorized external fixture repository akshay-hudev/rufa-test-lib at an exact immutable commit. The intended finding target is the deliberately private function normalizeLegacyReference. Historical access does not activate this fixture.
-    source_identity: akshay-hudev/rufa-test-lib
+      A phase-relevant eligible repository owned by akshay-hudev, other than
+      Rufa-Clean, selected at an exact immutable commit because it matches the
+      supported single-package npm TypeScript profile. rufa-test-lib may be
+      used only as an optional smoke fixture and must not be the primary
+      evidence.
+    source_identity: dynamically-selected-eligible-akshay-hudev-repository
     authorization_required: true
     tenant_scope: authorized-phase-1-tenant
     cleanup_required: true
@@ -1615,23 +1619,28 @@ test_groups:
           - determinism
           - idempotency
   - group_id: phase-1-external-fixture
-    title: Authorized external vertical-slice fixture
+    title: Authorized representative external vertical slice
     purpose: >-
-      Validate the Phase 1 workflow against the separately authorized external TypeScript fixture without treating historical access as current authorization.
+      Validate the Phase 1 workflow against a bounded representative eligible
+      repository without treating discovery or historical access as analysis,
+      remediation, or publication authority.
     execution_order: 70
     stop_group_on_failure: true
     tests:
       - test_id: p1-external-fixture-analysis
         title: Analyze the authorized external TypeScript fixture
         objective: >-
-          At an explicitly authorized immutable commit, qualify akshay-hudev/rufa-test-lib and reproduce the intended private function normalizeLegacyReference without modifying or publishing the repository.
+          At an explicitly authorized immutable commit, qualify a selected
+          eligible non-Rufa-Clean repository and reproduce an exact supported
+          private-function finding without modifying or publishing it.
         category: external
         requirement: conditional
         execution_mode: hybrid
         activation:
           default_active: false
           all_of:
-            - The current Phase 1 authorization explicitly names akshay-hudev/rufa-test-lib.
+            - The current Phase 1 authorization permits representative testing across eligible akshay-hudev repositories.
+            - Canonical identity is not akshay-hudev/Rufa-Clean.
             - The authorization includes an exact immutable commit.
             - The authorization permits source read and analysis.
           reason: >-
@@ -1645,14 +1654,14 @@ test_groups:
           - external-repository-source-read
           - isolated-runner-execution
         command_ids:
-          - external-fixture.analyze-rufa-test-lib
+          - external-fixture.analyze-selected-eligible-repository
         runner_profile: isolated-external-typescript-runner
         network_profile: provider-read-only
         credential_capabilities:
           - source-provider-read
         external_operations:
           - system_type: source_provider
-            system_identity: github-akshay-hudev-rufa-test-lib
+            system_identity: github-selected-eligible-akshay-hudev-repository
             environment: external-test-fixture
             operation: Resolve the authorized commit and acquire read-only source.
             authorization_required: true
@@ -1661,13 +1670,13 @@ test_groups:
             network_profile: provider-read-only
             cleanup_required: true
         fixture_ids:
-          - phase-1-external-rufa-test-lib
+          - phase-1-external-eligible-representative
         procedure:
           - Validate repository policy and prohibited-repository policy before source access.
           - Resolve the authorized revision to the exact immutable commit.
           - Acquire source read-only without publisher credentials.
           - Qualify the repository under the supported Phase 1 profile.
-          - Inventory and reproduce normalizeLegacyReference exactly.
+          - Inventory and reproduce the selected supported private function exactly.
           - Record unsupported or incomplete scope without modifying source.
         expected_results:
           - result_id: external-repository-identity-exact
@@ -1677,9 +1686,11 @@ test_groups:
             human_verification: Repository identity and commit match the authorization record.
           - result_id: intended-function-reproduced
             description: >-
-              normalizeLegacyReference is reproduced by exact package, module, file, source occurrence, content, evidence, and coverage identity.
+              The selected private function is reproduced by exact package,
+              module, file, source occurrence, content, evidence, and coverage
+              identity.
             status: passed
-            human_verification: The reproduced finding is the deliberate private function in the authorized fixture.
+            human_verification: The reproduced finding is the exact selected private function in the authorized representative.
           - result_id: external-fixture-not-modified
             description: >-
               No source, branch, pull request, release, setting, or other external write is performed.
@@ -1716,19 +1727,23 @@ test_groups:
             secret_free: true
         tags:
           - external
-          - rufa-test-lib
+          - representative-repository
           - read-only
       - test_id: p1-external-fixture-remediation
         title: Verify the external fixture remediation workflow
         objective: >-
-          When separately authorized, run the exact reproduction, baseline, transformation, changed-file validation, post-change verification, and patch-generation workflow for normalizeLegacyReference without publishing it automatically.
+          When separately authorized, run exact reproduction, baseline,
+          transformation, changed-file validation, post-change verification,
+          and patch generation for the selected eligible finding without
+          publishing it automatically.
         category: external
         requirement: conditional
         execution_mode: hybrid
         activation:
           default_active: false
           all_of:
-            - The current authorization explicitly permits remediation of the exact normalizeLegacyReference finding.
+            - The current authorization explicitly permits remediation of the exact selected finding.
+            - Canonical repository identity is not akshay-hudev/Rufa-Clean.
             - A current confirmed_dead disposition exists.
             - A current finding-specific remediation authorization exists.
             - The authorization permits required dependency preparation and tests.
@@ -1745,7 +1760,7 @@ test_groups:
           - dependency-installation
           - remediation-execution
         command_ids:
-          - external-fixture.remediate-rufa-test-lib
+          - external-fixture.remediate-selected-eligible-repository
         runner_profile: isolated-external-remediation-runner
         network_profile: registry-read-only
         credential_capabilities:
@@ -1753,7 +1768,7 @@ test_groups:
           - package-registry-read
         external_operations:
           - system_type: source_provider
-            system_identity: github-akshay-hudev-rufa-test-lib
+            system_identity: github-selected-eligible-akshay-hudev-repository
             environment: external-test-fixture
             operation: Acquire the exact authorized source revision read-only.
             authorization_required: true
@@ -1771,11 +1786,11 @@ test_groups:
             network_profile: registry-read-only
             cleanup_required: true
         fixture_ids:
-          - phase-1-external-rufa-test-lib
+          - phase-1-external-eligible-representative
         procedure:
           - Revalidate repository, commit, finding, disposition, authorization, evidence, and coverage identities.
           - Run required baseline gates in the isolated runner.
-          - Remove exactly normalizeLegacyReference using the approved structured transformation.
+          - Remove exactly the selected private function using the approved structured transformation.
           - Reject every unexpected changed file.
           - Run every required post-change gate.
           - Generate a deterministic local patch.
@@ -2012,7 +2027,7 @@ test_groups:
         activation:
           default_active: false
           all_of:
-            - The current authorization explicitly permits publication to akshay-hudev/rufa-test-lib.
+            - The current authorization explicitly permits publication to the selected eligible non-Rufa-Clean repository.
             - The exact base commit and patch hash are authorized.
             - Every required baseline and post-change gate passed.
             - The finding disposition and remediation authorization remain current.
@@ -2028,7 +2043,7 @@ test_groups:
           - trusted-publisher
         external_operations:
           - system_type: source_provider
-            system_identity: github-akshay-hudev-rufa-test-lib
+            system_identity: github-selected-eligible-akshay-hudev-repository
             environment: external-test-fixture
             operation: Create one non-default branch and one draft pull request for the exact authorized patch.
             authorization_required: true
@@ -2037,7 +2052,7 @@ test_groups:
             network_profile: provider-publish-only
             cleanup_required: true
         fixture_ids:
-          - phase-1-external-rufa-test-lib
+          - phase-1-external-eligible-representative
         expected_results:
           - result_id: one-draft-pull-request-created
             description: >-

@@ -1,50 +1,48 @@
 $schema: ../schemas/phase-authorization-v2.schema.json
 schema_version: 2
-record_type: phase_authorization
+record_type: phase_authorization_request
 
 authorization:
-  id: phase-1-typescript-vertical-slice-20260723-01
+  id: phase-2-qualification-and-configuration-20260723-draft-01
   kind: roadmap_phase
-  phase: phase-1-typescript-vertical-slice
-  status: completed
+  phase: phase-2-qualification-and-configuration
+  status: draft
   objective: >-
-    Implement and validate the bounded Phase 1 TypeScript vertical slice from
-    eligible-repository qualification through human-separated remediation and
-    optional trusted draft publication.
-  granted_by: human-operator
-  granted_at: 2026-07-23T10:53:08Z
-  completed_at: 2026-07-23T11:26:32Z
-  supersedes_authorization_id: phase-0-prerequisite-repair-and-readiness-20260723-01
+    Implement deterministic repository qualification and configuration
+    readiness decisions before analysis, remediation, or publication.
+  granted_by: null
+  granted_at: null
+  completed_at: null
+  supersedes_authorization_id: phase-1-typescript-vertical-slice-20260723-01
   notes:
-    - The human approved the corrected Phase 1 request by replying exactly APPROVED.
+    - This request does not authorize itself.
+    - This is a non-authorizing transition draft and is not ready for approval.
+    - Phase 2 must not begin until a Phase 2 test manifest is created, validated, presented, and explicitly approved with this request.
     - Autonomous debugging of ordinary implementation, test, Docker, PostgreSQL, fixture, and dependency failures is requested.
     - Paid or metered tools and services remain prohibited.
     - The existing codex/phase-0-prerequisite-readiness implementation branch must be preserved and reused for all remaining DCAv2 implementation phases.
-    - No implementation checkpoint commit is authorized by this request.
-    - Phase 1 completed within the bounded TypeScript profile.
-    - Phase 2 remains unauthorized.
-    - No external branch, commit, push, pull request, merge, or publication occurred.
+    - No implementation checkpoint commit is proposed by this draft.
+    - Remediation and publication are outside the default Phase 2 scope.
 
 human_instruction:
   summary: >-
-    Work autonomously only within the narrow Phase 1 TypeScript single-package
-    npm vertical slice and stop at the Phase 1 boundary, preserving the
-    corrected canonical-identity and implementation-branch restrictions.
-  conversation_reference: current-conversation-exact-approval
-  captured_at: 2026-07-23T10:53:08Z
-  exact_scope_confirmed: true
+    Await a complete Phase 2 test manifest and a separate explicit human
+    authorization before implementing qualification and configuration scope.
+  conversation_reference: phase-1-completion-transition-draft
+  captured_at: 2026-07-23
+  exact_scope_confirmed: false
 
 validity:
-  starts_at: 2026-07-23T10:53:08Z
+  starts_at: null
   expires_at: null
   expires_when:
-    - phase_1_acceptance_criteria_complete
+    - phase_2_acceptance_criteria_complete
     - phase_stops_for_human_review
     - human_operator_revokes_authorization
     - repository_scope_changes
     - governing_policy_changes
   maximum_external_operations: 100
-  maximum_external_writes: 1
+  maximum_external_writes: 0
   continuation_requires_new_authorization: true
 
 local_repository:
@@ -136,13 +134,7 @@ external_operations:
     - clone
     - fetch
     - qualification
-    - analysis
     - isolated_build_and_test
-    - branch_creation
-    - commit_creation
-    - push_non_default_branch
-    - pull_request_creation
-    - pull_request_update
   github:
     allowed_owners:
       - akshay-hudev
@@ -183,14 +175,14 @@ external_operations:
         decision_precedence: after_exact_identity_rules
         operations:
           qualification: allowed_when_phase_relevant
-          analysis: allowed_when_phase_relevant
+          analysis: denied
           isolated_build_and_test: allowed_when_phase_relevant
-          branch_creation: finding_bound_remediation_only
-          commit_creation: finding_bound_remediation_only
-          push_non_default_branch: finding_bound_remediation_only
-          pull_request_creation: draft_finding_bound_remediation_only
-          pull_request_update: authorization_created_draft_only
-          publication: draft_finding_bound_remediation_only
+          branch_creation: denied
+          commit_creation: denied
+          push_non_default_branch: denied
+          pull_request_creation: denied
+          pull_request_update: denied
+          publication: denied
           direct_default_branch_commit: denied
           direct_default_branch_push: denied
           force_push: denied
@@ -217,7 +209,7 @@ credentials:
 
 database:
   local_test_database_creation: true
-  disposable_database_prefix: dcav2_phase1_
+  disposable_database_prefix: dcav2_phase2_
   additive_migrations: true
   destructive_migrations: false
   production_database_access: false
@@ -241,37 +233,32 @@ governance:
 
 analysis:
   repository_qualification: true
-  evidence_collection: true
-  machine_classification: true
-  external_repository_execution: true
-  supported_profile:
-    language: TypeScript
-    package_manager: npm
-    repository_shape: single_package
-    symbol_shape: private_function
+  evidence_collection: false
+  machine_classification: false
+  external_repository_execution: false
+  requested_qualification_scope:
+    repository_identity: true
+    immutable_revision: true
+    language_detection: true
+    package_manager_detection: true
+    workspace_detection: true
+    source_test_and_generated_root_detection: true
+    build_system_detection: true
+    toolchain_requirement_detection: true
+    command_discovery_without_execution: true
+    baseline_readiness_evaluation: true
   unsupported_scope_must_be_explicit: true
   failed_analyzer_is_zero_findings: false
 
 remediation:
-  enabled: true
-  eligible_external_repositories_only: true
-  human_disposition_required: true
-  finding_specific_authorization_required: true
-  exact_reproduction_required: true
-  baseline_gates_required: true
-  post_change_gates_required: true
-  deterministic_patch_required: true
-  changed_file_allowlist_required: true
+  enabled: false
+  source_transformation_allowed: false
 
 publication:
-  enabled: true
+  enabled: false
   implementation_repository_identity: akshay-hudev/Rufa-Clean
   implementation_repository_publication: false
-  optional_not_required_for_phase_completion: true
-  meaningful_verified_finding_required: true
-  trusted_publisher_required: true
-  dedicated_non_default_branch_required: true
-  draft_pull_request_only: true
+  external_publication_allowed: false
   direct_default_branch_commit: false
   direct_default_branch_push: false
   merge: false
@@ -279,10 +266,10 @@ publication:
   mark_draft_ready: false
   self_approve_pull_request: false
   force_push: false
-  maximum_draft_pull_requests: 1
+  maximum_draft_pull_requests: 0
 
 testing:
-  phase_test_manifest: codex/tests/phase-1-tests.yaml
+  phase_test_manifest: null
   dependencies_may_be_installed: true
   local_docker_allowed: true
   local_postgresql_allowed: true
@@ -291,6 +278,7 @@ testing:
   rufa_test_lib_primary_evidence: false
   unavailable_required_tests_block_completion: true
   autonomous_failure_correction: true
+  activation_blocker: validated_phase_2_test_manifest_required
 
 reporting:
   execution_state_required: true
@@ -320,12 +308,13 @@ safety:
   no_automatic_phase_transition: true
 
 validation:
-  validated: true
+  validated: false
   validation_errors: []
   validation_warnings:
-    - External publication is optional and permitted only for one fully verified finding.
+    - Phase 2 test manifest has not yet been created or approved.
+    - This draft must not be activated or approved in its current form.
 
 human_approval:
-  approved: true
-  approval_reference: current-conversation-exact-approval
-  approved_at: 2026-07-23T10:53:08Z
+  approved: false
+  approval_reference: null
+  approved_at: null

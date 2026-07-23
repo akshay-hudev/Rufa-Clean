@@ -76,4 +76,37 @@ describe("trusted publisher", () => {
     await expect(publishVerifiedDraft({ store: changed.store, gateway: changed.gateway, attemptId: "attempt-id", baseBranch: "main", actorIdentity: "operator", access: testRepositoryAccess })).rejects.toThrow(/latest human disposition/);
     expect(changed.gateway.createDraftPullRequest).not.toHaveBeenCalled();
   });
+
+  it("records unknown provider state and blocks blind retry until reconciliation", async () => {
+    const uncertain = setup();
+    vi.mocked(uncertain.gateway.createDraftPullRequest).mockRejectedValue(
+      new Error("provider timeout after possible write"),
+    );
+    await expect(publishVerifiedDraft({
+      store: uncertain.store,
+      gateway: uncertain.gateway,
+      attemptId: "attempt-id",
+      baseBranch: "main",
+      actorIdentity: "operator",
+      access: testRepositoryAccess,
+    })).rejects.toThrow(/provider timeout/);
+    expect(uncertain.store.recordPublication).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "unknown_external_state" }),
+    );
+
+    const blocked = setup();
+    vi.mocked(blocked.store.existingPublication).mockResolvedValue({
+      status: "unknown_external_state",
+      prUrl: null,
+    });
+    await expect(publishVerifiedDraft({
+      store: blocked.store,
+      gateway: blocked.gateway,
+      attemptId: "attempt-id",
+      baseBranch: "main",
+      actorIdentity: "operator",
+      access: testRepositoryAccess,
+    })).rejects.toThrow(/reconciliation required/);
+    expect(blocked.gateway.createDraftPullRequest).not.toHaveBeenCalled();
+  });
 });

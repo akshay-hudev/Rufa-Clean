@@ -13,6 +13,9 @@ function finding(): FindingBundle {
     packageJsonSha256: "1".repeat(64),
     packageLockSha256: "2".repeat(64),
     tsconfigSha256: "3".repeat(64),
+    packageIdentity: "6".repeat(64),
+    moduleIdentity: "7".repeat(64),
+    functionIdentity: "8".repeat(64),
     occurrence: {
       filePath: "src/dead.ts", name: "dead", kind: "function", shape: "function_declaration",
       exported: false, lineStart: 1, columnStart: 1, lineEnd: 1, columnEnd: 20,

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DockerIsolatedRunner } from "../security/docker-runner";
 import { testRepositoryAccess } from "../test-support/repository-access";
+import { writeOfflineTypeScriptPackage } from "../test-support/offline-typescript";
 import { runIsolatedAnalysis } from "./isolated-analysis";
 import { publishVerifiedDraft, type DraftPullRequestGateway } from "./publisher";
 import { remediateInIsolation } from "./remediate";
@@ -26,8 +27,7 @@ beforeAll(async () => {
       test: "node -e \"process.exit(0)\"",
     },
   };
-  await writeFile(join(root, "package.json"), JSON.stringify(manifest));
-  await writeFile(join(root, "package-lock.json"), JSON.stringify({ name: manifest.name, version: manifest.version, lockfileVersion: 3, requires: true, packages: { "": { name: manifest.name, version: manifest.version } } }));
+  await writeOfflineTypeScriptPackage(root, manifest);
   await writeFile(join(root, "tsconfig.json"), JSON.stringify({ compilerOptions: { target: "ES2022", module: "commonjs", strict: true }, include: ["src/**/*.ts"] }));
   await writeFile(join(root, "src/dead.ts"), "function workflowDead() { return 1; }\nexport const retained = 1;\n");
 });
@@ -108,7 +108,23 @@ describeWorkflow("standalone milestone workflow", () => {
     expect(publishedInput.body).toContain(finding!.evidenceDigest);
     expect(publishedInput.body).not.toMatch(/auto.?merge/i);
     const audit = await store.auditChain(accountScopeId);
-    expect(audit).toHaveLength(5);
+    expect(audit).toHaveLength(13);
+    expect((audit as Array<{ event_type: string }>).map((event) => event.event_type))
+      .toEqual(expect.arrayContaining([
+        "analysis_recorded",
+        "evidence_recorded",
+        "coverage_recorded",
+        "classification_recorded",
+        "human_disposition_recorded",
+        "remediation_authorization_recorded",
+        "finding_reproduced",
+        "baseline_verification_recorded",
+        "transformation_recorded",
+        "post_change_verification_recorded",
+        "patch_recorded",
+        "remediation_attempt_recorded",
+        "draft_pr_publication_recorded",
+      ]));
     expect(await store.getRemediationAttempt(attemptId)).toEqual(expect.objectContaining({
       status: "verified",
       publication_status: "draft_pr_created",

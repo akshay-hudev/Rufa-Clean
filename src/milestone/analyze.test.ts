@@ -63,6 +63,9 @@ describe("milestone TypeScript analyzer", () => {
     expect(first.findings[0]?.coverage.status).toBe("complete_for_supported_scope");
     expect(second.findings[0]?.evidenceDigest).toBe(first.findings[0]?.evidenceDigest);
     expect(second.findings[0]?.findingId).toBe(first.findings[0]?.findingId);
+    expect(second.findings[0]?.functionIdentity).toBe(first.findings[0]?.functionIdentity);
+    expect(first.findings[0]?.packageIdentity).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.findings[0]?.moduleIdentity).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("blocks direct calls and function-value reads", async () => {
@@ -119,6 +122,7 @@ describe("milestone TypeScript analyzer", () => {
     });
     const duplicate = await analyze(duplicateRoot, [document("src/a.ts", "local 0"), document("src/b.ts", "local 0")]);
     expect(duplicate.findings.every((finding) => finding.classification === "conflicting")).toBe(true);
+    expect(new Set(duplicate.findings.map((finding) => finding.functionIdentity)).size).toBe(2);
 
     const textRoot = await fixture({ "src/text.ts": "function maybeDead() {}\nconst dynamic = 'maybeDead';\n" });
     const text = await analyze(textRoot, [document("src/text.ts", "local 0")]);

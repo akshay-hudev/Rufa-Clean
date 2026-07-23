@@ -20,6 +20,8 @@ authorization:
     - Phase 1 must not begin until the human replies exactly APPROVED.
     - Autonomous debugging of ordinary implementation, test, Docker, PostgreSQL, fixture, and dependency failures is requested.
     - Paid or metered tools and services remain prohibited.
+    - The existing codex/phase-0-prerequisite-readiness implementation branch must be preserved and reused for all remaining DCAv2 implementation phases.
+    - No implementation checkpoint commit is authorized by this request.
 
 human_instruction:
   summary: >-
@@ -44,9 +46,11 @@ validity:
   continuation_requires_new_authorization: true
 
 local_repository:
-  identity: current-dcav2-worktree
+  identity: akshay-hudev/Rufa-Clean
   path: /Users/apple/Desktop/Akshay@goAI/DCAv2
   repository_role: implementation_repository
+  required_branch: codex/phase-0-prerequisite-readiness
+  branch_reuse_policy: preserve_and_continue
   allowed_paths:
     - .
   modification_allowlist:
@@ -73,18 +77,25 @@ local_repository:
     inspect_git_history: true
     modify_tracked_files: true
     create_files: true
-    create_local_branch: true
-    create_local_commits: true
+    create_local_branch: false
+    create_local_commits: false
     run_local_tests: true
     run_containerized_tests: true
     autonomous_debugging: true
   prohibited_operations:
+    switch_to_new_implementation_branch: true
+    delete_required_branch: true
+    reset_required_branch: true
+    abandon_required_branch: true
     discard_preexisting_changes: true
     destructive_git_clean: true
     hard_reset: true
     rewrite_shared_history: true
     force_push: true
+    create_implementation_checkpoint_commit: true
     push_implementation_repository: true
+    create_implementation_pull_request: true
+    merge_implementation_repository: true
 
 repository_access:
   policy_file: codex/access/github-repository-policy.yaml
@@ -95,6 +106,14 @@ repository_access:
     local_inspection: allowed
     local_modification: allowed
     local_build_and_test: allowed
+    required_local_branch: codex/phase-0-prerequisite-readiness
+    local_commit_creation: denied
+    remote_branch_creation: denied
+    remote_commit_creation: denied
+    remote_push: denied
+    pull_request_creation: denied
+    pull_request_update: denied
+    publication: denied
   target_role_exclusions:
     - analysis_target
     - test_fixture
@@ -127,6 +146,55 @@ external_operations:
       - akshay-hudev
     repository_selection:
       mode: all_owned_visible_repositories
+    canonical_repository_rules:
+      - canonical_repository_identity: akshay-hudev/Rufa-Clean
+        match: exact_case_normalized
+        repository_role: implementation_repository
+        decision_precedence: identity_specific_deny_over_account_permission
+        operations:
+          branch_creation: denied
+          commit_creation: denied
+          push_non_default_branch: denied
+          pull_request_creation: denied
+          pull_request_update: denied
+          publication: denied
+          direct_default_branch_commit: denied
+          direct_default_branch_push: denied
+          force_push: denied
+          merge: denied
+          enable_auto_merge: denied
+          automatic_ready_for_review: denied
+        target_roles:
+          qualification_target: permanently_denied
+          analysis_target: permanently_denied
+          test_fixture: permanently_denied
+          finding_target: permanently_denied
+          remediation_target: permanently_denied
+          publication_target: permanently_denied
+          cross_repository_participant: permanently_denied
+          runtime_evidence_target: permanently_denied
+          contract_or_microservice_target: permanently_denied
+          scale_test_subject: permanently_denied
+      - canonical_repository_identity: akshay-hudev/*
+        match: owner_scope_excluding_explicit_identity_rules
+        repository_role: eligible_phase_relevant_repository
+        decision_precedence: after_exact_identity_rules
+        operations:
+          qualification: allowed_when_phase_relevant
+          analysis: allowed_when_phase_relevant
+          isolated_build_and_test: allowed_when_phase_relevant
+          branch_creation: finding_bound_remediation_only
+          commit_creation: finding_bound_remediation_only
+          push_non_default_branch: finding_bound_remediation_only
+          pull_request_creation: draft_finding_bound_remediation_only
+          pull_request_update: authorization_created_draft_only
+          publication: draft_finding_bound_remediation_only
+          direct_default_branch_commit: denied
+          direct_default_branch_push: denied
+          force_push: denied
+          merge: denied
+          enable_auto_merge: denied
+          automatic_ready_for_review: denied
     representative_sample:
       preferred_size: 3_to_5
       rufa_test_lib_role: optional_smoke_only
@@ -195,11 +263,14 @@ remediation:
 
 publication:
   enabled: true
+  implementation_repository_identity: akshay-hudev/Rufa-Clean
+  implementation_repository_publication: false
   optional_not_required_for_phase_completion: true
   meaningful_verified_finding_required: true
   trusted_publisher_required: true
   dedicated_non_default_branch_required: true
   draft_pull_request_only: true
+  direct_default_branch_commit: false
   direct_default_branch_push: false
   merge: false
   enable_auto_merge: false

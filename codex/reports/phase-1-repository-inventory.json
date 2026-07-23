@@ -1,0 +1,526 @@
+{
+  "schema_version": 1,
+  "requested_role": "analysis_target",
+  "operations": [
+    "repository_discovery",
+    "qualification",
+    "metadata_read"
+  ],
+  "repositories": [
+    {
+      "canonical_identity": "akshay-hudev/SlotMachineSimulator",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Python",
+      "language_bytes": {
+        "Python": 4435
+      },
+      "size_kib": 6,
+      "last_activity": "2024-07-19T08:48:04Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "0ea10bbf68733d8e50e879811b8751d87ccb3ef5",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/CollegeWorkshop",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "HTML",
+      "language_bytes": {
+        "HTML": 706,
+        "Python": 423
+      },
+      "size_kib": 3,
+      "last_activity": "2024-10-26T07:36:46Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "5341e6d2c334190b692e651d693b404aa820c3dc",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/akshay-portfolio",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "HTML",
+      "language_bytes": {
+        "HTML": 3885,
+        "CSS": 920,
+        "JavaScript": 257
+      },
+      "size_kib": 113,
+      "last_activity": "2025-11-06T09:12:55Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "5ef878f3e159e9ea1a7809a1c2adfc877beff73f",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/swift-apply-form",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 178972,
+        "CSS": 3306,
+        "HTML": 1019,
+        "JavaScript": 846
+      },
+      "size_kib": 177,
+      "last_activity": "2025-11-14T13:14:46Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "react",
+        "typescript"
+      ],
+      "tests": null,
+      "build": "vite build",
+      "typecheck": null,
+      "immutable_revision": "51e9a90f5b586830af2dd173b4cc3af0e5719fef",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/TimeAudit",
+      "default_branch": "master",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Kotlin",
+      "language_bytes": {
+        "Kotlin": 12945
+      },
+      "size_kib": 93,
+      "last_activity": "2026-01-27T17:58:30Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "b67029d353bbaf6f97dda8a2ceafbf2762837214",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/Network-Monitor",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Python",
+      "language_bytes": {
+        "Python": 60344
+      },
+      "size_kib": 957,
+      "last_activity": "2026-02-18T15:50:29Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "87d957eef9f3359c2f36977e721267bc065fbc11",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/NutriLens",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Python",
+      "language_bytes": {
+        "Python": 129679,
+        "TeX": 50632,
+        "HTML": 33270,
+        "Jupyter Notebook": 12101,
+        "Shell": 2982
+      },
+      "size_kib": 1210,
+      "last_activity": "2026-05-08T09:56:18Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "1f68446aea1887f0026ff5a4e46e9f1e68f672bf",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/career-flow",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Python",
+      "language_bytes": {
+        "Python": 99998,
+        "JavaScript": 68600,
+        "CSS": 934,
+        "Mako": 592,
+        "Dockerfile": 466,
+        "HTML": 319
+      },
+      "size_kib": 112,
+      "last_activity": "2026-07-17T06:09:28Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "monorepo_or_multi_package",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "11807be6d65d2a68e5de6d6ec99969cd7b729d05",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/VahanConnect",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "JavaScript",
+      "language_bytes": {
+        "JavaScript": 73959,
+        "CSS": 30539,
+        "HTML": 718
+      },
+      "size_kib": 747,
+      "last_activity": "2026-03-17T16:28:25Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "monorepo_or_multi_package",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "5e9e06e270ff2944c7583273827486cf3d7171a4",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/Fraud-Guard",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Python",
+      "language_bytes": {
+        "Python": 599886,
+        "TeX": 28472,
+        "Jupyter Notebook": 19685,
+        "Dockerfile": 5114
+      },
+      "size_kib": 3585,
+      "last_activity": "2026-07-16T17:46:36Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "0d10da8c87a122c338791c7539b471943361d83e",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/BlockSeat",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "JavaScript",
+      "language_bytes": {
+        "JavaScript": 40970,
+        "Solidity": 3823,
+        "HTML": 348
+      },
+      "size_kib": 131966,
+      "last_activity": "2026-04-09T16:36:13Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "monorepo_or_multi_package",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "9276872ba29e145ebb81612d15e11011861a298f",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/PDM",
+      "default_branch": "main",
+      "visibility": "private",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 155314,
+        "CSS": 4935,
+        "JavaScript": 81
+      },
+      "size_kib": 253,
+      "last_activity": "2026-07-17T06:46:00Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "monorepo_or_multi_package",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "5aaf43181bc67dc4bd9e3a0111ceffe69f9de6ab",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-lib",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "JavaScript",
+      "language_bytes": {
+        "JavaScript": 1758,
+        "TypeScript": 364
+      },
+      "size_kib": 7,
+      "last_activity": "2026-07-21T18:03:26Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "typescript"
+      ],
+      "tests": "npm run build && node --test test/*.test.js",
+      "build": "npm run clean && tsc",
+      "typecheck": "tsc --noEmit",
+      "immutable_revision": "a1bdd81ad38676b78760309c219d541daec47d77",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-consumer",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 232
+      },
+      "size_kib": 9,
+      "last_activity": "2026-07-14T10:48:33Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "typescript"
+      ],
+      "tests": null,
+      "build": "tsc",
+      "typecheck": null,
+      "immutable_revision": "e85f11a783f69dfb411d643707c7012088211df6",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/mcp-use-test",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 5031892,
+        "Python": 1026782,
+        "JavaScript": 245562,
+        "Shell": 41657,
+        "HTML": 23907,
+        "CSS": 12980,
+        "Go Template": 4070,
+        "Dockerfile": 615
+      },
+      "size_kib": 115182,
+      "last_activity": "2026-07-15T02:59:54Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "3b06a6896f61eb1f0578e45b962d90fa2f571cf8",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/microservices-demo-test",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "Go",
+      "language_bytes": {
+        "Go": 112797,
+        "Python": 108851,
+        "HTML": 39126,
+        "C#": 31629,
+        "Shell": 25614,
+        "Dockerfile": 17920,
+        "CSS": 17857,
+        "JavaScript": 15895,
+        "Java": 11755,
+        "HCL": 7836
+      },
+      "size_kib": 9837,
+      "last_activity": "2026-07-14T07:33:48Z",
+      "package_manager": null,
+      "lockfile": null,
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [],
+      "tests": null,
+      "build": null,
+      "typecheck": null,
+      "immutable_revision": "9ab08b076f26b39d8a9702c699188d75619df14b",
+      "suitability": "rejected_or_requires_manual_review"
+    },
+    {
+      "canonical_identity": "akshay-hudev/query-test",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 4420457,
+        "JavaScript": 108245,
+        "Svelte": 35333,
+        "Vue": 3013,
+        "HTML": 1979,
+        "CSS": 80
+      },
+      "size_kib": 18891,
+      "last_activity": "2026-07-14T07:37:20Z",
+      "package_manager": "pnpm",
+      "lockfile": "pnpm-lock.yaml",
+      "structure": "monorepo_or_multi_package",
+      "framework_indicators": [
+        "react",
+        "vitest",
+        "typescript"
+      ],
+      "tests": "pnpm run test:ci",
+      "build": "nx affected --target=build --exclude=examples/** --exclude=integrations/**",
+      "typecheck": null,
+      "immutable_revision": "151cd64dd1ba59e330b31806fe8570f207fd6d8d",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/reexport-chain",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 171
+      },
+      "size_kib": 2,
+      "last_activity": "2026-07-14T10:18:22Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "typescript"
+      ],
+      "tests": null,
+      "build": "tsc",
+      "typecheck": null,
+      "immutable_revision": "513c328c629b3492b5d1a2ca86cdb64811a9e8a0",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/barrel-file",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 498
+      },
+      "size_kib": 3,
+      "last_activity": "2026-07-14T10:26:27Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "typescript"
+      ],
+      "tests": null,
+      "build": "tsc",
+      "typecheck": null,
+      "immutable_revision": "c2016855f30998d1c33819aea23eed0a086c3007",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/test-only-usage",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 260
+      },
+      "size_kib": 3,
+      "last_activity": "2026-07-14T10:34:42Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "typescript"
+      ],
+      "tests": "node dist/helper.test.js",
+      "build": "tsc",
+      "typecheck": null,
+      "immutable_revision": "91d258b9b6c852e923b0021e9afe8222672caba4",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    },
+    {
+      "canonical_identity": "akshay-hudev/rufa-test-middleware",
+      "default_branch": "main",
+      "visibility": "public",
+      "archived": false,
+      "primary_language": "TypeScript",
+      "language_bytes": {
+        "TypeScript": 48
+      },
+      "size_kib": 1,
+      "last_activity": "2026-07-14T10:47:54Z",
+      "package_manager": "npm",
+      "lockfile": "package-lock.json",
+      "structure": "single_package_or_unknown",
+      "framework_indicators": [
+        "typescript"
+      ],
+      "tests": null,
+      "build": "tsc",
+      "typecheck": null,
+      "immutable_revision": "c8281be724b41395cf29ba83031930043502c661",
+      "suitability": "eligible_for_bounded_isolated_evaluation"
+    }
+  ],
+  "rejected": [
+    {
+      "canonical_identity": "akshay-hudev/Rufa-Clean",
+      "reason": "permanent_role_exclusion",
+      "operations_performed": [
+        "account_repository_discovery"
+      ]
+    }
+  ]
+}

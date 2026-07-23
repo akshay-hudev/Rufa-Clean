@@ -16,6 +16,8 @@ export function defaultMigrations(): MigrationDefinition[] {
     { version: "0001_legacy_baseline", path: join(__dirname, "../../src/db/schema.sql") },
     { version: "0002_milestone_ledger", path: join(__dirname, "../../src/db/migrations/0002_milestone_ledger.sql") },
     { version: "0003_publication_attempts", path: join(__dirname, "../../src/db/migrations/0003_publication_attempts.sql") },
+    { version: "0004_publication_reconciliation", path: join(__dirname, "../../src/db/migrations/0004_publication_reconciliation.sql") },
+    { version: "0005_phase1_qualification", path: join(__dirname, "../../src/db/migrations/0005_phase1_qualification.sql") },
   ];
 }
 

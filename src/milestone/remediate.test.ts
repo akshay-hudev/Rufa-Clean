@@ -37,6 +37,7 @@ async function setup(): Promise<{ root: string; finding: FindingBundle; changed:
     schemaVersion: "1", findingId: "f".repeat(64), accountScopeId: "account",
     repository: { provider: "github", owner: "owner", name: "repo" }, commitSha: "a".repeat(40),
     packageJsonSha256: "1".repeat(64), packageLockSha256: "2".repeat(64), tsconfigSha256: "3".repeat(64),
+    packageIdentity: "6".repeat(64), moduleIdentity: "7".repeat(64), functionIdentity: "8".repeat(64),
     occurrence: {
       filePath: "src/dead.ts", name: "dead", kind: "function", shape: "function_declaration", exported: false,
       lineStart: 1, columnStart: 1, lineEnd: 1, columnEnd: 30, byteStart: 0, byteEnd: original.length - 1,

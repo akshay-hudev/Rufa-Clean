@@ -135,7 +135,10 @@ const security = YAML.parse(
   readFileSync(join(root, "codex/tests/security-control-matrix.yaml"), "utf8"),
   { uniqueKeys: true },
 );
-const phase0CapabilityIds = new Set(phase0.capability_ids);
+const requiredCapabilityIds = new Set([
+  ...phase0.capability_ids,
+  ...phase1.capability_ids,
+]);
 const matrixCapabilityIds = new Set(matrix.capabilities.map((capability) => capability.capability_id));
 const testIds = new Set(
   [phase0, phase1].flatMap((manifest) =>
@@ -144,10 +147,13 @@ const testIds = new Set(
 );
 const controlIds = new Set(security.controls.map((control) => control.control_id));
 
-for (const capabilityId of phase0CapabilityIds) {
+for (const capabilityId of requiredCapabilityIds) {
   if (!matrixCapabilityIds.has(capabilityId)) {
-    errors.push(`capability-matrix: missing Phase 0 capability ${capabilityId}`);
+    errors.push(`capability-matrix: missing declared capability ${capabilityId}`);
   }
+}
+if (matrix.matrix_summary?.total_capabilities !== matrix.capabilities.length) {
+  errors.push("capability-matrix: summary total does not match capability count");
 }
 for (const capability of matrix.capabilities) {
   for (const controlId of capability.security_control_ids) {

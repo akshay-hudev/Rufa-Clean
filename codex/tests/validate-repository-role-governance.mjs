@@ -134,10 +134,79 @@ validateDocument(
   "codex/authorizations/phase-0-reconciliation-authorization-request.yaml",
   "codex/schemas/phase-authorization-v2.schema.json",
 );
-validateDocument(
+const phase1AuthorizationRequest = validateDocument(
   "codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml",
   "codex/schemas/phase-authorization-v2.schema.json",
 );
+validateDocument(
+  "codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml",
+  "codex/schemas/phase-authorization-v2.schema.json",
+);
+
+const phase1LocalRepository = phase1AuthorizationRequest.local_repository;
+if (phase1LocalRepository?.identity !== "akshay-hudev/Rufa-Clean") {
+  failures.push("phase 1 request: local repository must use canonical Rufa-Clean identity");
+}
+if (
+  phase1LocalRepository?.required_branch !==
+  "codex/phase-0-prerequisite-readiness"
+) {
+  failures.push("phase 1 request: required implementation branch is not preserved");
+}
+for (const operation of ["create_local_branch", "create_local_commits"]) {
+  if (phase1LocalRepository?.operations?.[operation] !== false) {
+    failures.push(`phase 1 request: ${operation} must be denied`);
+  }
+}
+
+const phase1RufaRule =
+  phase1AuthorizationRequest.external_operations?.github?.canonical_repository_rules?.find(
+    (entry) =>
+      entry.canonical_repository_identity === "akshay-hudev/Rufa-Clean" &&
+      entry.match === "exact_case_normalized",
+  );
+if (!phase1RufaRule) {
+  failures.push("phase 1 request: missing exact canonical Rufa-Clean operation rule");
+} else {
+  for (const operation of [
+    "branch_creation",
+    "commit_creation",
+    "push_non_default_branch",
+    "pull_request_creation",
+    "pull_request_update",
+    "publication",
+    "direct_default_branch_commit",
+    "direct_default_branch_push",
+    "force_push",
+    "merge",
+    "enable_auto_merge",
+    "automatic_ready_for_review",
+  ]) {
+    if (phase1RufaRule.operations?.[operation] !== "denied") {
+      failures.push(
+        `phase 1 request: Rufa-Clean ${operation} must be identity-denied`,
+      );
+    }
+  }
+  for (const role of [
+    "qualification_target",
+    "analysis_target",
+    "test_fixture",
+    "finding_target",
+    "remediation_target",
+    "publication_target",
+    "cross_repository_participant",
+    "runtime_evidence_target",
+    "contract_or_microservice_target",
+    "scale_test_subject",
+  ]) {
+    if (phase1RufaRule.target_roles?.[role] !== "permanently_denied") {
+      failures.push(
+        `phase 1 request: Rufa-Clean target role ${role} must remain permanently denied`,
+      );
+    }
+  }
+}
 
 const phase0 = parseYaml("codex/tests/phase-0-tests.yaml");
 const phase1 = parseYaml("codex/tests/phase-1-tests.yaml");
@@ -341,6 +410,10 @@ for (const [documentPath, schemaPath] of [
   ],
   [
     "codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml",
+    "codex/schemas/phase-authorization-v2.schema.json",
+  ],
+  [
+    "codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml",
     "codex/schemas/phase-authorization-v2.schema.json",
   ],
 ]) {

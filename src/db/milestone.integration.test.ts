@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { CanonicalAnalysisResult, FindingBundle } from "../milestone/types";
+import type { TypeScriptQualification } from "../milestone/qualify";
 
 const databaseUrl = process.env.DCA_TEST_DATABASE_URL;
 const describeDatabase = databaseUrl ? describe : describe.skip;
@@ -11,6 +12,7 @@ function finding(): FindingBundle {
     schemaVersion: "1", findingId: "f".repeat(64), accountScopeId: "db-integration",
     repository: { provider: "github", owner: "fixture", name: "ledger" }, commitSha: "a".repeat(40),
     packageJsonSha256: "1".repeat(64), packageLockSha256: "2".repeat(64), tsconfigSha256: "3".repeat(64),
+    packageIdentity: "6".repeat(64), moduleIdentity: "7".repeat(64), functionIdentity: "8".repeat(64),
     occurrence: {
       filePath: "src/dead.ts", name: "dead", kind: "function", shape: "function_declaration", exported: false,
       lineStart: 1, columnStart: 1, lineEnd: 1, columnEnd: 20, byteStart: 0, byteEnd: 20,
@@ -37,9 +39,48 @@ describeDatabase("PostgreSQL milestone ledger", () => {
     await migrate();
     await migrate();
     const versions = await pool.query<{ version: string }>("SELECT version FROM schema_migrations ORDER BY version");
-    expect(versions.rows.map((row) => row.version)).toEqual(["0001_legacy_baseline", "0002_milestone_ledger", "0003_publication_attempts"]);
+    expect(versions.rows.map((row) => row.version)).toEqual([
+      "0001_legacy_baseline",
+      "0002_milestone_ledger",
+      "0003_publication_attempts",
+      "0004_publication_reconciliation",
+      "0005_phase1_qualification",
+    ]);
     const store = new MilestoneStore("db-integration", pool);
     await store.ensureAccountScope("db-integration", "DB Integration");
+    const qualification: TypeScriptQualification = {
+      schemaVersion: "1",
+      status: "ready",
+      repository: { provider: "github", owner: "fixture", name: "ledger" },
+      commitSha: "a".repeat(40),
+      packageName: "fixture",
+      packageVersion: "1.0.0",
+      packageIdentity: "6".repeat(64),
+      sourceRoot: ".",
+      packageJsonSha256: "1".repeat(64),
+      packageLockSha256: "2".repeat(64),
+      tsconfigSha256: "3".repeat(64),
+      toolchain: {
+        node: { version: "22.18.0", executable: "/usr/local/bin/node", source: "approved_runner" },
+        npm: { version: "10.9.3", executable: "/usr/local/bin/npm", source: "approved_runner" },
+        typescript: {
+          version: "5.9.3",
+          executable: "/workspace/node_modules/.bin/tsc",
+          source: "project_local",
+        },
+      },
+      commands: {
+        install: ["npm", "ci", "--ignore-scripts", "--include=dev"],
+        typecheck: "/workspace/node_modules/.bin/tsc --noEmit -p tsconfig.json",
+        build: "npm run build",
+        test: "npm test",
+      },
+      modules: [],
+      reasons: [],
+      qualificationDigest: "9".repeat(64),
+    };
+    const qualificationId = await store.recordQualification(qualification, "qualifier");
+    expect(await store.recordQualification(qualification, "qualifier")).toBe(qualificationId);
     const value = finding();
     const analysis: CanonicalAnalysisResult = {
       schemaVersion: "1", accountScopeId: value.accountScopeId, repository: value.repository,
@@ -82,6 +123,10 @@ describeDatabase("PostgreSQL milestone ledger", () => {
     expect(publicationCount.rows[0]?.count).toBe("1");
 
     await expect(pool.query("UPDATE milestone_findings SET classification = 'failed' WHERE finding_id = $1", [value.findingId])).rejects.toThrow(/immutable milestone ledger/);
+    await expect(pool.query(
+      "UPDATE qualification_runs SET status = 'blocked' WHERE id = $1",
+      [qualificationId],
+    )).rejects.toThrow(/immutable milestone ledger/);
     const reviewCount = await pool.query<{ count: string }>("SELECT count(*)::text AS count FROM human_review_decisions WHERE finding_id = $1", [value.findingId]);
     expect(reviewCount.rows[0]?.count).toBe("10");
     await store.recordAuthorization({ findingId: value.findingId, decision: "revoked", actorIdentity: "authorizer", rationale: "integration revocation" });

@@ -131,5 +131,49 @@ describeDocker("isolated remediation integration", () => {
     )).toBe(true);
     expect(result.patch).toContain("function removableDead");
     expect(result.changedFiles).toEqual(["src/dead.ts"]);
+
+    const repeated = await remediateInIsolation({
+      session: await new DockerIsolatedRunner(image!).createSession(root),
+      sourcePath: root,
+      finding: finding!,
+      authorization: { ...binding, id: "integration-authorization", decision: "approved_for_remediation" },
+      freshIdentity: {
+        repositoryProvider: "github", repositoryOwner: repository.owner, repositoryName: repository.name,
+        commitSha, filePath: finding!.occurrence.filePath,
+        sourceSha256: finding!.occurrence.sourceSha256, evidenceDigest: finding!.evidenceDigest,
+        policyVersion: finding!.policyVersion, exactOccurrence: finding!.occurrence,
+      },
+      access: testRepositoryAccess,
+    });
+    expect(repeated.status, repeated.failure).toBe("verified");
+    expect(repeated.patchSha256).toBe(result.patchSha256);
+
+    const idempotencySession = await new DockerIsolatedRunner(image!).createSession(root);
+    try {
+      const install = await idempotencySession.runInstall("npm", [
+        "ci", "--ignore-scripts", "--include=dev", "--no-audit", "--no-fund",
+      ]);
+      expect(install.exitCode).toBe(0);
+      await idempotencySession.sealNetwork();
+      const command = [
+        "/opt/dcav2/scripts/piranha-remove-simple.py",
+        "--file", "/workspace/src/dead.ts",
+        "--symbol", "removableDead",
+        "--language", "typescript",
+        "--shape", "top_level_function",
+      ];
+      const firstApplication = await idempotencySession.run(
+        "/opt/piranha/bin/python",
+        command,
+      );
+      const secondApplication = await idempotencySession.run(
+        "/opt/piranha/bin/python",
+        command,
+      );
+      expect(JSON.parse(firstApplication.stdout.trim()).rewrite_count).toBe(1);
+      expect(JSON.parse(secondApplication.stdout.trim()).rewrite_count).toBe(0);
+    } finally {
+      await idempotencySession.dispose();
+    }
   }, 120_000);
 });

@@ -8,6 +8,7 @@ import {
 } from "./audit";
 import { canonicalJson, digestCanonical } from "./canonical";
 import { assertDispositionAllowed, bindingForFinding, type BoundAuthorization } from "./policy";
+import type { TypeScriptQualification } from "./qualify";
 import type {
   AuthorizationDecision,
   CanonicalAnalysisResult,
@@ -153,6 +154,77 @@ export class MilestoneStore {
     );
   }
 
+  async recordQualification(
+    qualification: TypeScriptQualification,
+    actorIdentity: string,
+  ): Promise<string> {
+    const client = await this.database.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext($1))",
+        [`${this.accountScopeId}:${qualification.qualificationDigest}`],
+      );
+      const prior = await client.query<{ id: string }>(
+        `SELECT id FROM qualification_runs
+          WHERE account_scope_id = $1 AND qualification_digest = $2`,
+        [this.accountScopeId, qualification.qualificationDigest],
+      );
+      const inserted = prior.rows[0]
+        ? prior
+        : await client.query<{ id: string }>(
+        `INSERT INTO qualification_runs (
+           account_scope_id, repository_provider, repository_owner,
+           repository_name, commit_sha, status, qualification_digest,
+           qualification_bundle, actor_identity
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)
+         RETURNING id`,
+        [
+          this.accountScopeId,
+          qualification.repository.provider,
+          qualification.repository.owner,
+          qualification.repository.name,
+          qualification.commitSha,
+          qualification.status,
+          qualification.qualificationDigest,
+          canonicalJson(qualification),
+          requireText(actorIdentity, "actor identity"),
+        ],
+        );
+      const id = inserted.rows[0]?.id;
+      if (!id) {
+        throw new Error("Qualification insert returned no id");
+      }
+      const existingAudit = await client.query(
+        `SELECT 1 FROM milestone_audit_events
+          WHERE account_scope_id = $1
+            AND event_type = 'qualification_recorded'
+            AND subject_id = $2`,
+        [this.accountScopeId, id],
+      );
+      if (!existingAudit.rows[0]) {
+        await appendAudit(client, {
+          accountScopeId: this.accountScopeId,
+          eventType: "qualification_recorded",
+          subjectType: "qualification_run",
+          subjectId: id,
+          payload: {
+            status: qualification.status,
+            qualificationDigest: qualification.qualificationDigest,
+          },
+          actorIdentity,
+        });
+      }
+      await client.query("COMMIT");
+      return id;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async recordAnalysis(
     result: CanonicalAnalysisResult,
     actorIdentity: string,
@@ -226,6 +298,32 @@ export class MilestoneStore {
         payload: { resultSha256: digestCanonical(result), findings: result.findings.map((finding) => finding.findingId) },
         actorIdentity: requireText(actorIdentity, "actor identity"),
       });
+      for (const [eventType, payload] of [
+        ["evidence_recorded", {
+          analyzers: result.analyzerRuns.map((analyzer) => analyzer.analyzer),
+          findingEvidenceDigests: result.findings.map((finding) => finding.evidenceDigest),
+        }],
+        ["coverage_recorded", {
+          status: result.coverage.status,
+          analyzedFiles: result.coverage.analyzedFiles,
+          missingScipFiles: result.coverage.missingScipFiles,
+        }],
+        ["classification_recorded", {
+          findings: result.findings.map((finding) => ({
+            findingId: finding.findingId,
+            classification: finding.classification,
+          })),
+        }],
+      ] as const) {
+        await appendAudit(client, {
+          accountScopeId: result.accountScopeId,
+          eventType,
+          subjectType: "analysis_run",
+          subjectId: runId,
+          payload,
+          actorIdentity: requireText(actorIdentity, "actor identity"),
+        });
+      }
       await client.query("COMMIT");
       return runId;
     } catch (error) {
@@ -613,6 +711,36 @@ export class MilestoneStore {
         payload: { findingId: result.findingId, authorizationId: result.authorizationId, status: result.status, patchSha256: result.patchSha256 ?? null },
         actorIdentity: requireText(actorIdentity, "actor identity"),
       });
+      const remediationEvents: Array<[string, unknown]> = [
+        ["finding_reproduced", {
+          findingId: result.findingId,
+          baseCommitSha: result.baseCommitSha,
+        }],
+        ["baseline_verification_recorded", {
+          status: result.baseline.status,
+        }],
+        ["transformation_recorded", {
+          status: result.status,
+          generator: result.generator,
+        }],
+        ["post_change_verification_recorded", {
+          status: result.postChange?.status ?? "not_run",
+        }],
+        ["patch_recorded", {
+          patchSha256: result.patchSha256 ?? null,
+          changedFiles: result.changedFiles ?? [],
+        }],
+      ];
+      for (const [eventType, payload] of remediationEvents) {
+        await appendAudit(client, {
+          accountScopeId: finding.accountScopeId,
+          eventType,
+          subjectType: "remediation_attempt",
+          subjectId: attemptId,
+          payload,
+          actorIdentity: requireText(actorIdentity, "actor identity"),
+        });
+      }
       await client.query("COMMIT");
       return attemptId;
     } catch (error) {
@@ -760,7 +888,7 @@ export class MilestoneStore {
 
   async recordPublication(input: {
     attemptId: string;
-    status: "draft_pr_created" | "failed";
+    status: "draft_pr_created" | "failed" | "unknown_external_state";
     owner: string;
     repository: string;
     baseCommitSha: string;

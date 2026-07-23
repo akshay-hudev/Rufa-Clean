@@ -19,6 +19,10 @@ import { configuredDockerRunner } from "./security/docker-runner";
 import { readOnlyRepositoryCredential } from "./security/github-credentials";
 import { acquireGitHubSource } from "./security/source-acquisition";
 import { sha256 } from "./milestone/canonical";
+import {
+  qualifyTypeScriptRepository,
+  type QualificationToolchain,
+} from "./milestone/qualify";
 
 interface Arguments {
   positionals: string[];
@@ -106,6 +110,45 @@ async function analyze(
   });
   try {
     try {
+      access.assert({
+        repository: { provider: "github", owner: identity.owner, name: identity.name },
+        role: "analysis_target",
+        operation: "qualify",
+      });
+      const lock = JSON.parse(
+        await readFile(join(source.path, "package-lock.json"), "utf8"),
+      ) as { packages?: Record<string, { version?: unknown }> };
+      const lockedTypeScript = lock.packages?.["node_modules/typescript"]?.version;
+      const toolchain: QualificationToolchain = {
+        node: {
+          version: "22.18.0",
+          executable: "/usr/local/bin/node",
+          source: "approved_runner",
+        },
+        npm: {
+          version: "10.9.3",
+          executable: "/usr/local/bin/npm",
+          source: "approved_runner",
+        },
+        typescript: {
+          version: typeof lockedTypeScript === "string" ? lockedTypeScript : "unresolved",
+          executable: "/workspace/node_modules/.bin/tsc",
+          source: "project_local",
+        },
+      };
+      const qualification = await qualifyTypeScriptRepository({
+        repositoryPath: source.path,
+        repository: { provider: "github", owner: identity.owner, name: identity.name },
+        commitSha: source.commitSha,
+        toolchain,
+      });
+      const qualificationRunId = await store.recordQualification(qualification, actor);
+      if (qualification.status !== "ready") {
+        throw new Error(
+          `Repository qualification is ${qualification.status} (${qualification.reasons.join(", ")}) ` +
+            `(recorded as ${qualificationRunId})`,
+        );
+      }
       const session = await configuredDockerRunner().createSession(source.path);
       const result = await runIsolatedAnalysis({
         session,

@@ -76,6 +76,7 @@ export interface RepositoryAccessDecision {
     | "inactive_authorization"
     | "owner_out_of_scope"
     | "role_operation_mismatch"
+    | "identity_operation_denied"
     | "permanent_role_exclusion"
     | "operation_not_authorized";
 }
@@ -309,6 +310,33 @@ function targetExclusion(
   return false;
 }
 
+function identityOperationDenied(
+  documents: RepositoryAccessDocuments,
+  repositoryKey: string,
+  operation: RepositoryOperation,
+): boolean {
+  const document = record(documents.authorization);
+  const external = record(document?.external_operations);
+  const github = record(external?.github);
+  const rules = Array.isArray(github?.canonical_repository_rules)
+    ? github.canonical_repository_rules
+    : [];
+  const externalOperation = EXTERNAL_PERMISSION[operation];
+  if (!externalOperation) {
+    return false;
+  }
+  return rules.some((value) => {
+    const rule = record(value);
+    const operations = record(rule?.operations);
+    return (
+      rule?.match === "exact_case_normalized" &&
+      typeof rule.canonical_repository_identity === "string" &&
+      rule.canonical_repository_identity.toLowerCase() === repositoryKey &&
+      operations?.[externalOperation] === "denied"
+    );
+  });
+}
+
 function operationAuthorized(
   documents: RepositoryAccessDocuments,
   request: RepositoryAccessRequest,
@@ -457,6 +485,14 @@ export function createRepositoryAccessAuthorizer(
           allowed: false,
           authorizationId: authorization.id as string,
           reason: "role_operation_mismatch",
+        };
+      }
+      if (identityOperationDenied(documents, identity.key, request.operation)) {
+        return {
+          ...base,
+          allowed: false,
+          authorizationId: authorization.id as string,
+          reason: "identity_operation_denied",
         };
       }
       if (targetExclusion(documents, identity.key, request.role)) {

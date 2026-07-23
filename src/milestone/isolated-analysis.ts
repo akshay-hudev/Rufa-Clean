@@ -24,6 +24,7 @@ export async function runIsolatedAnalysis(input: {
     repository: input.repository,
     role,
   };
+  input.access.assert({ ...request, operation: "qualify" });
   input.access.assert({ ...request, operation: "static_analysis" });
   input.access.assert({ ...request, operation: "semantic_analysis" });
   input.access.assert({ ...request, operation: "generate_findings" });
@@ -33,6 +34,11 @@ export async function runIsolatedAnalysis(input: {
     ]);
     requirePassed("Dependency installation", install);
     await input.session.sealNetwork();
+    const compiler = await input.session.run(
+      "/workspace/node_modules/.bin/tsc",
+      ["--version"],
+    );
+    requirePassed("Project-local TypeScript compiler", compiler);
     const scip = await input.session.run("node", [
       "/opt/dcav2/node_modules/@sourcegraph/scip-typescript/dist/src/main.js",
       "index", "--output", "/tmp/index.scip", "--no-progress-bar",

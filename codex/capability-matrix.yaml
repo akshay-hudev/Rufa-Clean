@@ -1,18 +1,19 @@
 $schema: ./schemas/capability-matrix.schema.json
 schema_version: "1.0.0"
-matrix_id: dcav2-phase-0-readiness-capabilities
-title: DCAv2 Phase 0 Readiness Capability Matrix
+matrix_id: dcav2-phase-1-typescript-vertical-slice-capabilities
+title: DCAv2 Phase 1 TypeScript Vertical-Slice Capability Matrix
 purpose: >-
-  Records evidence-backed capability status at the Phase 0 prerequisite
-  boundary. This matrix is descriptive and grants no execution authority.
+  Records evidence-backed capability status at the Phase 1 TypeScript
+  vertical-slice boundary. This matrix is descriptive and grants no execution
+  authority.
 document_status: active
 implementation_authorized_by_matrix: false
-generated_at: "2026-07-23T09:45:00Z"
+generated_at: "2026-07-23T10:45:00Z"
 source_revision:
   repository: akshay-hudev/Rufa-Clean
-  commit: 834c5f99a21e5baefa1cdd4f92922efff26689c4
+  commit: 2aaa35519c161a5f9b4f4b6e2bd49307858cf9c6
   worktree_status: modified
-  captured_at: "2026-07-23T09:45:00Z"
+  captured_at: "2026-07-23T10:45:00Z"
 references:
   - path: codex/tests/phase-0-tests.yaml
     purpose: Phase 0 test identities and acceptance evidence.
@@ -20,6 +21,10 @@ references:
     purpose: Representative eligible-repository evidence.
   - path: codex/tests/security-control-matrix.yaml
     purpose: Security-control identities and evidence-backed status.
+  - path: codex/tests/phase-1-tests.yaml
+    purpose: Phase 1 test identities and bounded acceptance evidence.
+  - path: codex/reports/phase-1-representative-analysis.json
+    purpose: Phase 1 representative eligible-repository evidence.
 status_vocabulary:
   support_statuses:
     - planned
@@ -434,18 +439,485 @@ capabilities:
           secret_free: true
           retained: true
           current: true
+  - &phase1_capability
+    capability_id: repository.typescript.qualify.v1
+    title: Qualify the bounded TypeScript repository profile
+    description: >-
+      Qualifies exact immutable single-package npm TypeScript repositories with
+      project-local compiler and required gate identities.
+    domain: qualification
+    version: 1
+    lifecycle_status: active
+    support_status: functional
+    implementation_status: implemented
+    validation_status: passed
+    introduced_in_phase: phase-1-typescript-vertical-slice
+    last_validated_in_phase: phase-1-typescript-vertical-slice
+    authorization_required: true
+    trust_boundary: &phase1_runner_boundary
+      execution_zone: untrusted_runner
+      repository_content_trusted: false
+      structured_output_validation_required: true
+      prohibited_credentials:
+        - github-app-private-key
+        - github-installation-token
+        - database-url
+        - publisher-credential
+      network_profiles:
+        - registry-proxy-then-network-none
+      runner_profiles:
+        - digest-pinned-docker-runner
+    scope: &phase1_scope
+      scope_type: single_package
+      bounded: true
+      open_world_behavior: complete_only_when_all_required_dimensions_complete
+      languages:
+        - TypeScript
+      package_managers:
+        - npm
+      target_shapes:
+        - private-top-level-function-declaration
+        - single-root-tsconfig
+      excluded_shapes:
+        - exported-symbol
+        - nested-function
+        - arrow-function
+        - multiple-root-tsconfig
+        - monorepo
+        - pnpm
+        - yarn
+        - tsx
+      maximum_tested_scope:
+        repositories: 2
+        files: 4
+        notes: >-
+          One eligible representative was primary evidence and rufa-test-lib
+          was used only as an optional deterministic smoke fixture.
+    operations: &phase1_detection_operations
+      detection_supported: true
+      classification_supported: true
+      human_review_supported: true
+      remediation_supported: false
+      publication_supported: false
+      deployment_supported: false
+      infrastructure_modification_supported: false
+      destructive_operations_supported: false
+      external_reads_supported: true
+      external_writes_supported: false
+    security_control_ids:
+      - access-repository-policy
+      - supply-tool-provenance
+      - supply-no-host-global-fallback
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-supported-repository-qualification
+          - p1-node-resolution
+          - p1-npm-profile-resolution
+          - p1-typescript-compiler-resolution
+          - p1-unsupported-profile-statuses
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-digest-pinned-docker-runner
+        report_identity: codex/reports/phase-1-representative-analysis.json
+    evidence: &phase1_evidence
+      evidence_required: true
+      current_evidence_available: true
+      evidence_status: current
+      evidence_identities:
+        - evidence_id: phase1-test-and-representative-evidence
+          evidence_type: test_report
+          description: codex/reports/phase-1-representative-analysis.json
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+      implementation_revision:
+        repository: akshay-hudev/Rufa-Clean
+        commit: 2aaa35519c161a5f9b4f4b6e2bd49307858cf9c6
+        worktree_status: modified
+    limitations: &phase1_limitations
+      - limitation_id: phase1-bounded-typescript-profile
+        description: >-
+          Support is limited to private top-level function declarations in
+          single-package npm TypeScript repositories with complete required
+          evidence and gates.
+        effect: partial_coverage
+        affects_support_status: false
+        reported_to_users: true
+    scale_validation:
+      status: not_validated
+      notes: Phase 1 establishes no scale capability.
+    reporting: *truthful_reporting
+  - <<: *phase1_capability
+    capability_id: runtime.node.resolve.v1
+    title: Resolve the approved Node.js runtime
+    description: Rejects missing, conflicting, or host-global Node.js fallback.
+    domain: runtime-resolution
+    security_control_ids:
+      - supply-tool-provenance
+      - supply-no-host-global-fallback
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-node-resolution
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: package-manager.npm.resolve.v1
+    title: Resolve exact npm dependency inputs
+    description: Binds package and lockfile content while disabling lifecycle scripts.
+    domain: package-management
+    security_control_ids:
+      - supply-tool-provenance
+      - package-lifecycle-script-boundary
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-npm-profile-resolution
+          - p1-package-script-boundary
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: inventory.typescript.module.v1
+    title: Inventory exact TypeScript modules
+    description: Produces deterministic module identities and source-kind classifications.
+    domain: inventory
+    security_control_ids:
+      - evidence-provenance
+      - evidence-failure-not-absence
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-module-inventory
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase1_capability
+    capability_id: inventory.typescript.function.v1
+    title: Identify private TypeScript functions exactly
+    description: Binds package, module, file, occurrence, shape, and content identities.
+    domain: inventory
+    security_control_ids:
+      - evidence-provenance
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-function-identity
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase1_capability
+    capability_id: analysis.typescript.imports.v1
+    title: Collect supported TypeScript import evidence
+    description: Retains exact SCIP import and reference provenance within scope.
+    domain: analysis
+    security_control_ids:
+      - evidence-provenance
+      - evidence-failure-not-absence
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-import-and-reference-evidence
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: analysis.typescript.references.v1
+    title: Collect exact TypeScript reference evidence
+    description: Positive production, test, and value references dominate absence evidence.
+    domain: analysis
+    security_control_ids:
+      - evidence-provenance
+      - classification-positive-evidence-dominance
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-import-and-reference-evidence
+          - p1-positive-evidence-dominance
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: evidence.typescript.normalize.v1
+    title: Normalize evidence deterministically
+    description: Canonicalizes evidence and invalidates changed source or tool identities.
+    domain: evidence
+    security_control_ids:
+      - evidence-provenance
+      - evidence-failure-not-absence
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-analyzer-failure-not-absence
+          - p1-evidence-freshness
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase1_capability
+    capability_id: coverage.typescript.single-package.v1
+    title: Evaluate bounded TypeScript coverage
+    description: Preserves uncertainty unless every required supported dimension completes.
+    domain: coverage
+    security_control_ids:
+      - coverage-open-world
+      - evidence-failure-not-absence
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-complete-typescript-coverage
+          - p1-partial-coverage-preserves-uncertainty
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: classification.typescript.private-function.v1
+    title: Classify supported private functions
+    description: Deterministically classifies only exact private top-level functions.
+    domain: classification
+    security_control_ids:
+      - classification-deterministic
+      - classification-positive-evidence-dominance
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-private-function-classification
+          - p1-positive-evidence-dominance
+          - p1-exported-and-public-symbol-protection
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-representative-isolated-runner
+  - <<: *phase1_capability
+    capability_id: disposition.finding.record.v1
+    title: Record attributable human disposition
+    description: Preserves append-only human decisions separately from machine classification.
+    domain: human-review
+    security_control_ids:
+      - disposition-human-separation
+      - audit-append-only
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-human-disposition-separation
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: disposable-local-postgresql
+  - <<: *phase1_capability
+    capability_id: remediation.authorization.validate.v1
+    title: Validate finding-specific remediation authorization
+    description: Requires a separate current authorization bound to exact evidence.
+    domain: authorization
+    security_control_ids:
+      - remediation-separate-authorization
+      - remediation-exact-reproduction
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-remediation-authorization-separation
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-and-disposable-postgresql
+  - <<: *phase1_capability
+    capability_id: reproduction.typescript.private-function.v1
+    title: Reproduce exact private-function findings
+    description: Rejects stale source, occurrence, evidence, policy, or authorization.
+    domain: remediation
+    security_control_ids:
+      - remediation-exact-reproduction
+      - evidence-provenance
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-exact-finding-reproduction
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase1_capability
+    capability_id: remediation.typescript.private-function-delete.v1
+    title: Remove one authorized private function
+    description: Performs one structured, finding-bound rewrite in isolation.
+    domain: remediation
+    operations: &phase1_remediation_operations
+      detection_supported: true
+      classification_supported: true
+      human_review_supported: true
+      remediation_supported: true
+      publication_supported: false
+      deployment_supported: false
+      infrastructure_modification_supported: false
+      destructive_operations_supported: false
+      external_reads_supported: true
+      external_writes_supported: false
+      remediation_profile_ids:
+        - typescript-private-top-level-function-delete
+      human_disposition_required: true
+      separate_remediation_authorization_required: true
+      exact_reproduction_required: true
+      baseline_verification_required: true
+      post_change_verification_required: true
+      changed_file_allowlist_required: true
+    security_control_ids:
+      - remediation-separate-authorization
+      - remediation-exact-reproduction
+      - remediation-structured-transformation
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-structured-private-function-removal
+          - p1-unsupported-transformation-shapes
+          - p1-changed-file-allowlist
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: verification.typescript.gates.v1
+    title: Run baseline and post-change gates
+    description: Runs the project-local compiler and available build and test gates twice.
+    domain: verification
+    operations: *phase1_remediation_operations
+    security_control_ids:
+      - verification-baseline-gates
+      - verification-post-change-gates
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-baseline-gates
+          - p1-post-change-gates
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: patch.deterministic.generate.v1
+    title: Generate deterministic idempotent patches
+    description: Produces one exact changed-file patch with a stable SHA-256 identity.
+    domain: patch
+    operations: *phase1_remediation_operations
+    security_control_ids:
+      - patch-determinism-idempotency
+      - remediation-changed-file-allowlist
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-patch-determinism-and-idempotency
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase1_capability
+    capability_id: publisher.trusted-draft-pr.v1
+    title: Publish through the trusted draft-only boundary
+    description: >-
+      Validates exact publication state and creates only a dedicated draft;
+      live provider publication was not required or performed.
+    domain: publication
+    support_status: partially_supported
+    implementation_status: implemented
+    validation_status: partial
+    operations:
+      detection_supported: true
+      classification_supported: true
+      human_review_supported: true
+      remediation_supported: true
+      publication_supported: true
+      deployment_supported: false
+      infrastructure_modification_supported: false
+      destructive_operations_supported: false
+      external_reads_supported: true
+      external_writes_supported: true
+      remediation_profile_ids:
+        - typescript-private-top-level-function-delete
+      human_disposition_required: true
+      separate_remediation_authorization_required: true
+      exact_reproduction_required: true
+      baseline_verification_required: true
+      post_change_verification_required: true
+      changed_file_allowlist_required: true
+      trusted_publisher_required: true
+      separate_publication_authorization_required: true
+      draft_pull_request_only: true
+      direct_default_branch_push: prohibited
+      merge: prohibited
+      auto_merge: prohibited
+      automatic_ready_transition: prohibited
+    security_control_ids:
+      - publisher-trusted-isolation
+      - publisher-draft-only
+      - publisher-idempotency-reconciliation
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-publisher-isolation
+          - p1-publisher-draft-only-policy
+          - p1-publisher-idempotency
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-provider-emulator-and-workflow
+        notes: p1-live-draft-publication was conditional and not activated.
+    limitations:
+      - limitation_id: live-provider-publication-not-run
+        description: No live external branch or draft pull request was necessary for Phase 1.
+        effect: external_operations_blocked
+        affects_support_status: true
+        reported_to_users: true
+  - <<: *phase1_capability
+    capability_id: audit.phase-1-events.v1
+    title: Retain append-only Phase 1 audit events
+    description: Hash-links attributable qualification through publication records.
+    domain: audit
+    security_control_ids:
+      - audit-append-only
+      - audit-tamper-evidence
+      - audit-secret-free
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-audit-event-completeness
+          - p1-additive-migrations
+          - p1-persistence-tenant-isolation
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: disposable-local-postgresql
+  - <<: *phase1_capability
+    capability_id: reporting.phase-1-completion.v1
+    title: Report bounded Phase 1 completion
+    description: Reports supported, partial, conditional, unavailable, and cleanup states truthfully.
+    domain: reporting
+    security_control_ids:
+      - reporting-truthfulness
+      - reporting-execution-state-nonauthority
+    test_references:
+      - manifest_path: codex/tests/phase-1-tests.yaml
+        test_ids:
+          - p1-phase-report-truthfulness
+          - p1-execution-state-handoff
+          - p1-final-cleanup
+          - p1-phase-2-remains-unauthorized
+        status: passed
+        executed_at: "2026-07-23T10:45:00Z"
+        environment_identity: local-governance-runner
+    evidence:
+      <<: *phase1_evidence
+      evidence_identities:
+        - evidence_id: phase1-completion-report
+          evidence_type: test_report
+          description: codex/reports/phase-1-typescript-vertical-slice-report.md
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
 matrix_summary:
-  total_capabilities: 9
+  total_capabilities: 28
   planned: 0
   experimental: 0
   detection_only: 0
-  partially_supported: 1
-  functional: 8
+  partially_supported: 2
+  functional: 26
   blocked: 0
   unsupported: 0
   deprecated: 0
   superseded: 0
-  validation_passed: 9
+  validation_passed: 27
   validation_failed: 0
   validation_not_run: 0
   scale_validated: 0

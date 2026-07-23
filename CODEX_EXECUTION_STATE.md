@@ -1,5 +1,133 @@
 # DCAv2 Execution State
 
+## Completed Phase 1 TypeScript vertical-slice execution
+
+This section records the active Phase 1 execution. Historical sections below
+remain unchanged and non-authorizing.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-1-typescript-vertical-slice-2026-07-23-01 |
+| Authorization ID | phase-1-typescript-vertical-slice-20260723-01 |
+| Authorized phase | phase-1-typescript-vertical-slice |
+| Execution status | completed; inactive |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | 2aaa35519c161a5f9b4f4b6e2bd49307858cf9c6 |
+| Started | 2026-07-23T10:53:08Z |
+| Completed | 2026-07-23T11:26:32Z |
+| Final result | Phase 1 complete within bounded profile |
+| New implementation branch permitted | No |
+| Local implementation commits permitted | No |
+| Rufa-Clean external writes permitted | No |
+| Automatic Phase 2 continuation | prohibited |
+
+### Starting repository and preservation record
+
+- Repository root: `/Users/apple/Desktop/Akshay@goAI/DCAv2`
+- Canonical repository identity: `akshay-hudev/Rufa-Clean`
+- Repository role: `implementation_repository`
+- Sanitized origin: `github.com/akshay-hudev/Rufa-Clean.git`
+- Starting branch: `codex/phase-0-prerequisite-readiness`
+- The branch must be preserved, reused, and not reset, rewritten, deleted, or
+  abandoned.
+- Pre-existing modified paths:
+  `codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml`
+  and `codex/tests/validate-repository-role-governance.mjs`.
+- Those two modifications are the approved repository/branch-policy correction
+  and must be preserved.
+- No pre-existing staged or untracked paths were present.
+- All completed Phase 0 implementation changes, reports, authorization history,
+  and historical state sections must be preserved.
+- `OPEARTING_GUIDE.MD`: preserve the current committed treatment.
+
+### Governing-file SHA-256 baseline
+
+| File | SHA-256 |
+| --- | --- |
+| `AGENTS.md` | `3f4a36ec5da7f6b464cc9b5865fef9a0cee4c63f9ae962aade5c14bf99d085df` |
+| `codex/core/01-instruction-precedence.md` | `606cbac5a6dca581cc66a7230fb4497eeecbd6bf381a9c4f971d0a726ab98d9b` |
+| `codex/core/03-safety-invariants.md` | `a2786ee9291ff56e929e197940bd39d6e8a46e719490636477d7901c7fc5e844` |
+| `codex/core/05-phase-authorization-protocol.md` | `685d9d16ae9c843fedbf2dbf0615d75bb41f844c8e9460841664896d4c0d3bda` |
+| `codex/core/06-autonomy-and-stop-conditions.md` | `96741da1b0ed7059a60faf23ad78fe0bdc0ac3e741cc12616055873dd351b9d9` |
+| `codex/core/07-source-control-policy.md` | `4a8f25a62e21eff79038fbdb453872dc530cc477d7b2f4310f86327458a54c9a` |
+| `codex/core/08-secret-handling-policy.md` | `e4a55cbcbe18ed1b76d68c4ccbfa9cc28bc568dd5d23a3d653f587302d21f366` |
+| `codex/core/09-prompt-injection-policy.md` | `399dfcdd11378b15c7294aa4e417f134931e7c7beb0a38ecee80cf2f7d622f98` |
+| `codex/core/10-reporting-and-state-policy.md` | `d98330e1efe04f648846feb51a75a5938fb859cd497dbc109b091af604e19b3b` |
+| `codex/access/github-repository-policy.yaml` | `328fee1d610ea96227d73704bf91e50bd7f093cc3ef66a72ba0aa6dd4b686beb` |
+| `codex/access/prohibited-repositories.yaml` | `a5033750a185644e509a751b1b27fc1ec54bc0d3812289d010d372da3a043954` |
+| `codex/authorizations/phase-1-typescript-vertical-slice-authorization-request.yaml` | `8f4ac4191970b1607bb32dac8c0776cd25b74070977de64b92dd49beaf928193` |
+| `codex/roadmap/phase-1-typescript-vertical-slice.md` | `1bbfdd5006c8b0e56cc2672f00825bcd516b7a7418310b04f4f1fe71759a70de` |
+| `codex/tests/phase-1-tests.yaml` | `639d6a52f775b4a67b206db37a181fb79e64b775ee951e2c4bf4d2180535c1a6` |
+
+The current authorization was created from the approved request at phase
+activation and is tracked as an expected Phase 1 governance change.
+
+### Current progress
+
+- Completed: authorization activation, deterministic qualification, exact
+  package/module/function identity, evidence and coverage validation,
+  classification, separated review/authorization, exact reproduction,
+  isolated remediation, deterministic patching, persistence, audit,
+  publisher reconciliation, representative testing, reporting, and cleanup.
+- Final complete suite: 35 test files passed; 218 tests passed; zero skipped.
+- Clean database-free suite: 28 test files passed; 205 tests passed; seven
+  integration files and 13 integration tests skipped because Docker/database
+  configuration was intentionally absent.
+- External operations performed: GitHub App discovery, metadata read,
+  read-only source acquisition, qualification, and isolated analysis for
+  eligible non-Rufa-Clean targets/fixtures.
+- Phase-created external branches, commits, pushes, or pull requests: none.
+- Phase-created local commits or branches: none.
+
+### Completion evidence
+
+- Supported profile: private non-exported top-level TypeScript function in a
+  single-package npm repository with lockfile version 3, one root tsconfig,
+  project-local TypeScript 5.9.3, and available build/test gates.
+- Rufa-Clean remained only the implementation repository and was rejected
+  before target qualification or metadata retrieval.
+- Exact identity-specific Rufa-Clean denials protect branch creation, commit
+  creation, non-default push, pull-request creation/update, and publication.
+- Repository inventory: 21 target-eligible repositories; one immediate
+  Rufa-Clean target-role rejection.
+- Primary representative: `akshay-hudev/test-only-usage` at
+  `91d258b9b6c852e923b0021e9afe8222672caba4`; qualification ready, complete
+  supported coverage, one explicitly unsupported exported function.
+- Optional smoke fixture: `akshay-hudev/rufa-test-lib` at
+  `a1bdd81ad38676b78760309c219d541daec47d77`; qualification ready, complete
+  supported coverage, two unsupported exports, and one `candidate_dead`
+  private function. It was not primary general-capability evidence.
+- No external finding was human-disposed or separately authorized for
+  remediation. No external remediation or publication occurred.
+- Docker runner:
+  `dcav2-runner@sha256:7f347352497067cbd5b833b0c63046c89c358040078ade1b3c3fd29d0358f45f`.
+- Additive migrations: `0004_publication_reconciliation` and
+  `0005_phase1_qualification`; historical migrations unchanged.
+- Four explicitly named disposable Phase 1 databases were dropped; verified
+  remaining count: zero.
+- Test-created containers, proxy, network, source workspaces, dependency
+  homes, remediation workspaces, and publisher workspaces were removed and
+  cleanup was verified.
+- Security matrix: 47 controls `implemented/passed`; 13 future-phase controls
+  `not_assessed/not_run`.
+- Capability matrix: 28 capabilities; 26 functional, two partially supported,
+  27 validation-passed, one partial (`publisher.trusted-draft-pr.v1`).
+- No paid or metered service was used. Credential values were not printed or
+  retained.
+
+### Completion artifacts
+
+- `codex/reports/phase-1-typescript-vertical-slice-report.md`
+- `codex/reports/phase-1-repository-inventory.json`
+- `codex/reports/phase-1-representative-analysis.json`
+- `codex/capability-matrix.yaml`
+- `codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml`
+
+The Phase 2 authorization file is an incomplete, non-authorizing transition
+draft because no Phase 2 test manifest exists. It must not be approved or
+activated until that manifest and the final bounded request are prepared and
+presented for a separate human decision.
+
 ## Completed Phase 0 prerequisite-repair execution
 
 This section records the completed prerequisite repair. Historical sections

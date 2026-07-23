@@ -325,8 +325,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/core/07-source-control-policy.md
       - codex/architecture/trusted-publisher-policy.md
@@ -813,8 +813,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/engineering/reuse-first-policy.md
       - codex/engineering/tooling-and-license-policy.md
@@ -936,8 +936,8 @@ controls:
     applies_to:
       - all-phases
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/evidence-model.md
       - codex/core/04-accuracy-and-evidence-policy.md
@@ -1056,8 +1056,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/classification-policy.md
       - codex/core/04-accuracy-and-evidence-policy.md
@@ -1100,8 +1100,8 @@ controls:
       - phase-7-contracts-and-microservices
       - phase-8-infrastructure-and-runtime
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/classification-policy.md
       - codex/architecture/evidence-model.md
@@ -1145,8 +1145,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/classification-policy.md
       - codex/architecture/remediation-policy.md
@@ -1191,8 +1191,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/core/05-phase-authorization-protocol.md
@@ -1236,8 +1236,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/core/04-accuracy-and-evidence-policy.md
@@ -1282,8 +1282,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/engineering/testing-policy.md
@@ -1328,8 +1328,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/engineering/testing-policy.md
@@ -1372,8 +1372,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/core/07-source-control-policy.md
@@ -1414,8 +1414,8 @@ controls:
       - phase-4-python
       - phase-5-additional-language
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/engineering/reuse-first-policy.md
@@ -1461,8 +1461,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/remediation-policy.md
       - codex/core/10-reporting-and-state-policy.md
@@ -1506,8 +1506,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/trusted-publisher-policy.md
       - codex/architecture/trust-boundaries.md
@@ -1551,8 +1551,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/trusted-publisher-policy.md
       - codex/core/07-source-control-policy.md
@@ -1598,8 +1598,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/architecture/trusted-publisher-policy.md
       - codex/access/external-operation-policy.md
@@ -1858,8 +1858,8 @@ controls:
       - phase-9-campaigns-and-control-plane
       - phase-10-scale-validation
     policy_status: defined
-    implementation_status: not_assessed
-    validation_status: not_run
+    implementation_status: implemented
+    validation_status: passed
     requirement_references:
       - codex/access/external-operation-policy.md
       - codex/architecture/trusted-publisher-policy.md
