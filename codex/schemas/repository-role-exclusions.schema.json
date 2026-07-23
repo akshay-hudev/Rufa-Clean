@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/repository-role-exclusions.schema.json",
+  "title": "DCAv2 Repository Role Exclusions",
+  "description": "Validates permanent repository-role and operation exclusions without treating repository identity as a universal content-access denial.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "authority",
+    "repository_roles",
+    "decisions",
+    "evaluation",
+    "enforcement",
+    "reporting",
+    "failure_behavior",
+    "change_control"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": 2},
+    "policy": {
+      "type": "object",
+      "required": ["id", "status", "enforcement", "default_for_unlisted_role_or_operation"],
+      "properties": {
+        "id": {"const": "repository-role-exclusions-v2"},
+        "status": {"const": "active"},
+        "enforcement": {"const": "operation_specific"},
+        "default_for_unlisted_role_or_operation": {"const": "deny"}
+      }
+    },
+    "authority": {"type": "object"},
+    "repository_roles": {
+      "type": "array",
+      "uniqueItems": true,
+      "const": [
+        "implementation_repository",
+        "analysis_target",
+        "test_fixture",
+        "remediation_target",
+        "publication_target",
+        "cross_repository_graph_participant",
+        "runtime_evidence_target"
+      ]
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "provider",
+          "owner",
+          "repository_name",
+          "full_name",
+          "implementation_repository",
+          "denied_target_roles"
+        ],
+        "properties": {
+          "provider": {"const": "github"},
+          "owner": {"const": "akshay-hudev"},
+          "repository_name": {"const": "Rufa-Clean"},
+          "full_name": {"const": "akshay-hudev/Rufa-Clean"},
+          "implementation_repository": {
+            "type": "object",
+            "required": [
+              "local_inspection",
+              "local_modification",
+              "local_build_and_test"
+            ],
+            "properties": {
+              "local_inspection": {"const": "authorization_required"},
+              "local_modification": {"const": "authorization_required"},
+              "local_build_and_test": {"const": "authorization_required"}
+            }
+          },
+          "denied_target_roles": {
+            "type": "object",
+            "required": [
+              "analysis_target",
+              "test_fixture",
+              "remediation_target",
+              "publication_target",
+              "cross_repository_graph_participant",
+              "runtime_evidence_target"
+            ]
+          }
+        }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "required": [
+        "required_input",
+        "implementation_role_may_imply_target_role",
+        "read_permission_may_imply_modification",
+        "modification_permission_may_imply_analysis",
+        "analysis_permission_may_imply_publication"
+      ],
+      "properties": {
+        "implementation_role_may_imply_target_role": {"const": false},
+        "read_permission_may_imply_modification": {"const": false},
+        "modification_permission_may_imply_analysis": {"const": false},
+        "analysis_permission_may_imply_publication": {"const": false}
+      }
+    },
+    "enforcement": {"type": "object"},
+    "reporting": {"type": "object"},
+    "failure_behavior": {"type": "object"},
+    "change_control": {"type": "object"}
+  }
+}

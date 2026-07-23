@@ -232,7 +232,7 @@ Remediation must begin from the exact authorized immutable source snapshot.
 Source acquisition must:
 
 1. Validate the repository against access policy.
-2. Apply the prohibited-repository denylist.
+2. Apply the repository-role exclusion policy for `remediation_target`.
 3. Resolve the authorized commit.
 4. Verify the source snapshot digest.
 5. Remove credential-bearing remotes.
@@ -245,23 +245,18 @@ The writable workspace must not contain unrelated user changes.
 
 ---
 
-## 9. Prohibited repositories
+## 9. Repository-role exclusions
 
-No remediation stage may access a prohibited repository.
+No remediation stage may operate on a repository excluded for
+`remediation_target` or `publication_target`.
 
-A prohibited repository must not be:
+`akshay-hudev/Rufa-Clean` may be developed as the local DCAv2 implementation
+under explicit authorization, but must never be used for finding reproduction,
+transformation, dead-code remediation, fixture derivation, or automated
+remediation publication.
 
-- cloned;
-- fetched;
-- inspected;
-- analyzed;
-- used for finding reproduction;
-- used as a transformation target;
-- branched;
-- published to;
-- used as a source of supporting fixtures.
-
-Broad account authorization does not override the denylist.
+Broad account or implementation authorization does not override those target
+role exclusions.
 
 ---
 

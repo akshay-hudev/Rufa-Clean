@@ -68,7 +68,7 @@ Tests do not:
 - create a human disposition;
 - authorize remediation;
 - authorize publication;
-- override a prohibited repository;
+- override a repository-role exclusion;
 - weaken a permanent safety invariant;
 - prove behavior outside the tested scope.
 
@@ -283,7 +283,7 @@ applicable:
 - missing authorization;
 - expired authorization;
 - wrong tenant;
-- prohibited repository;
+- excluded repository target role or operation;
 - unexpected changed files;
 - invalid patch hashes;
 - malformed analyzer output;
@@ -402,7 +402,8 @@ Examples include:
 - evidence from one tenant cannot affect another tenant;
 - analyzer failure cannot become zero references;
 - unavailable required tests cannot produce phase completion;
-- prohibited repositories remain inaccessible;
+- excluded target roles remain inaccessible while authorized implementation
+  operations remain independently decidable;
 - runner output cannot authorize publication.
 
 Invariant tests should avoid dependence on one fixture name or path.
@@ -823,7 +824,7 @@ Tests against external repositories require:
 
 - current authorization;
 - exact repository identity;
-- denylist validation;
+- repository-role exclusion validation;
 - immutable commit;
 - permitted operation;
 - isolated execution;
@@ -832,7 +833,8 @@ Tests against external repositories require:
 
 Broad account access does not authorize every test operation.
 
-A prohibited repository must never be used as a fixture.
+A repository excluded for `test_fixture` must never be used as a fixture.
+Authorized implementation access does not grant fixture status.
 
 ---
 
@@ -1544,21 +1546,20 @@ One tenant's data or authorization must never affect another tenant's result.
 
 ---
 
-## 70. Prohibited-repository tests
+## 70. Repository-role exclusion tests
 
-Tests must verify that prohibited repositories are rejected before content
-access.
+Tests must verify that repository identity, role, and operation are evaluated
+together.
 
-The test should confirm that DCAv2 does not:
+For the DCAv2 implementation repository, tests must confirm:
 
-- clone;
-- fetch;
-- inspect files;
-- inspect branches;
-- inspect commits;
-- analyze;
-- modify;
-- publish.
+- explicitly authorized implementation inspection is not rejected by identity;
+- read permission does not imply modification;
+- implementation modification does not imply analysis-target permission;
+- analysis-target qualification and finding generation are denied;
+- fixture, remediation, cross-repository, runtime-evidence, and automated
+  remediation publication roles are denied;
+- analysis permission for other repositories does not imply publication.
 
 The audit record should contain only minimum identity and denial information.
 
@@ -2109,7 +2110,7 @@ The following practices are prohibited:
 - weakening assertions to fit implementation;
 - using production credentials in ordinary tests;
 - using production databases as test databases;
-- accessing prohibited repositories;
+- performing excluded repository target operations;
 - retrying external writes without idempotency;
 - relying on one fixture for universal capability claims;
 - reporting mocked provider behavior as live integration;

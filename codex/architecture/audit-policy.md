@@ -945,18 +945,20 @@ The audit event should retain the artifact identity and digest.
 
 ---
 
-## 32. Prohibited-repository events
+## 32. Repository-role exclusion events
 
-When a prohibited repository is encountered, audit only the minimum identity
-needed to prove that exclusion was enforced.
+When a repository-role exclusion is encountered, audit the minimum identity,
+role, operation, and decision needed to prove that exclusion was enforced.
 
 A permitted record may include:
 
 - provider;
 - canonical repository full name;
+- repository role;
+- requested operation;
 - denial decision;
 - policy version;
-- content retrieved as `false`;
+- excluded target operation started as `false`;
 - event time.
 
 It must not include:
@@ -1189,7 +1191,7 @@ The audit model should support queries such as:
 - Did a retry create duplicate external state?
 - Were cleanup operations successful?
 - Did governance integrity fail?
-- Was a prohibited repository excluded?
+- Was the requested repository target role excluded?
 - Did a containment or secret-handling incident occur?
 
 Queries must remain tenant-scoped.

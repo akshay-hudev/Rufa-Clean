@@ -1602,7 +1602,7 @@ Phase 2 should produce audit events for applicable:
 - repository identity validated;
 - repository access allowed;
 - repository access denied;
-- prohibited repository excluded;
+- repository target-role exclusion enforced;
 - immutable revision resolved;
 - source acquisition completed;
 - repository profile selected;
@@ -1767,7 +1767,7 @@ Repository-identity tests should cover:
 - malformed identity;
 - wrong account or installation;
 - unauthorized repository;
-- prohibited repository;
+- repository excluded for the requested target role;
 - local remote with credential-bearing URL;
 - requested operation outside policy.
 
@@ -2092,7 +2092,8 @@ The authorization must identify:
 
 External qualification must not imply remediation or publication authority.
 
-The prohibited repository must never be used.
+A repository excluded for the requested target role must never be used for that
+role.
 
 ---
 
@@ -2308,7 +2309,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - repository scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - repository identity cannot be verified;
 - immutable source resolution fails;
 - required network access is unauthorized;

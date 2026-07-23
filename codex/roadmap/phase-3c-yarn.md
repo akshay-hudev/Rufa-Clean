@@ -2829,7 +2829,8 @@ The authorization must identify:
 
 Historical access does not constitute current authorization.
 
-The prohibited repository must never be used.
+A repository excluded for the requested target role must never be used for that
+role.
 
 ---
 
@@ -3144,7 +3145,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - repository or package scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - repository identity cannot be verified;
 - immutable source resolution fails;
 - Yarn identity is ambiguous;

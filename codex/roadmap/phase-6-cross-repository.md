@@ -308,7 +308,7 @@ The universe should identify:
 - repository selection rule;
 - explicit inclusions;
 - explicit exclusions;
-- prohibited repositories;
+- repository target-role exclusions;
 - target repository;
 - possible consumer repositories;
 - selection time;
@@ -473,51 +473,43 @@ A rate-limited or partially paginated result must remain incomplete.
 
 ---
 
-## 17. Prohibited-repository enforcement
+## 17. Repository-role exclusion enforcement
 
-The prohibited-repository policy must be evaluated before content retrieval.
+The repository-role exclusion policy must be evaluated before target selection
+or graph inclusion.
 
-The absolute prohibited repository remains:
+The permanent cross-repository target exclusion applies to:
 
 ```text
 akshay-hudev/Rufa-Clean
 ```
 
-DCAv2 must not:
+DCAv2 must not qualify or analyze it as a target, include it in a
+cross-repository dead-code graph, derive consumer evidence from it, remediate
+it, or publish automated dead-code remediation to it. Separately authorized
+local implementation development is outside this target role and is not
+blocked by repository identity alone.
 
-- clone it;
-- fetch it;
-- inspect its branches;
-- inspect its commits;
-- inspect its files;
-- qualify it;
-- analyze it;
-- index it;
-- modify it;
-- create a branch in it;
-- publish against it.
-
-The minimum permitted record is a repository identity and denial event.
+The minimum denial record is repository identity, requested role, operation,
+and decision.
 
 ---
 
-## 18. Denylist evaluation order
+## 18. Role-exclusion evaluation order
 
-Denylist validation must occur before:
+Role-exclusion validation must occur before:
 
-- metadata expansion beyond minimum canonical identity;
-- source acquisition;
-- branch enumeration;
-- tag enumeration;
-- commit enumeration;
+- target selection;
+- target metadata expansion;
+- target source acquisition;
 - package discovery;
 - semantic-index ingestion;
 - consumer discovery;
 - remediation planning;
 - publication planning.
 
-A prohibited repository must not contribute source, package, dependency, or
-consumer evidence.
+An excluded graph participant must not contribute source, package, dependency,
+or consumer evidence.
 
 Its exclusion must remain visible as policy-denied scope rather than ordinary
 absence.
@@ -1359,7 +1351,7 @@ The result must preserve:
 - failed repositories;
 - inaccessible repositories;
 - denied repositories;
-- prohibited repositories;
+- repository target-role exclusions;
 - unsupported repositories;
 - stale repositories;
 - affected relationships;
@@ -1565,7 +1557,7 @@ Cross-repository coverage should use statuses such as:
 
 Only `complete` may satisfy a required dimension.
 
-A policy-prohibited repository is not equivalent to a successfully analyzed
+A repository excluded for the requested target role is not equivalent to a successfully analyzed
 repository.
 
 ---
@@ -2296,7 +2288,7 @@ Phase 6 should produce audit events for applicable:
 - inventory partial;
 - repository access allowed;
 - repository access denied;
-- prohibited repository excluded;
+- repository target-role exclusion enforced;
 - repository snapshot resolved;
 - repository snapshot failed;
 - snapshot set created;
@@ -2646,7 +2638,7 @@ Universe tests should cover:
 - renamed repository;
 - repository added after inventory;
 - repository removed after inventory;
-- prohibited repository identity;
+- repository identity and requested target role;
 - universe digest determinism.
 
 ---
@@ -2661,7 +2653,7 @@ Access tests should cover:
 - wrong provider account;
 - wrong installation;
 - repository outside universe;
-- prohibited repository;
+- repository excluded for the requested target role;
 - credential unavailable;
 - metadata allowed but source denied;
 - source allowed but publication denied;
@@ -2819,7 +2811,7 @@ Coverage tests should cover:
 - incomplete provider enumeration;
 - inaccessible required repository;
 - unauthorized required repository;
-- prohibited repository;
+- repository excluded for the requested target role;
 - unsupported required repository;
 - failed semantic index;
 - stale repository snapshot;
@@ -2844,7 +2836,7 @@ Classification tests should verify:
 - complete private internal universe permits candidate evaluation;
 - inaccessible possible consumer produces inconclusive;
 - unauthorized possible consumer produces access-blocked or inconclusive;
-- prohibited repository scope remains visible;
+- excluded repository target scope remains visible;
 - public package with unknown consumers remains inconclusive;
 - failed repository analysis does not produce absence;
 - stale inventory produces stale classification;
@@ -2996,7 +2988,7 @@ Migration tests should cover:
 - inventory attempts;
 - partial inventories;
 - access decisions;
-- prohibited repository events;
+- repository target-role exclusion events;
 - snapshot sets;
 - package mappings;
 - relationship edges;
@@ -3021,7 +3013,7 @@ Security tests should cover:
 - one tenant cannot read another tenant's semantic indexes;
 - provider credential scope is enforced;
 - package-registry credential scope is enforced;
-- prohibited repository content is never retrieved;
+- excluded target operations never execute;
 - Git submodule policy is enforced;
 - unsafe Git alternates are rejected;
 - semantic-index path traversal is rejected;
@@ -3141,7 +3133,7 @@ Cross-repository detection may become `functional` only when:
 
 1. Repository universes are explicit and versioned.
 2. Repository access is evaluated per operation.
-3. Prohibited repositories are excluded before content access.
+3. Repository target-role exclusions are enforced before target operations.
 4. Inventory completeness is explicit.
 5. Pagination and rate limits preserve partial status.
 6. Repository snapshot sets use immutable commits.
@@ -3234,7 +3226,7 @@ Phase 6 must remain blocked when applicable:
 - repository universe is ambiguous;
 - required provider enumeration is incomplete;
 - repository authorization is missing;
-- a prohibited repository would need to be accessed;
+- an excluded repository target operation would be required;
 - immutable snapshot-set construction fails;
 - required repository is inaccessible;
 - required repository is unsupported;
@@ -3328,7 +3320,7 @@ The Phase 6 completion report should include:
 - consumer-set derivation;
 - inaccessible repositories;
 - unsupported repositories;
-- prohibited repositories;
+- repository target-role exclusions;
 - repository coverage;
 - cross-repository coverage;
 - classification behavior;
@@ -3414,7 +3406,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - provider, organization, repository, or operation scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - prohibited-repository identity cannot be evaluated safely;
 - repository inventory is incomplete when completeness is required;
 - pagination fails;
@@ -3453,7 +3445,7 @@ publication state cannot be established confidently:
 
 - do not report complete cross-repository support;
 - do not access unauthorized repositories;
-- do not access prohibited repositories;
+- do not perform excluded repository target operations;
 - do not treat inaccessible repositories as empty;
 - do not treat partial pagination as complete;
 - do not infer package source from names alone;

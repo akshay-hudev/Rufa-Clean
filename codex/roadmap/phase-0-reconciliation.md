@@ -326,16 +326,14 @@ Phase 0 should verify that repository access is governed by:
 The review must determine whether denylist evaluation occurs before content
 retrieval.
 
-A prohibited repository must not be:
+Repository access must be decided from canonical identity, repository role, and
+requested operation. A repository excluded for an analysis-target role must not
+be qualified, analyzed, used as a fixture, remediated, included in
+cross-repository dead-code analysis, processed for runtime dead-code evidence,
+or used for automated remediation publication.
 
-- cloned;
-- fetched;
-- opened;
-- qualified;
-- analyzed;
-- modified;
-- branched;
-- published.
+The DCAv2 implementation repository may still be inspected or modified locally
+when the current phase explicitly authorizes the implementation operation.
 
 Testing must use synthetic identities or authorized safe fixtures.
 
@@ -358,7 +356,8 @@ The validation should test applicable operations such as:
 The permitted audit result should contain only minimum identity and denial
 information.
 
-The test must not retrieve prohibited repository content.
+The test must not start the excluded target operation. It must also prove that
+repository identity alone does not reject authorized implementation access.
 
 ---
 
@@ -1370,7 +1369,8 @@ The authorization must identify:
 
 Historical use of a fixture does not constitute current authorization.
 
-A prohibited repository must never be used.
+A repository excluded for the requested target role must never be used for that
+role.
 
 ---
 
@@ -1576,7 +1576,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - repository scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - an external operation lacks permission;
 - a credential capability is missing;
 - production access would be required without permission;

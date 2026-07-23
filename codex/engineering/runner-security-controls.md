@@ -90,7 +90,7 @@ The runner must not:
 - create pull requests;
 - merge code;
 - modify repository settings;
-- access prohibited repositories;
+- perform repository operations excluded for the requested target role;
 - modify DCAv2 governance;
 - write authoritative audit records directly;
 - access unrelated tenant data;

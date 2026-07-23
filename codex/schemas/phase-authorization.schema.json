@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://dcav2.local/schemas/phase-authorization.schema.json",
   "title": "DCAv2 Phase Authorization",
-  "description": "Defines the machine-readable structure for temporary human phase-authorization records. An authorization record mirrors an explicit human instruction; it does not create permission, override permanent safety invariants, remove prohibited repositories, authorize a later phase, or make remediation, publication, merge, production access, governance modification, or destructive operations implicit.",
+  "description": "Defines the machine-readable structure for temporary human phase-authorization records. An authorization record mirrors an explicit human instruction; it does not create permission, override permanent safety invariants, remove repository-role exclusions, authorize a later phase, or make remediation, publication, merge, production access, governance modification, or destructive operations implicit.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
     "authorization",
     "local_repository",
     "github",
-    "excluded_repositories",
+    "repository_role_exclusions",
     "database",
     "credentials",
     "governance_modification",
@@ -34,17 +34,6 @@
     },
     "github": {
       "$ref": "#/$defs/github_scope"
-    },
-    "excluded_repositories": {
-      "type": "array",
-      "minItems": 1,
-      "uniqueItems": true,
-      "items": {
-        "$ref": "#/$defs/canonical_repository"
-      },
-      "contains": {
-        "const": "akshay-hudev/Rufa-Clean"
-      }
     },
     "capabilities": {
       "type": "array",
@@ -128,6 +117,36 @@
     },
     "metadata": {
       "$ref": "#/$defs/metadata"
+    },
+    "repository_role_exclusions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "denied_roles"
+      ],
+      "properties": {
+        "repository": {
+          "const": "akshay-hudev/Rufa-Clean"
+        },
+        "denied_roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "contains": {
+            "const": "analysis_target"
+          },
+          "items": {
+            "enum": [
+              "analysis_target",
+              "test_fixture",
+              "remediation_target",
+              "publication_target",
+              "cross_repository_graph_participant",
+              "runtime_evidence_target"
+            ]
+          }
+        }
+      }
     }
   },
   "allOf": [
@@ -169,7 +188,7 @@
               "repository_policy_valid": {
                 "const": true
               },
-              "prohibited_repository_policy_valid": {
+              "repository_role_exclusion_policy_valid": {
                 "const": true
               },
               "governance_integrity_recorded": {
@@ -184,7 +203,7 @@
               "matches_latest_human_instruction",
               "authorization_not_expired",
               "repository_policy_valid",
-              "prohibited_repository_policy_valid",
+              "repository_role_exclusion_policy_valid",
               "governance_integrity_recorded",
               "preexisting_worktree_state_understood"
             ]
@@ -1562,7 +1581,7 @@
         "repository_policy_valid": {
           "type": "boolean"
         },
-        "prohibited_repository_policy_valid": {
+        "repository_role_exclusion_policy_valid": {
           "type": "boolean"
         },
         "governance_integrity_recorded": {

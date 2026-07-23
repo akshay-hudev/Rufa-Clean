@@ -2033,7 +2033,7 @@ Qualification tests should cover:
 - ambiguous project roots;
 - generated-only source;
 - unsupported framework behavior;
-- prohibited repository identity;
+- repository identity and requested target role;
 - immutable revision failure.
 
 Every result must map to an explicit qualification status.
@@ -2429,7 +2429,8 @@ The authorization must identify:
 
 Historical access does not constitute current authorization.
 
-The prohibited repository must never be used.
+A repository excluded for the requested target role must never be used for that
+role.
 
 ---
 
@@ -2709,7 +2710,7 @@ Work must stop when:
 - selection scope is exceeded;
 - more than one language would be implemented without separate authorization;
 - repository, project, package, or module scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - repository identity cannot be verified;
 - immutable source resolution fails;
 - mandatory tool licensing is unresolved;

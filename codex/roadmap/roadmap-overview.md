@@ -303,7 +303,7 @@ Work must stop when applicable:
 - authorization expires;
 - authorization is revoked;
 - requested work exceeds phase scope;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - repository identity cannot be established;
 - a required credential is unavailable;
 - a required security control fails;
@@ -1106,20 +1106,23 @@ Every phase involving repository access must validate:
 - account or installation;
 - canonical repository identity;
 - repository-access policy;
-- prohibited-repository policy;
+- repository-role exclusion policy;
 - exact source revision;
 - permitted operation.
 
-The absolute prohibited repository remains:
+The permanent target-role exclusion applies to:
 
 ```text
 akshay-hudev/Rufa-Clean
 ```
 
-DCAv2 must not clone, fetch, inspect, qualify, analyze, modify, branch, or
-publish against that repository.
+DCAv2 may develop its local implementation only under explicit phase
+authorization. It must not select, qualify, analyze, remediate, use as a
+fixture, include in cross-repository dead-code analysis, process runtime
+dead-code evidence for, or publish automated dead-code remediation to that
+repository.
 
-Denylist validation must occur before content retrieval.
+Role-exclusion validation must occur before the excluded target operation.
 
 ---
 
@@ -1405,7 +1408,7 @@ The roadmap must not be interpreted as permission to:
 - finish the entire project;
 - implement all listed phases;
 - access every repository;
-- test against prohibited repositories;
+- test repository target-role exclusions;
 - install every named tool;
 - use every available credential;
 - remediate every confirmed finding;

@@ -716,9 +716,10 @@ Repository access permits only the operations allowed by:
 * the secret-handling policy;
 * permanent safety invariants.
 
-The prohibited repository denylist remains absolute.
-
-No secret may be obtained from a prohibited repository.
+Repository-role exclusions remain absolute for the matching target operation.
+Authorized implementation access does not authorize opening secret-bearing
+files. No secret may be obtained through an excluded analysis, fixture,
+remediation, publication, cross-repository, or runtime-evidence operation.
 
 ---
 

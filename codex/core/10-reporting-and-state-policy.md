@@ -608,9 +608,11 @@ Prohibited or denied operations should also be recorded when relevant.
 
 ---
 
-## 18. Prohibited-repository reporting
+## 18. Repository-role exclusion reporting
 
-When a prohibited repository is encountered, record only the minimum identity required to demonstrate that exclusion was enforced.
+When a repository-role exclusion is encountered, record the minimum canonical
+identity, requested role, requested operation, and decision required to
+demonstrate that the exclusion was enforced.
 
 Do not record:
 
@@ -624,12 +626,15 @@ Do not record:
 The report may state:
 
 ```text
-Excluded repository encountered: akshay-hudev/Rufa-Clean
-Action: access denied by prohibited-repository policy
-Content retrieved: no
+Repository: akshay-hudev/Rufa-Clean
+Role: analysis_target
+Operation: qualify
+Decision: denied by repository-role exclusion policy
+Analysis started: no
 ```
 
-Do not access the repository merely to produce a more detailed report.
+Do not perform an excluded target operation merely to produce a more detailed
+report. Separately authorized implementation access may be reported as such.
 
 ---
 

@@ -3482,7 +3482,7 @@ Work must stop when:
 - provider, account, environment, cluster, namespace, service, or operation
   scope is exceeded;
 - production access would occur without explicit permission;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - environment identity cannot be verified;
 - infrastructure identity cannot be verified;
 - required inventory is incomplete;

@@ -100,8 +100,9 @@ Complete this section when the operation involves a source repository.
 | --- | --- |
 | Canonical identity resolved | {{yes_or_no}} |
 | Repository access policy evaluated | {{yes_or_no}} |
-| Prohibited-repository policy evaluated before content access | {{yes_or_no}} |
-| Repository is prohibited | {{yes_or_no}} |
+| Repository-role policy evaluated before operation | {{yes_or_no}} |
+| Requested repository role | `{{repository_role}}` |
+| Requested operation is permanently excluded | {{yes_or_no}} |
 | Repository is within standing eligibility scope | {{yes_or_no}} |
 | Current authorization names the repository | {{yes_or_no}} |
 | Current authorization names the operation | {{yes_or_no}} |
@@ -109,7 +110,9 @@ Complete this section when the operation involves a source repository.
 | Access decision | `{{allow}}` |
 | Policy-decision evidence ID | {{evidence_id}} |
 
-A prohibited repository must be denied before branch, commit, tree, file, package, source, qualification, analysis, remediation, or publication access.
+A repository-role exclusion must be denied before the matching target operation.
+Repository identity alone must not block separately authorized implementation
+development.
 
 ## 5. Exact operation scope
 
@@ -566,7 +569,7 @@ Unknown external state must block blind retry and phase completion until reconci
 | --- | --- | --- | --- |
 | Authorization missing or invalid | deny | No | Yes |
 | Repository identity unresolved | blocked or configuration_required | No | Yes |
-| Prohibited repository matched | deny_before_content_access | No | Yes |
+| Repository role and operation excluded | deny_before_operation | No | Yes |
 | Credential unavailable | blocked | No | As required |
 | Network destination unavailable | failed or blocked | Only under policy | As required |
 | Required tool unavailable | unavailable | Only after environment correction | As required |
@@ -782,7 +785,7 @@ The operation must stop when any applicable condition occurs.
 - [ ] Repository identity changes.
 - [ ] Source revision changes.
 - [ ] Finding, evidence, coverage, or disposition changes.
-- [ ] A prohibited repository is identified.
+- [ ] An excluded repository target operation is requested.
 - [ ] A required security control fails.
 - [ ] A secret value is exposed.
 - [ ] Tenant isolation fails.

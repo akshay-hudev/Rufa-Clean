@@ -98,7 +98,8 @@ Repository access is governed by:
 - `codex/access/prohibited-repositories.yaml`;
 - the current phase authorization.
 
-The prohibited-repository list is a hard denylist.
+The repository-role exclusion policy is a hard deny for the matching role and
+operation, not for repository identity alone.
 
 The repository:
 
@@ -106,9 +107,17 @@ The repository:
 akshay-hudev/Rufa-Clean
 ```
 
-must not be cloned, inspected, searched, qualified, analyzed, modified, branched, or published to.
+is the DCAv2 implementation repository. Local implementation inspection,
+modification, builds, and tests require explicit phase authorization.
 
-Broad authorization covering all repositories owned by `akshay-hudev` does not override the denylist.
+It must never be selected, qualified, indexed, or analyzed as a dead-code
+target; used as a test fixture or remediation target; included as a
+cross-repository dead-code graph participant; used as a runtime-evidence
+target; or receive automated dead-code remediation publication.
+
+Broad authorization covering all repositories owned by `akshay-hudev` does not
+override these target-role exclusions. Implementation authorization does not
+grant a target role.
 
 Removing or changing a denylist entry requires an explicit policy-amendment instruction from the human operator. It must never be inferred from a general request.
 
@@ -277,7 +286,7 @@ If a policy appears incorrect or obstructive:
 When instruction authority cannot be determined confidently:
 
 - do not perform external writes;
-- do not access prohibited repositories;
+- do not perform excluded repository target operations;
 - do not expose secrets;
 - do not perform destructive operations;
 - do not broaden the phase;

@@ -1066,7 +1066,7 @@ Complete this section for tools processing untrusted repositories or external co
 - [ ] The current phase authorization permits required test execution.
 - [ ] The current phase authorization permits governance changes when this checklist or policy must change.
 - [ ] Repository scope is authorized.
-- [ ] Prohibited repositories remain excluded.
+- [ ] Repository target-role exclusions remain enforced.
 - [ ] No permission was inferred from roadmap text or existing credentials.
 
 ### Evidence

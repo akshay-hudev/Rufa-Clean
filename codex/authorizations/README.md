@@ -73,7 +73,7 @@ Before implementation begins, the file must identify:
 * local repository scope;
 * permitted local Git operations;
 * external repository scope;
-* prohibited repositories;
+* repository-role exclusions;
 * external discovery permission;
 * clone and fetch permission;
 * analysis permission;
@@ -231,31 +231,26 @@ Every operation remains subject to:
 
 ---
 
-## 9. Prohibited repositories
+## 9. Repository-role exclusions
 
-The prohibited-repository policy is a hard denylist.
+The repository-role policy is a hard deny for the matching role and operation.
 
 The repository:
 
 `akshay-hudev/Rufa-Clean`
 
-must not be:
+is the DCAv2 implementation repository. Its local implementation may be
+inspected, modified, built, or tested only when explicitly authorized.
 
-* cloned;
-* fetched;
-* searched;
-* inspected;
-* qualified;
-* indexed;
-* analyzed;
-* modified;
-* branched;
-* published to;
-* used as a test fixture.
+It must never be used as a dead-code analysis target, test fixture, remediation
+target, automated remediation publication target, cross-repository graph
+participant, or runtime-evidence target.
 
-An authorization file must not remove, override, or weaken this exclusion.
+An implementation authorization must not remove, override, or weaken a target
+role exclusion.
 
-Changing the denylist requires separate, explicit governance authorization.
+Changing a repository-role exclusion requires separate, explicit governance
+authorization.
 
 ---
 
@@ -483,7 +478,7 @@ Material changes include:
 * destructive operations;
 * governance modification;
 * expiration;
-* prohibited repositories.
+* repository-role exclusions.
 
 Do not silently edit the authorization file to match work already performed.
 
@@ -537,7 +532,7 @@ When authorization validation fails:
 
 * do not modify source;
 * do not begin a new phase;
-* do not access prohibited repositories;
+* do not perform excluded repository target operations;
 * do not perform external writes;
 * do not use unauthorized credentials;
 * do not perform destructive actions;

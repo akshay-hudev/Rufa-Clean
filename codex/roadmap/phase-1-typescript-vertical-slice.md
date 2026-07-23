@@ -1660,7 +1660,7 @@ Phase 1 qualification tests should cover:
 - generated-only target;
 - baseline command unavailable;
 - inaccessible repository;
-- prohibited repository identity;
+- repository identity and requested target role;
 - immutable revision failure.
 
 Every result must map to an explicit qualification status.
@@ -2228,7 +2228,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - repository scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - a required credential is unavailable;
 - a required network operation is unauthorized;
 - a required tool's license is unresolved;

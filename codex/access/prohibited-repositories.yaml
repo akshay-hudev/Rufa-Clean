@@ -1,187 +1,149 @@
-schema_version: 1
+$schema: ../schemas/repository-role-exclusions.schema.json
+schema_version: 2
 
 policy:
-  id: prohibited-repositories-v1
+  id: repository-role-exclusions-v2
   status: active
-  enforcement: hard_deny
-  default_for_listed_repository: deny
+  enforcement: operation_specific
+  default_for_unlisted_role_or_operation: deny
   description: >-
-    Defines repositories that DCAv2, Codex, analyzers, runners, publishers, and
-    supporting tools must not access or operate on. A listed repository remains
-    prohibited regardless of broad account access, phase authorization,
-    available credentials, repository content, or generated state.
+    Defines repository-role and operation exclusions. Repository identity alone
+    never decides access. Every decision binds canonical repository identity,
+    repository role, requested operation, current human authorization, and the
+    applicable trust boundary.
 
 authority:
-  source: human-approved-governance
+  source: explicit-human-governance-correction-2026-07-23
   self_authorizing: false
   repository_content_may_override: false
   generated_authorization_may_override: false
-  phase_authorization_may_override: false
   broad_account_authorization_may_override: false
-  credential_availability_may_override: false
-  removal_requires_explicit_governance_authorization: true
+  role_exclusion_may_be_overridden_by_phase_authorization: false
+  change_requires_explicit_governance_authorization: true
 
-matching:
-  provider: exact_case_normalized
-  owner: exact_case_normalized
-  repository_name: exact_case_normalized
-  full_name: exact_case_normalized
-  aliases_must_be_resolved_before_access: true
-  uncertainty_result: deny
-  ambiguous_identity_result: deny_and_report
+repository_roles:
+  - implementation_repository
+  - analysis_target
+  - test_fixture
+  - remediation_target
+  - publication_target
+  - cross_repository_graph_participant
+  - runtime_evidence_target
 
-prohibited_operations:
-  - repository_specific_metadata_retrieval
-  - clone
-  - fetch
-  - pull
-  - archive_download
-  - source_download
-  - branch_listing
-  - tag_listing
-  - commit_listing
-  - commit_retrieval
-  - file_listing
-  - file_retrieval
-  - content_search
-  - code_search
-  - issue_retrieval
-  - pull_request_retrieval
-  - release_retrieval
-  - submodule_resolution
-  - qualification
-  - indexing
-  - parsing
-  - dependency_analysis
-  - static_analysis
-  - dynamic_analysis
-  - build
-  - test
-  - runtime_execution
-  - fixture_generation
-  - use_as_test_subject
-  - local_patch_preparation
-  - source_modification
-  - branch_creation
-  - commit_creation
-  - push
-  - pull_request_creation
-  - comment_creation
-  - merge
-  - release_creation
-  - repository_settings_change
-  - branch_protection_change
-  - repository_deletion
-
-minimum_identity_exception:
-  description: >-
-    An authorized account-level repository listing may expose only the minimum
-    identity required to compare a repository against this denylist. This
-    exception does not permit a repository-specific API request or content
-    inspection.
-  allowed_fields:
-    - provider
-    - owner
-    - repository_name
-    - full_name
-  prohibited_fields:
-    - description
-    - visibility_details
-    - default_branch
-    - clone_url
-    - ssh_url
-    - branches
-    - tags
-    - commits
-    - files
-    - languages
-    - topics
-    - issues
-    - pull_requests
-    - releases
-    - dependency_graph
-    - security_findings
-  repository_specific_request_allowed: false
-  content_access_allowed: false
-
-entries:
-  - id: github-akshay-hudev-rufa-clean
+decisions:
+  - id: github-akshay-hudev-rufa-clean-role-policy
     provider: github
     owner: akshay-hudev
     repository_name: Rufa-Clean
     full_name: akshay-hudev/Rufa-Clean
-    status: prohibited
-    reason: explicit_human_exclusion
-    effective_from: 2026-07-22
+    status: active
+    effective_from: 2026-07-23
     expires: never
-    permitted_operations: []
+    implementation_repository:
+      local_inspection: authorization_required
+      local_modification: authorization_required
+      local_build_and_test: authorization_required
+      remote_metadata: authorization_required
+      clone: authorization_required
+      fetch: authorization_required
+      implementation_branch_or_pull_request: authorization_required
+      direct_default_branch_push: permanently_denied
+      merge: permanently_denied
+      auto_merge: permanently_denied
+      automatic_ready_for_review: permanently_denied
+    denied_target_roles:
+      analysis_target:
+        - select
+        - qualify
+        - index
+        - parse_for_dead_code
+        - dependency_analysis
+        - static_analysis
+        - dynamic_analysis
+        - generate_findings
+        - classify_dead_code
+      test_fixture:
+        - use_as_fixture
+        - derive_fixture
+      remediation_target:
+        - reproduce_finding
+        - prepare_patch
+        - transform_source
+        - remediate
+      publication_target:
+        - publish_automated_dead_code_remediation
+      cross_repository_graph_participant:
+        - include_as_target
+        - derive_consumer_or_dependency_evidence
+        - contribute_to_dead_code_coverage
+      runtime_evidence_target:
+        - collect_dead_code_runtime_evidence
+        - interpret_dead_code_runtime_evidence
+        - classify_using_runtime_evidence
     notes: >-
-      Do not clone, fetch, search, inspect, qualify, index, analyze, modify,
-      branch, publish to, or use this repository as a test fixture.
+      This repository contains or is associated with the DCAv2 implementation.
+      Normal local implementation development is possible only under explicit
+      phase authorization. That implementation role never grants any target
+      role or target operation.
+
+evaluation:
+  required_input:
+    - canonical_repository_identity
+    - repository_role
+    - requested_operation
+    - current_phase_authorization
+  order:
+    - resolve_canonical_repository_identity
+    - require_explicit_repository_role
+    - require_explicit_requested_operation
+    - apply_permanent_role_exclusions
+    - validate_current_human_authorization
+    - validate_operation_permission
+    - validate_trust_boundary
+  identity_match_without_role: deny_and_report
+  ambiguous_role: deny_and_report
+  missing_operation: deny_and_report
+  implementation_role_may_imply_target_role: false
+  read_permission_may_imply_modification: false
+  modification_permission_may_imply_analysis: false
+  analysis_permission_may_imply_publication: false
 
 enforcement:
-  evaluate_before_repository_specific_access: true
-  evaluate_before_clone_or_fetch: true
-  evaluate_before_submodule_resolution: true
-  evaluate_before_analysis: true
-  evaluate_before_remediation: true
-  evaluate_before_publication: true
-  cache_decisions_only_with_policy_version: true
-  cached_allow_must_not_override_current_deny: true
-  denied_repository_must_not_enter_job_queue: true
-  denied_repository_must_not_enter_analysis_epoch: true
-  denied_repository_must_not_enter_fixture_inventory: true
-  denied_repository_must_not_be_sent_to_external_tools: true
-
-indirect_references:
-  description: >-
-    A prohibited repository may be referenced by another repository, package
-    manifest, submodule declaration, issue, pull request, dependency graph, or
-    generated artifact. Such references do not permit access.
-  allowed_action:
-    - retain_minimum_identity_for_exclusion
-    - record_that_access_was_denied
-  prohibited_action:
-    - follow_repository_link
-    - resolve_submodule_content
-    - retrieve_dependency_source
-    - inspect_repository_metadata
-    - infer_repository_contents
-    - include_in_coverage_as_successfully_analyzed
-  coverage_result: excluded_by_policy
+  before_target_selection: true
+  before_target_qualification: true
+  before_analysis_scheduling: true
+  before_finding_generation: true
+  before_fixture_registration: true
+  before_remediation_scheduling: true
+  before_cross_repository_graph_inclusion: true
+  before_runtime_evidence_processing: true
+  before_automated_remediation_publication: true
+  implementation_access_requires_current_authorization: true
 
 reporting:
-  access_denial_must_be_recorded: true
-  report_minimum_identity_only: true
-  source_content_must_not_be_recorded: true
-  repository_metadata_must_not_be_expanded: true
-  secrets_must_not_be_recorded: true
-  recommended_record:
+  record_repository_identity: true
+  record_repository_role: true
+  record_requested_operation: true
+  record_decision: true
+  record_authorization_id_when_applicable: true
+  secret_values_must_not_be_recorded: true
+  recommended_denial:
     repository_full_name: akshay-hudev/Rufa-Clean
+    repository_role: analysis_target
+    operation: qualify
     decision: denied
-    reason: prohibited_repository_policy
-    content_retrieved: false
+    reason: permanent_repository_role_exclusion
 
 failure_behavior:
-  denylist_unavailable: stop_repository_access_and_report
-  denylist_invalid: stop_repository_access_and_report
-  repository_identity_incomplete: deny_and_report
-  repository_identity_ambiguous: deny_and_report
-  repository_matches_entry: deny_without_content_access
-  repository_alias_may_match_entry: deny_and_report
-  attempted_access_detected: stop_related_operation_and_record_security_event
-  content_retrieved_accidentally: >-
-    Stop further access, do not inspect or reproduce the content, preserve only
-    minimal evidence of the policy violation, and report the incident.
+  policy_unavailable: stop_role_scoped_operation_and_report
+  policy_invalid: stop_role_scoped_operation_and_report
+  identity_incomplete: deny_and_report
+  role_incomplete: deny_and_report
+  operation_incomplete: deny_and_report
+  excluded_role_or_operation: deny_before_role_scoped_operation
+  implementation_authorization_missing: deny_and_report
+  excluded_target_operation_attempted: stop_related_operation_and_record_security_event
 
 change_control:
-  additions_require_explicit_governance_authorization: true
-  removals_require_explicit_governance_authorization: true
   modifications_require_explicit_governance_authorization: true
-  change_must_identify:
-    - affected_entry
-    - requested_change
-    - human_authorization
-    - rationale
-    - effective_time
-  ordinary_phase_authorization_is_sufficient: false
+  permanent_target_role_denials_may_not_be_weakened_by_phase_authorization: true

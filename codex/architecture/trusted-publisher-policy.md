@@ -307,28 +307,23 @@ Ambiguous repository identity must cause rejection.
 
 ---
 
-## 11. Prohibited-repository enforcement
+## 11. Publication-role exclusion enforcement
 
 Before every repository-specific operation, the publisher must evaluate:
 
 `codex/access/prohibited-repositories.yaml`
 
-A prohibited repository must not receive:
+A repository excluded for `publication_target` must not receive automated
+dead-code remediation publication. `akshay-hudev/Rufa-Clean` has that permanent
+exclusion.
 
-- metadata requests;
-- clone or fetch requests;
-- branch creation;
-- pushes;
-- commits;
-- pull requests;
-- comments;
-- administrative operations.
+This exclusion does not by itself block separately authorized implementation
+development operations, but implementation authorization cannot be presented
+as automated remediation publication authority.
 
 Broad account authorization, valid credentials, or an apparently approved
-publication request must not override the denylist.
-
-A matching prohibited repository must cause immediate rejection without content
-access.
+remediation request must not override the target-role exclusion. A matching
+repository, role, and operation must be rejected before publication effects.
 
 ---
 
@@ -1184,7 +1179,7 @@ The following must be treated as security failures rather than ordinary
 publication errors:
 
 - publisher credentials exposed to the runner;
-- prohibited repository access;
+- excluded remediation-publication target operation;
 - unauthorized default-branch push;
 - patch content changed after verification;
 - unexpected governance-file changes;
@@ -1237,7 +1232,7 @@ Trusted publisher tests should cover:
 - revoked authorization;
 - invalid human disposition;
 - invalid remediation authorization;
-- prohibited repository;
+- repository excluded for the publication target role;
 - repository identity mismatch;
 - stale base commit;
 - evidence digest mismatch;
@@ -1275,7 +1270,8 @@ Where practical, invariant tests should verify:
 - changing the base commit always causes rejection;
 - removing publication permission cannot produce an external write;
 - adding an unexpected file always blocks publication;
-- a prohibited repository can never enter publication;
+- a repository excluded for remediation publication can never enter that
+  publication workflow;
 - the runner can never publish directly;
 - equivalent requests reuse the same publication identity;
 - retries do not create duplicate pull requests;
@@ -1361,7 +1357,7 @@ be established confidently:
 - do not create a branch;
 - do not create a pull request;
 - do not broaden credential use;
-- do not access a prohibited repository;
+- do not perform an excluded remediation-publication target operation;
 - do not modify the patch;
 - do not retry an uncertain write blindly;
 - preserve the verified local result;

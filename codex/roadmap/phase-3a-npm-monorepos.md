@@ -2345,7 +2345,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - repository or package scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - repository identity cannot be verified;
 - immutable source resolution fails;
 - workspace identity is ambiguous;

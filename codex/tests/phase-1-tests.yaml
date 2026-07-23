@@ -249,10 +249,11 @@ test_groups:
         tags:
           - authorization
           - least-privilege
-      - test_id: p1-prohibited-repository-preflight
-        title: Validate prohibited-repository denial before content access
+      - test_id: p1-repository-role-exclusion-matrix
+        title: Validate implementation access and target-role exclusions
         objective: >-
-          Confirm that akshay-hudev/Rufa-Clean is rejected using canonical repository identity before any branch, commit, tree, source, qualification, analysis, remediation, or publication request occurs.
+          Confirm that akshay-hudev/Rufa-Clean is recognized as the DCAv2
+          implementation repository without gaining any dead-code target role.
         category: security
         requirement: required
         execution_mode: automated
@@ -265,26 +266,54 @@ test_groups:
         required_permissions:
           - local-repository-read
         command_ids:
-          - access-policy.test-prohibited-preflight
+          - access-policy.test-repository-role-exclusions
         runner_profile: governance-readonly-runner
         network_profile: network-disabled
         fixture_ids:
           - phase-1-local-dcav2
         expected_results:
-          - result_id: prohibited-repository-denied
+          - result_id: implementation-repository-recognized
             description: >-
-              The prohibited decision is produced using minimum canonical identity metadata and no repository content request is emitted.
+              Authorized implementation work is evaluated under the
+              implementation_repository role rather than rejected by identity.
             status: passed
-            machine_assertion: prohibited_repository_content_request_count == 0
+            machine_assertion: implementation_repository_identity_match == true
+          - result_id: implementation-work-does-not-trigger-target-exclusion
+            description: Implementation work does not automatically become target analysis.
+            status: passed
+            machine_assertion: implementation_role_false_target_denial_count == 0
+          - result_id: operation-permissions-remain-independent
+            description: >-
+              Read does not imply modification, implementation modification does
+              not imply target analysis, and analysis of another repository does
+              not imply publication.
+            status: passed
+            machine_assertion: role_or_operation_escalation_count == 0
+          - result_id: target-qualification-and-findings-denied
+            description: Qualification, analysis, and finding generation are denied before execution.
+            status: passed
+            machine_assertion: excluded_analysis_target_effect_count == 0
+          - result_id: fixture-and-remediation-denied
+            description: Fixture registration and dead-code remediation are denied.
+            status: passed
+            machine_assertion: excluded_fixture_or_remediation_effect_count == 0
+          - result_id: cross-repository-and-runtime-denied
+            description: Cross-repository inclusion and runtime-evidence classification are denied.
+            status: passed
+            machine_assertion: excluded_graph_or_runtime_effect_count == 0
+          - result_id: remediation-publication-denied
+            description: Automated dead-code remediation publication is denied.
+            status: passed
+            machine_assertion: excluded_target_publication_count == 0
         evidence_requirements:
           - evidence_type: policy_decision
-            description: Repository preflight denial record.
-            schema_or_format: repository-access-decision-v1
+            description: Repository identity, role, operation, and access decision matrix.
+            schema_or_format: repository-role-operation-decision-v2
             required_for_pass: true
             retention_required: true
             secret_free: true
           - evidence_type: audit_event
-            description: Secret-free prohibited-repository denial event.
+            description: Secret-free target-role exclusion events.
             schema_or_format: audit-event-v1
             required_for_pass: true
             retention_required: true
@@ -293,7 +322,7 @@ test_groups:
         retry_policy: no_retry
         cleanup_required: false
         tags:
-          - prohibited-repository
+          - repository-role-exclusion
           - preflight
   - group_id: phase-1-qualification
     title: TypeScript repository qualification

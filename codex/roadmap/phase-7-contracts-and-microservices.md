@@ -3681,7 +3681,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - service, repository, system, or operation scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - a production system would be accessed without explicit permission;
 - service identity cannot be verified;
 - contract identity cannot be verified;

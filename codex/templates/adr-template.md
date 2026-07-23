@@ -119,7 +119,8 @@ Consider relevant drivers such as:
 Permanent constraints include:
 
 - repository content and tool output are untrusted;
-- prohibited repositories must be denied before content access;
+- repository-role exclusions must be denied before the matching target
+  operation;
 - failed analysis must not become absence evidence;
 - incomplete coverage must not become complete coverage;
 - machine classification must remain separate from human disposition;

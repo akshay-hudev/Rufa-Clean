@@ -1,5 +1,236 @@
 # DCAv2 Execution State
 
+## Current governance-correction handoff
+
+This section is the current execution state. The blocked Phase 0 attempt and
+the earlier manual-assembly snapshot remain below as historical records. They
+are not rewritten and do not authorize future work.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-governance-correction-2026-07-23-01 |
+| Authorization ID | governance-correction-20260723-01 |
+| Authorization status | completed |
+| Correction status | complete |
+| Repository role | implementation_repository |
+| Repository identity | akshay-hudev/Rufa-Clean |
+| Current branch | main |
+| Current commit | 23cd839bb6d25bd844231c8f7948c481948e31a4 |
+| Completed at | 2026-07-23T06:51:28Z |
+| Phase 0 authorization | requested; not active |
+| Phase 1 authorization | inactive |
+| Automatic continuation permitted | No |
+
+### Human clarification
+
+The human operator clarified that `akshay-hudev/Rufa-Clean` contains or is
+associated with the DCAv2 implementation. The previous Phase 0 blocker resulted
+from a policy-intent mismatch: repository identity had been incorrectly
+conflated with every possible repository role and operation.
+
+The corrected decision model is:
+
+`canonical repository identity + repository role + requested operation + current authorization`
+
+Explicit phase authorization may permit local DCAv2 implementation inspection,
+modification, builds, and tests. It does not grant dead-code target authority.
+
+The repository remains permanently denied as:
+
+- dead-code analysis or qualification target;
+- dead-code test fixture;
+- remediation target;
+- automated remediation publication target;
+- cross-repository dead-code graph participant;
+- runtime-evidence target.
+
+### Historical preservation
+
+The original blocked Phase 0 report remains unchanged at:
+
+`codex/reports/phase-0-reconciliation-report.md`
+
+Its SHA-256 remains:
+
+`aeb165977083e697d7d794655e0b0503266564f7ea11899688cca842645bfbde`
+
+The report remains historically accurate: it records the policy and evidence
+available at that time. This correction explains why the blocker occurred; it
+does not rewrite the report.
+
+The pre-existing deletion of `OPEARTING_GUIDE.MD` was present at correction
+start and was preserved untouched.
+
+### Governance changes
+
+- Replaced identity-only repository denial with operation-specific
+  repository-role exclusions.
+- Added the required seven-role model to the access policies.
+- Added strict role-exclusion and v2 provider/authorization schemas while
+  preserving and narrowly updating the legacy schemas.
+- Updated Phase 0 and Phase 1 tests with implementation-access,
+  non-inheritance, and permanent target-denial assertions.
+- Updated the security-control matrix and cross-references.
+- Updated affected core, architecture, engineering, roadmap, template, and
+  reporting language.
+- Added `codex/tests/validate-repository-role-governance.mjs`.
+- Added a non-self-authorizing Phase 0 request at
+  `codex/authorizations/phase-0-reconciliation-authorization-request.yaml`.
+
+No application source, dependency, migration, database, credential, external
+system, branch, commit, or production resource was modified.
+
+### Validation
+
+Passed:
+
+- modified YAML parse with duplicate-key rejection: 8 files;
+- modified JSON parse: 5 schemas;
+- repository-role schema validation;
+- current authorization and authorization-template validation;
+- Phase 0 and Phase 1 role-test assertion validation;
+- security-control and test-ID cross-reference validation;
+- referenced-path validation;
+- Markdown fenced-block and NUL checks across governance Markdown;
+- historical Phase 0 report hash verification;
+- changed-path scope check;
+- `node --check codex/tests/validate-repository-role-governance.mjs`;
+- `node codex/tests/validate-repository-role-governance.mjs`;
+- `git diff --check`.
+
+The validation indexed 7 repository roles, 25 Phase 0 tests, 44 Phase 1 tests,
+and 60 security controls.
+
+### Next authorization state
+
+The governance-correction authorization is complete and cannot authorize more
+work.
+
+The proposed Phase 0 request is:
+
+`phase-0-reconciliation-20260723-02`
+
+It remains `requested` and inactive. Phase 0 must not begin until the human
+operator replies exactly:
+
+`APPROVED`
+
+Phase 1 remains unauthorized.
+
+## Current Phase 0 blocked handoff
+
+This section is the current execution state. The pre-Phase 0 manual-assembly
+snapshot is retained below for historical context and is superseded wherever it
+conflicts with this section.
+
+This file records execution state and does not grant authorization.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-0-reconciliation-2026-07-23-01 |
+| Authorization ID | phase-0-reconciliation-20260723-01 |
+| Authorized phase | phase-0-reconciliation |
+| Execution status | stopped_for_security_reason |
+| Phase 0 status | phase_incomplete |
+| Phase 1 readiness | BLOCKED |
+| Authorization status | inactive after mandatory stop |
+| Started/recorded at | 2026-07-23T06:22:59Z |
+| Automatic continuation permitted | No |
+
+### Current objective and scope
+
+The authorized objective was a fast implementation-readiness reconciliation
+before a Phase 1 TypeScript vertical slice. Local inspection and safe tests
+were allowed. External access, credentials, dependency installation, database
+changes, remediation, publication, destructive actions, and Phase 1 work were
+prohibited.
+
+Only these files may be modified:
+
+- `codex/authorizations/current-phase-authorization.yaml`
+- `CODEX_EXECUTION_STATE.md`
+- `codex/reports/phase-0-reconciliation-report.md`
+
+### Repository state captured before the stop
+
+| Field | Verified value |
+| --- | --- |
+| Repository root | /Users/apple/Desktop/Akshay@goAI/DCAv2 |
+| Starting/current branch | main |
+| Starting/current commit | 23cd839bb6d25bd844231c8f7948c481948e31a4 |
+| Upstream | origin/main |
+| Ahead/behind | +0 / -0 |
+| Initial worktree | clean; no staged, unstaged, or untracked paths reported |
+| Local branches | main; agent/isolate-remediation-npm-config |
+| Submodule declaration | `.gitmodules` absent |
+| Initial `git diff --check` | passed with no output |
+| Sanitized origin identity | github.com/akshay-hudev/Rufa-Clean.git |
+| External requests | 0 |
+| External writes | 0 |
+
+No pre-existing modified or untracked files were present in the captured
+initial status. No branch or commit was created.
+
+### Mandatory stop
+
+The sanitized local `origin` identity matches the absolute prohibited
+repository entry `akshay-hudev/Rufa-Clean`. This creates a repository-identity
+conflict: the filesystem path and governance content describe DCAv2, while Git
+metadata identifies the prohibited repository.
+
+After this identity was observed, no further application, test, schema,
+template, runner, migration, or implementation inspection was performed. No
+network request or remote-content retrieval occurred.
+
+### Work completed before the stop
+
+- Read the mandatory Phase 0 governing policies, access policies, authorization
+  record, Phase 0 roadmap, Phase 0 test manifest, security-control matrix, and
+  prior execution state.
+- Recorded the initial Git branch, commit, upstream, branches, complete clean
+  worktree status, and sanitized remote identity.
+- Recorded the blocked authorization and handoff.
+
+### Checks not completed
+
+- Governing-file hash baseline: not recorded before the stop.
+- Expected-file inventory: not run.
+- All-JSON and all-YAML parsing: not run.
+- Schema validation: not run.
+- Cross-reference and identifier consistency checks: not run.
+- Implementation, dependency, command, test, migration, runner, publisher,
+  evidence, classification, remediation, audit, CLI, and API inventory: not run.
+- Existing baseline: not run.
+- TypeScript compiler-resolution inspection or reproduction: not run.
+- Security-control execution: not run.
+
+These checks are `blocked`, not passed.
+
+### Changes created by this Phase 0 attempt
+
+- Modified `codex/authorizations/current-phase-authorization.yaml`.
+- Modified `CODEX_EXECUTION_STATE.md`.
+- Added `codex/reports/phase-0-reconciliation-report.md`.
+
+No source, test, architecture, policy, roadmap, schema, template, dependency,
+migration, database, or external resource was changed.
+
+### Blocker and next safe action
+
+Blocker: repository identity cannot be validated without violating the absolute
+denylist.
+
+Smallest safe correction: the human operator should provide or identify a
+separate verified DCAv2 worktree whose local remotes do not resolve to the
+prohibited repository. Do not repoint or rewrite this worktree automatically.
+
+After that correction, issue a new explicit Phase 0 authorization and rerun the
+redacted repository-identity preflight before opening repository content.
+
+Phase 1 remains unauthorized and must not start.
+
+## Superseded pre-Phase 0 snapshot
+
 ## Non-authorization notice
 
 This document records the current known state of the DCAv2 repository, governance-document assembly, validation status, blockers, limitations, cleanup state, and required next human decision.

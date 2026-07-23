@@ -3390,7 +3390,7 @@ Qualification tests should cover:
 - namespace spanning inaccessible roots;
 - nested independent Python projects;
 - generated-only source;
-- prohibited repository identity;
+- repository identity and requested target role;
 - immutable revision failure.
 
 Every result must map to an explicit qualification status.
@@ -4295,7 +4295,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - repository, package, or module scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - repository identity cannot be verified;
 - immutable source resolution fails;
 - Python version cannot be resolved safely;

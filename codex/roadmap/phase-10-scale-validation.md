@@ -19,7 +19,7 @@ infrastructure do not permit DCAv2 to:
 - infer remediation authorization;
 - infer publication authorization;
 - bypass repository policy;
-- access prohibited repositories;
+- perform excluded repository target operations;
 - expose credentials;
 - suppress failed targets;
 - merge pull requests;
@@ -183,7 +183,7 @@ Phase 10 does not, by default, include:
 - adding new runtime collectors;
 - changing classification semantics;
 - weakening safety invariants;
-- testing prohibited repositories;
+- testing repository target-role exclusions;
 - unrestricted organization crawling;
 - unrestricted production load;
 - production denial-of-service testing;
@@ -441,7 +441,7 @@ The environment must prevent:
 - impact on unrelated tenants;
 - uncontrolled provider cost;
 - access to production credentials;
-- access to prohibited repositories;
+- excluded repository target operations;
 - accidental publication;
 - accidental deployment;
 - shared mutable test state;
@@ -605,7 +605,8 @@ The dataset record should identify:
 
 Historical repository access does not constitute current authorization.
 
-The prohibited repository must never be included.
+A repository excluded for the requested target role must never be included for
+that role.
 
 ---
 
@@ -1628,7 +1629,8 @@ Publication scale tests should prefer:
 
 Live provider testing requires explicit authorization.
 
-The prohibited repository must never be used.
+A repository excluded for the requested target role must never be used for that
+role.
 
 ---
 
@@ -2142,7 +2144,7 @@ Provider tests should cover:
 - source-acquisition concurrency;
 - repository rename;
 - stale default branch;
-- prohibited repository denial;
+- repository target-role denial;
 - credential-scope enforcement;
 - reconciliation after timeout.
 
@@ -2279,7 +2281,7 @@ Publication tests should cover:
 - repeated request for one patch;
 - conflicting patches for one repository;
 - stale base commit;
-- prohibited repository;
+- repository excluded for the requested target role;
 - default-branch rejection;
 - draft-only pull requests;
 - provider rate limit;
@@ -2575,7 +2577,7 @@ Publisher concurrency may become `validated_within_profile` only when:
 2. Repository-specific serialization works.
 3. Exact base commits are enforced.
 4. Exact patch hashes are enforced.
-5. Prohibited repositories are rejected.
+5. Repository target-role exclusions are enforced.
 6. Default-branch direct push is rejected.
 7. Pull requests remain draft-only.
 8. Duplicate requests are idempotent.
@@ -2879,7 +2881,7 @@ Work must stop when:
 - authorization is revoked;
 - tenant, provider, repository, service, environment, or operation scope is
   exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - production impact becomes possible without explicit permission;
 - benchmark isolation fails;
 - correctness oracle fails;

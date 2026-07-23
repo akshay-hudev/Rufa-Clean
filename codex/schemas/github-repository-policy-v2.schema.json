@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/github-repository-policy-v2.schema.json",
+  "title": "DCAv2 GitHub Repository Access Policy v2",
+  "description": "Validates an operation-specific repository access policy keyed by canonical repository identity, repository role, and requested operation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy",
+    "authority",
+    "account_scope",
+    "repository_roles",
+    "standing_access",
+    "role_exclusion_policy",
+    "repository_identity",
+    "access_decision",
+    "credentials",
+    "source_acquisition",
+    "analysis_execution",
+    "remediation",
+    "publication",
+    "external_operation_record",
+    "audit",
+    "failure_behavior"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": 2},
+    "policy": {
+      "type": "object",
+      "required": ["id", "status", "provider", "default_decision", "decision_model"],
+      "properties": {
+        "id": {"const": "github-repository-policy-v2"},
+        "status": {"const": "active"},
+        "provider": {"const": "github"},
+        "default_decision": {"const": "deny"},
+        "decision_model": {"const": "repository_identity_role_operation"}
+      }
+    },
+    "authority": {"type": "object"},
+    "account_scope": {"type": "object"},
+    "repository_roles": {
+      "type": "object",
+      "required": [
+        "implementation_repository",
+        "analysis_target",
+        "test_fixture",
+        "remediation_target",
+        "publication_target",
+        "cross_repository_graph_participant",
+        "runtime_evidence_target"
+      ]
+    },
+    "standing_access": {
+      "type": "object",
+      "required": [
+        "permission_inheritance",
+        "read_implies_write",
+        "implementation_modification_implies_analysis_target",
+        "analysis_permission_implies_publication"
+      ],
+      "properties": {
+        "permission_inheritance": {"const": "prohibited"},
+        "read_implies_write": {"const": false},
+        "implementation_modification_implies_analysis_target": {"const": false},
+        "analysis_permission_implies_publication": {"const": false}
+      }
+    },
+    "role_exclusion_policy": {
+      "type": "object",
+      "required": ["file", "policy_id", "required_decision_key", "implementation_access_may_continue_when_authorized"],
+      "properties": {
+        "file": {"const": "codex/access/prohibited-repositories.yaml"},
+        "policy_id": {"const": "repository-role-exclusions-v2"},
+        "required_decision_key": {
+          "type": "array",
+          "const": [
+            "canonical_repository_identity",
+            "repository_role",
+            "requested_operation"
+          ]
+        },
+        "implementation_access_may_continue_when_authorized": {"const": true}
+      }
+    },
+    "repository_identity": {"type": "object"},
+    "access_decision": {"type": "object"},
+    "credentials": {"type": "object"},
+    "source_acquisition": {"type": "object"},
+    "analysis_execution": {"type": "object"},
+    "remediation": {"type": "object"},
+    "publication": {"type": "object"},
+    "external_operation_record": {"type": "object"},
+    "audit": {"type": "object"},
+    "failure_behavior": {"type": "object"}
+  }
+}
+

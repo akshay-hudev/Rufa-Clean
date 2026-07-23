@@ -94,19 +94,17 @@ Defines GitHub repository access.
 The broad account scope may allow discovery, cloning and analysis of
 repositories owned by `akshay-hudev`.
 
-The repository `akshay-hudev/Rufa-Clean` is explicitly prohibited and must not
-be:
+The repository `akshay-hudev/Rufa-Clean` contains or is associated with the
+DCAv2 implementation. Explicit phase authorization may permit normal local
+implementation inspection, modification, builds, and tests.
 
-- cloned;
-- searched;
-- inspected;
-- qualified;
-- analyzed;
-- modified;
-- branched;
-- published to.
+The same repository is permanently excluded as a dead-code analysis target,
+test fixture, remediation target, automated remediation publication target,
+cross-repository graph participant, and runtime-evidence target.
 
-The denylist overrides broad account permissions.
+Repository decisions therefore use canonical identity, repository role, and
+operation. Role exclusions override broad account permissions for the matching
+target operation.
 
 Broad access does not permit:
 

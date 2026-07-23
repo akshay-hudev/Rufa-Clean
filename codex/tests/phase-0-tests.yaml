@@ -355,10 +355,12 @@ test_groups:
         tags:
           - access-policy
           - least-privilege
-      - test_id: p0-prohibited-repository-preflight
-        title: Validate prohibited-repository preflight denial
+      - test_id: p0-repository-role-exclusion-matrix
+        title: Validate implementation access and target-role exclusions
         objective: >-
-          Confirm that the prohibited repository is denied before branch, commit, tree, file, package, analysis, modification, or publication access is attempted.
+          Confirm that akshay-hudev/Rufa-Clean is recognized as the DCAv2
+          implementation repository while every dead-code target role remains
+          denied before the corresponding target operation begins.
         category: security
         requirement: required
         execution_mode: automated
@@ -370,26 +372,73 @@ test_groups:
         required_permissions:
           - local-repository-read
         command_ids:
-          - access-policy.test-prohibited-repository-preflight
+          - access-policy.test-repository-role-exclusions
         runner_profile: governance-readonly-runner
         network_profile: network-disabled
         fixture_ids:
           - phase-0-governance-tree
         expected_results:
-          - result_id: prohibited-content-access-denied
+          - result_id: implementation-repository-recognized
             description: >-
-              The policy engine returns a prohibited decision using canonical repository identity without requesting repository content.
+              The local worktree is recognized as the DCAv2 implementation
+              repository and identity alone does not trigger a target denial.
             status: passed
-            machine_assertion: prohibited_repository_content_request_count == 0
+            machine_assertion: implementation_repository_identity_match == true
+          - result_id: implementation-access-requires-authorization
+            description: >-
+              Local implementation inspection, modification, build, and test
+              decisions require explicit matching phase authorization.
+            status: passed
+            machine_assertion: unauthorized_implementation_allow_count == 0
+          - result_id: read-does-not-imply-modification
+            description: Read permission does not grant modification.
+            status: passed
+            machine_assertion: read_to_modify_escalation_count == 0
+          - result_id: implementation-modification-does-not-imply-analysis
+            description: Implementation modification does not grant analysis-target permission.
+            status: passed
+            machine_assertion: implementation_to_analysis_escalation_count == 0
+          - result_id: analysis-target-qualification-denied
+            description: Qualification as a dead-code target is denied before analysis.
+            status: passed
+            machine_assertion: excluded_target_qualification_start_count == 0
+          - result_id: finding-generation-denied
+            description: Dead-code finding generation is denied.
+            status: passed
+            machine_assertion: excluded_target_finding_count == 0
+          - result_id: fixture-use-denied
+            description: Use as a test fixture is denied.
+            status: passed
+            machine_assertion: excluded_target_fixture_registration_count == 0
+          - result_id: remediation-target-denied
+            description: Dead-code remediation is denied.
+            status: passed
+            machine_assertion: excluded_target_remediation_start_count == 0
+          - result_id: cross-repository-target-denied
+            description: Inclusion in cross-repository dead-code analysis is denied.
+            status: passed
+            machine_assertion: excluded_target_graph_inclusion_count == 0
+          - result_id: runtime-evidence-target-denied
+            description: Runtime dead-code evidence processing and classification are denied.
+            status: passed
+            machine_assertion: excluded_target_runtime_evidence_count == 0
+          - result_id: automated-remediation-publication-denied
+            description: Automated dead-code remediation publication is denied.
+            status: passed
+            machine_assertion: excluded_target_publication_count == 0
+          - result_id: other-analysis-permission-does-not-imply-publication
+            description: Analysis permission for another repository does not grant publication.
+            status: passed
+            machine_assertion: analysis_to_publication_escalation_count == 0
         evidence_requirements:
           - evidence_type: policy_decision
-            description: Prohibited decision containing only minimum canonical identity metadata.
-            schema_or_format: repository-access-decision-v1
+            description: Role-aware access decisions for implementation and target operations.
+            schema_or_format: repository-role-operation-decision-v2
             required_for_pass: true
             retention_required: true
             secret_free: true
           - evidence_type: audit_event
-            description: Secret-free denial event proving the preflight decision occurred.
+            description: Secret-free target-role denial events.
             schema_or_format: audit-event-v1
             required_for_pass: true
             retention_required: true
@@ -398,7 +447,7 @@ test_groups:
         retry_policy: no_retry
         cleanup_required: false
         tags:
-          - prohibited-repository
+          - repository-role-exclusion
           - preflight
           - security
       - test_id: p0-external-operations-default-deny

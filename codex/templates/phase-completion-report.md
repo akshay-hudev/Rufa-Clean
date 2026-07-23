@@ -192,7 +192,7 @@ State None when no local commits were created.
 | Executed scope remained within authorization | {{yes_or_no}} |
 | Repository access policy was evaluated | {{yes_or_no}} |
 | Prohibited-repository policy was evaluated before content access | {{yes_or_no}} |
-| No prohibited repository was accessed | {{yes_or_no}} |
+| No excluded repository target operation occurred | {{yes_or_no}} |
 | Unsupported scope remained visible | {{yes_or_no}} |
 | Inaccessible scope remained visible | {{yes_or_no}} |
 | Failed scope was not treated as absent | {{yes_or_no}} |

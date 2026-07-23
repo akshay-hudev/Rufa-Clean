@@ -450,9 +450,12 @@ Reports involving tenant data must record tenant scope.
 
 A report must not combine evidence, findings, operations, credentials, or audit records from different tenants unless the aggregation is explicitly authorized and designed to preserve isolation.
 
-The absolute prohibited repository policy remains applicable to report generation.
+The operation-specific repository-role exclusion policy remains applicable to
+report generation.
 
-Reports must not contain content, findings, summaries, or derived data from prohibited repositories.
+Reports must not contain findings or derived target data produced through an
+excluded repository role. Authorized implementation-development reporting is
+independent.
 
 # 9. Evidence references
 

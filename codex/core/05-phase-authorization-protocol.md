@@ -206,34 +206,30 @@ Standing account access does not automatically authorize:
 
 ---
 
-## 7. Prohibited repositories
+## 7. Repository-role exclusions
 
-The denylist in:
+The role-exclusion policy in:
 
 `codex/access/prohibited-repositories.yaml`
 
-takes precedence over standing account access and phase authorization.
+takes precedence over standing account access and phase authorization for the
+matching role and operation.
 
 The repository:
 
 `akshay-hudev/Rufa-Clean`
 
-must not be:
+is the DCAv2 implementation repository. Explicit phase authorization may permit
+local implementation inspection, modification, builds, or tests.
 
-* cloned;
-* fetched;
-* searched;
-* opened;
-* inspected;
-* qualified;
-* indexed;
-* analyzed;
-* modified;
-* branched;
-* published to;
-* used as a test fixture.
+It must not be selected, qualified, indexed, or analyzed as a dead-code target;
+used as a test fixture; remediated as a target; included in cross-repository
+dead-code analysis; processed as a runtime-evidence target; or used as an
+automated dead-code remediation publication target.
 
-A broad instruction such as “use all my repositories” does not override the denylist.
+A broad instruction such as “use all my repositories” does not override those
+target-role exclusions. Implementation authorization never implies target
+authorization.
 
 Removing or weakening a denylist entry requires a separate, explicit human instruction authorizing a governance-policy change.
 
@@ -439,7 +435,7 @@ Before beginning work, the agent must verify:
 * the authorization file matches the human instruction;
 * the authorization has not expired;
 * the local repository matches the authorized scope;
-* prohibited repositories remain excluded;
+* repository target-role exclusions remain enforced;
 * requested operations are permitted;
 * governance-file hashes are recorded;
 * pre-existing working-tree changes are understood;
@@ -510,7 +506,7 @@ A change is material when it alters:
 
 * phase;
 * repository scope;
-* prohibited repositories;
+* repository-role exclusions;
 * external write permission;
 * publication permission;
 * credential use;
@@ -563,8 +559,15 @@ github:
   draft_pull_request: prohibited
   merge: prohibited
 
-excluded_repositories:
-  - akshay-hudev/Rufa-Clean
+repository_role_exclusions:
+  repository: akshay-hudev/Rufa-Clean
+  denied_roles:
+    - analysis_target
+    - test_fixture
+    - remediation_target
+    - publication_target
+    - cross_repository_graph_participant
+    - runtime_evidence_target
 
 database:
   additive_migrations: allowed
@@ -608,7 +611,7 @@ The next phase may begin only after a new explicit human instruction and a match
 When authorization cannot be validated:
 
 * do not modify source;
-* do not access prohibited repositories;
+* do not perform excluded repository target operations;
 * do not perform external writes;
 * do not use publication credentials;
 * do not perform destructive actions;

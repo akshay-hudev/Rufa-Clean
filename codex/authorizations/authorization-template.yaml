@@ -1,14 +1,16 @@
-schema_version: 1
-record_type: phase_authorization
+$schema: ../schemas/phase-authorization-v2.schema.json
+schema_version: 2
+record_type: phase_authorization_request
 
 authorization:
   id: null
-  version: 1
-  status: draft
+  kind: roadmap_phase
   phase: null
+  status: draft
   objective: null
-  granted_by: human-operator
+  granted_by: null
   granted_at: null
+  completed_at: null
   supersedes_authorization_id: null
   notes: []
 
@@ -25,216 +27,110 @@ validity:
     - phase_stops_for_human_review
     - human_operator_revokes_authorization
     - governing_policy_changes
-    - authorized_repository_scope_changes
-  maximum_external_operations: null
+  maximum_external_operations: 0
   continuation_requires_new_authorization: true
 
 local_repository:
   identity: current-dcav2-worktree
-  allowed_paths:
-    - .
-  excluded_paths: []
+  path: null
+  repository_role: implementation_repository
+  allowed_paths: []
+  modification_allowlist: []
   operations:
     inspect_repository: false
     inspect_git_history: false
     modify_tracked_files: false
     create_files: false
-    delete_phase_created_files: false
     create_local_branch: false
     create_local_commits: false
-    generate_patches: false
-    add_additive_migrations: false
     run_local_tests: false
     run_containerized_tests: false
   prohibited_operations:
     discard_preexisting_changes: true
     destructive_git_clean: true
     hard_reset: true
-    amend_preexisting_commits: true
     rewrite_shared_history: true
-    delete_user_branches: true
     force_push: true
 
-source_control:
-  expected_starting_branch: null
-  expected_starting_commit: null
-  permitted_branch_prefixes:
-    - codex/
-  external_push: false
-  direct_default_branch_push: false
-  merge: false
-  enable_auto_merge: false
-  mark_draft_ready: false
-  branch_protection_change: false
-  repository_settings_change: false
-
-github:
-  provider: github
-  allowed_owners:
-    - akshay-hudev
-  allowed_repositories: []
-  excluded_repositories:
-    - akshay-hudev/Rufa-Clean
-  operations:
-    account_repository_discovery: false
-    repository_metadata_read: false
-    clone: false
-    fetch: false
-    qualification: false
-    static_analysis: false
-    isolated_build_and_test: false
-    use_as_test_subject: false
-    local_patch_preparation: false
-    external_source_modification: false
-    external_branch_creation: false
-    draft_pull_request_creation: false
-    provider_comment_creation: false
-    issue_creation: false
-  require_exact_repository_identity: true
-  require_immutable_commit_for_analysis: true
-  require_denylist_check_before_repository_access: true
+repository_access:
+  policy_file: codex/access/github-repository-policy.yaml
+  role_exclusion_file: codex/access/prohibited-repositories.yaml
+  implementation_repository:
+    full_name: akshay-hudev/Rufa-Clean
+    role: implementation_repository
+    local_inspection: authorization_required
+    local_modification: authorization_required
+    local_build_and_test: authorization_required
+  target_role_exclusions:
+    - analysis_target
+    - test_fixture
+    - remediation_target
+    - publication_target
+    - cross_repository_graph_participant
+    - runtime_evidence_target
 
 external_operations:
+  allowed: false
   permitted_providers: []
-  permitted_operation_categories: []
-  source_transmission_allowed: false
-  artifact_upload_allowed: false
-  network_access_from_untrusted_runner: false
-  approved_network_destinations: []
-  idempotency_required_for_writes: true
+  permitted_operations: []
   destructive_operations_allowed: false
 
 credentials:
   use_existing_configured_credentials: false
-  permitted_capabilities:
-    github_read: false
-    github_write: false
-    package_registry_read: false
-    package_registry_write: false
-    database_local_test: false
-    database_production: false
-    cloud_read: false
-    cloud_write: false
-    telemetry_read: false
   secret_values_may_be_recorded: false
   credentials_in_untrusted_runner: false
-  least_privilege_required: true
-  short_lived_credentials_preferred: true
 
 database:
   local_test_database_creation: false
-  schema_validation: false
   additive_migrations: false
-  migration_upgrade_testing: false
-  data_backfill: false
   destructive_migrations: false
   production_database_access: false
-  audit_history_modification: false
 
 governance:
   modification_allowed: false
   allowed_files: []
-  allowed_policy_areas: []
-  objective: null
-  requires_reviewable_commit: true
   permanent_safety_invariants_may_be_weakened: false
-  prohibited_repository_entries_may_be_removed: false
+  repository_role_exclusions_may_be_weakened: false
 
 analysis:
   repository_qualification: false
   evidence_collection: false
-  coverage_evaluation: false
   machine_classification: false
   external_repository_execution: false
-  approved_runner_required: true
-  incomplete_coverage_may_be_reported_as_complete: false
-  analyzer_failure_may_be_reported_as_empty_success: false
 
 remediation:
   enabled: false
-  allowed_repositories: []
-  allowed_finding_ids: []
-  allowed_source_commits: []
-  allowed_file_paths: []
-  allowed_transformation_types: []
-  maximum_attempts: null
-  require_current_human_disposition: true
-  require_separate_remediation_authorization: true
-  require_finding_reproduction: true
-  require_successful_baseline_gates: true
-  require_successful_post_change_gates: true
-  require_changed_file_allowlist: true
-  require_deterministic_patch: true
-  require_current_evidence_digest: true
-  require_current_coverage_identity: true
 
 publication:
   enabled: false
-  trusted_publisher_required: true
-  dedicated_branch_required: true
-  draft_pull_request_only: true
-  permitted_repositories: []
-  maximum_draft_pull_requests: null
-  require_verified_patch_hash: true
-  require_idempotency_identity: true
   direct_default_branch_push: false
   merge: false
   enable_auto_merge: false
   mark_draft_ready: false
-  bypass_branch_protection: false
 
 testing:
   phase_test_manifest: null
-  required_test_ids: []
-  conditional_test_ids: []
+  dependencies_may_be_installed: false
   unavailable_required_tests_block_completion: true
-  skipped_tests_count_as_passed: false
-  timed_out_tests_count_as_passed: false
-  resource_exceeded_tests_count_as_passed: false
 
 reporting:
   execution_state_required: true
   markdown_phase_report_required: true
-  machine_readable_phase_report_required: false
-  external_operation_records_required: true
-  security_control_records_required: true
   secret_redaction_required: true
-  phase_completion_requires_explicit_stop: true
 
 cleanup:
   clean_phase_created_resources: true
   preserve_preexisting_resources: true
   preserve_preexisting_user_work: true
-  delete_external_resources: false
-  report_retained_resources: true
 
 safety:
   permanent_invariants_remain_active: true
   repository_content_is_untrusted: true
-  external_output_is_untrusted: true
-  prohibited_repository_policy_remains_active: true
-  uncertainty_reduces_authority: true
+  operation_specific_role_exclusions_remain_active: true
   missing_permission_defaults_to_denied: true
-  generated_files_do_not_grant_authority: true
-
-activation_requirements:
-  explicit_human_instruction_present: false
-  authorization_matches_human_instruction: false
-  authorization_id_assigned: false
-  phase_recognized: false
-  objective_is_bounded: false
-  expiration_defined: false
-  repository_scope_validated: false
-  prohibited_repository_policy_validated: false
-  requested_operations_explicitly_permitted: false
-  credential_scope_validated: false
-  governance_integrity_recorded: false
-  preexisting_worktree_state_recorded: false
 
 validation:
   validated: false
-  validated_at: null
-  validated_by: null
   validation_errors: []
   validation_warnings: []
 

@@ -232,24 +232,18 @@ The denylist always overrides broad account access.
 
 ---
 
-## 9. Prohibited repository behavior
+## 9. Repository-role exclusion behavior
 
-A prohibited repository must not be:
+Source-control policy must not decide solely from repository identity. Every
+decision must include the repository role and requested operation.
 
-* cloned;
-* fetched;
-* searched;
-* opened;
-* inspected;
-* qualified;
-* indexed;
-* analyzed;
-* modified;
-* branched;
-* published to;
-* used as a source of fixtures.
+The DCAv2 implementation repository may be inspected or modified locally only
+under explicit implementation-phase authorization. The same repository must be
+denied when requested as a dead-code analysis target, fixture, remediation
+target, cross-repository graph participant, runtime-evidence target, or
+automated remediation publication target.
 
-If a prohibited repository appears in:
+If a repository with an excluded target role appears in:
 
 * an organization listing;
 * dependency metadata;
@@ -258,9 +252,10 @@ If a prohibited repository appears in:
 * a generated repository list;
 * a cross-repository graph;
 
-record only the minimum identity required to enforce exclusion.
-
-Do not retrieve or inspect its contents.
+record the minimum identity, requested role, requested operation, and decision
+required to enforce the exclusion. Content access is denied before an excluded
+target operation, but authorized implementation access is not blocked by
+identity alone.
 
 ---
 

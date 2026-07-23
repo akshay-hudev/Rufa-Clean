@@ -19,7 +19,7 @@ Codex should not request confirmation for ordinary engineering decisions when:
 - no external system is modified;
 - no secret or new credential is required;
 - no permanent safety invariant is changed;
-- no prohibited repository is accessed;
+- no excluded repository target operation is performed;
 - no pre-existing user work is discarded;
 - the decision does not create a significant long-term architectural commitment.
 
@@ -144,7 +144,7 @@ Codex must stop before proceeding when any of the following occurs.
 
 ### Repository-access problems
 
-- A prohibited repository would need to be accessed.
+- An excluded repository target operation would be required.
 - Repository identity cannot be verified.
 - The resolved source revision does not match the requested scope.
 - External modification is required but not authorized.

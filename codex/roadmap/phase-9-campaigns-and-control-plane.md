@@ -1147,7 +1147,7 @@ The control plane should support an emergency stop for conditions such as:
 
 - suspected credential exposure;
 - tenant-isolation failure;
-- prohibited repository access;
+- excluded repository target operation;
 - unexpected production access;
 - publisher boundary violation;
 - uncontrolled cost growth;
@@ -2158,7 +2158,7 @@ Policy tests should cover:
 
 - allowed target read;
 - denied target read;
-- prohibited repository;
+- repository excluded for the requested target role;
 - allowed analysis;
 - denied remediation;
 - allowed remediation with exact authorization;
@@ -2223,7 +2223,7 @@ Publication tests should cover:
 - missing verification gate;
 - expired remediation authorization;
 - missing publication authorization;
-- prohibited repository;
+- repository excluded for the requested target role;
 - default-branch rejection;
 - draft pull-request creation;
 - duplicate publication request;
@@ -2258,7 +2258,7 @@ Pause and cancellation tests should cover:
 Security-stop tests should cover:
 
 - suspected credential exposure;
-- prohibited repository access attempt;
+- excluded repository target-operation attempt;
 - cross-tenant access attempt;
 - publisher credential in runner;
 - unexpected production access;
@@ -2316,7 +2316,7 @@ Security tests should cover:
 - repository content cannot change priority authoritatively;
 - repository content cannot modify workflows;
 - denied targets never execute;
-- prohibited repositories never receive content access;
+- excluded repository target operations never begin;
 - production operations remain denied by default;
 - output is bounded;
 - credential revocation works;
@@ -2336,7 +2336,7 @@ Phase 9 should use fixtures representing:
 - one remediation request;
 - one draft publication request;
 - one inaccessible repository;
-- one prohibited repository;
+- one repository with an excluded target role;
 - one unsupported repository;
 - one transient failure;
 - one deterministic failure;
@@ -2702,7 +2702,7 @@ Work must stop when:
 - authorization expires;
 - authorization is revoked;
 - tenant, provider, target, operation, or campaign scope is exceeded;
-- a prohibited repository is encountered;
+- an excluded repository target operation is requested;
 - campaign scope cannot be verified;
 - target identity cannot be verified;
 - policy evaluation is unavailable;

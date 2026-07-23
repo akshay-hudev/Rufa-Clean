@@ -1037,7 +1037,7 @@ Classification tests must include:
 - monorepo workspace failure;
 - cross-repository consumer;
 - unavailable repository;
-- prohibited repository exclusion;
+- repository target-role exclusion;
 - contradictory evidence;
 - stale source;
 - stale evidence;

@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcav2.local/schemas/phase-authorization-v2.schema.json",
+  "title": "DCAv2 Phase Authorization v2",
+  "description": "Validates current and requested DCAv2 authorizations. Repository permissions are scoped by canonical identity, repository role, and operation; an implementation role never implies a dead-code target role.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "authorization",
+    "human_instruction",
+    "validity",
+    "local_repository",
+    "repository_access",
+    "external_operations",
+    "credentials",
+    "database",
+    "governance",
+    "analysis",
+    "remediation",
+    "publication",
+    "testing",
+    "reporting",
+    "cleanup",
+    "safety",
+    "validation",
+    "human_approval"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schema_version": {"const": 2},
+    "record_type": {
+      "enum": ["phase_authorization", "phase_authorization_request"]
+    },
+    "authorization": {
+      "type": "object",
+      "required": ["id", "kind", "status", "objective", "granted_by"],
+      "properties": {
+        "id": {"type": ["string", "null"]},
+        "kind": {
+          "enum": ["roadmap_phase", "governance_correction"]
+        },
+        "phase": {"type": ["string", "null"]},
+        "status": {
+          "enum": [
+            "draft",
+            "requested",
+            "active",
+            "completed",
+            "inactive",
+            "expired",
+            "revoked",
+            "superseded"
+          ]
+        },
+        "objective": {"type": ["string", "null"]},
+        "granted_by": {"type": ["string", "null"]},
+        "granted_at": {"type": ["string", "null"]},
+        "completed_at": {"type": ["string", "null"]},
+        "supersedes_authorization_id": {"type": ["string", "null"]},
+        "notes": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "human_instruction": {"type": "object"},
+    "validity": {"type": "object"},
+    "local_repository": {
+      "type": "object",
+      "required": [
+        "identity",
+        "repository_role",
+        "allowed_paths",
+        "modification_allowlist",
+        "operations"
+      ],
+      "properties": {
+        "identity": {"type": "string"},
+        "path": {"type": ["string", "null"]},
+        "repository_role": {"const": "implementation_repository"},
+        "allowed_paths": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "modification_allowlist": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "operations": {"type": "object"},
+        "prohibited_operations": {"type": "object"}
+      }
+    },
+    "repository_access": {
+      "type": "object",
+      "required": [
+        "policy_file",
+        "role_exclusion_file",
+        "implementation_repository",
+        "target_role_exclusions"
+      ],
+      "properties": {
+        "policy_file": {"const": "codex/access/github-repository-policy.yaml"},
+        "role_exclusion_file": {"const": "codex/access/prohibited-repositories.yaml"},
+        "implementation_repository": {
+          "type": "object",
+          "required": ["full_name", "role", "local_inspection", "local_modification", "local_build_and_test"],
+          "properties": {
+            "full_name": {"const": "akshay-hudev/Rufa-Clean"},
+            "role": {"const": "implementation_repository"},
+            "local_inspection": {"enum": ["allowed", "authorization_required", "prohibited"]},
+            "local_modification": {"enum": ["allowed", "authorization_required", "prohibited"]},
+            "local_build_and_test": {"enum": ["allowed", "authorization_required", "prohibited"]}
+          }
+        },
+        "target_role_exclusions": {
+          "type": "array",
+          "uniqueItems": true,
+          "contains": {"const": "analysis_target"},
+          "items": {
+            "enum": [
+              "analysis_target",
+              "test_fixture",
+              "remediation_target",
+              "publication_target",
+              "cross_repository_graph_participant",
+              "runtime_evidence_target"
+            ]
+          }
+        }
+      }
+    },
+    "external_operations": {"type": "object"},
+    "credentials": {"type": "object"},
+    "database": {"type": "object"},
+    "governance": {"type": "object"},
+    "analysis": {"type": "object"},
+    "remediation": {"type": "object"},
+    "publication": {"type": "object"},
+    "testing": {"type": "object"},
+    "reporting": {"type": "object"},
+    "cleanup": {"type": "object"},
+    "safety": {"type": "object"},
+    "validation": {"type": "object"},
+    "human_approval": {"type": "object"}
+  }
+}
+

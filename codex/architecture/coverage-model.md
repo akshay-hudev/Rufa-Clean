@@ -346,8 +346,9 @@ account listing.
 Repository coverage requires the applicable repository-specific analysis to
 complete successfully.
 
-A prohibited repository must be recorded as `excluded_by_policy` without
-retrieving its contents.
+A repository excluded from the requested analysis role must be recorded as
+`excluded_by_policy` without performing that analysis operation. Separately
+authorized implementation access does not count as analysis coverage.
 
 ---
 
@@ -793,18 +794,19 @@ The coverage profile must define whether a specific exclusion is acceptable.
 
 ---
 
-## 28. Prohibited repositories
+## 28. Repository-role exclusions
 
-A prohibited repository must be represented without content access.
+A repository excluded from analysis or graph participation must be represented
+without performing the excluded target operation.
 
 Coverage may record only:
 
 - canonical repository identity;
 - exclusion status;
 - exclusion policy;
-- content retrieved as `false`.
+- target operation started as `false`.
 
-The prohibited repository must not contribute:
+The excluded target must not contribute:
 
 - source evidence;
 - package metadata;
@@ -813,7 +815,7 @@ The prohibited repository must not contribute:
 - runtime mappings;
 - fixture content.
 
-When the prohibited repository could contain relevant usage, the finding may
+When the excluded target could contain relevant usage, the finding may
 remain inconclusive because the consumer universe is intentionally incomplete.
 
 ---
@@ -1116,7 +1118,7 @@ Coverage-model tests should include:
 - analyzer timeout;
 - unsupported language;
 - unavailable repository;
-- prohibited repository exclusion;
+- repository target-role exclusion;
 - incomplete monorepo workspace coverage;
 - cross-package coverage;
 - cross-repository coverage;

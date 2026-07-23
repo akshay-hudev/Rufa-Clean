@@ -242,31 +242,25 @@ Ambiguous identity must produce a denied operation.
 
 ---
 
-## 6. Prohibited targets
+## 6. Repository-role exclusions
 
-Before any repository-specific external operation, evaluate:
+Before any repository-specific external operation, resolve the repository role
+and evaluate:
 
 `codex/access/prohibited-repositories.yaml`
 
-A prohibited repository must not receive:
+A repository excluded for the requested target role must not receive the
+corresponding target operation. For `akshay-hudev/Rufa-Clean`, dead-code target
+qualification, analysis, fixture use, remediation, cross-repository inclusion,
+runtime-evidence processing, and automated remediation publication are
+permanently denied.
 
-- repository-specific metadata requests;
-- clone or fetch requests;
-- content retrieval;
-- analysis requests;
-- branch creation;
-- commits;
-- pull requests;
-- comments;
-- administrative actions.
+The same identity may receive separately authorized implementation-development
+operations. Read authority does not imply modification, implementation
+modification does not imply target analysis, and analysis of another repository
+does not imply publication.
 
-An account-level listing may expose only the minimum repository identity needed
-to enforce the denylist.
-
-A prohibited repository must not be sent to another external service for
-analysis.
-
-References to a prohibited repository found in:
+References to a role-excluded repository found in:
 
 - manifests;
 - submodules;
@@ -275,7 +269,7 @@ References to a prohibited repository found in:
 - dependency graphs;
 - tool output;
 
-do not permit further access.
+do not grant the referenced target role or operation.
 
 ---
 
@@ -720,7 +714,7 @@ Write operations may be retried only when:
 Do not retry:
 
 - permission-denied operations using broader credentials;
-- prohibited repository access;
+- excluded repository target operation;
 - stale publication attempts;
 - policy-denied writes;
 - destructive actions without renewed confirmation.
@@ -935,7 +929,7 @@ At phase completion, report:
 - retries;
 - partial failures;
 - denied operations;
-- prohibited repositories excluded;
+- repository target-role exclusions enforced;
 - credentials used by type only;
 - external resources remaining.
 

@@ -454,7 +454,7 @@ Existing behavior does not need to be preserved when it:
 
 - violates a permanent safety invariant;
 - exposes secrets;
-- accesses a prohibited repository;
+- performs an excluded repository target operation;
 - runs untrusted code on a trusted host;
 - permits direct default-branch pushes;
 - permits automatic merge;

@@ -2,7 +2,7 @@
 "$schema": "https://json-schema.org/draft/2020-12/schema",
 "$id": "https://dcav2.local/schemas/repository-access-policy.schema.json",
 "title": "DCAv2 Repository Access Policy",
-"description": "Defines the machine-readable structure for provider-specific repository-access policy. The policy evaluates repository operations independently and does not authorize execution, credential use, remediation, publication, merge, infrastructure changes, or destructive operations by itself.",
+"description": "Defines the machine-readable structure for provider-specific repository-access policy. The policy evaluates canonical repository identity, repository role, and requested operation independently and does not authorize execution, credential use, remediation, publication, merge, infrastructure changes, or destructive operations by itself.",
 "type": "object",
 "additionalProperties": false,
 "required": [
@@ -17,7 +17,7 @@
 "standing_scope",
 "identity_resolution",
 "operations",
-"prohibited_repository_policy",
+"role_exclusion_policy",
 "external_writes",
 "credentials",
 "audit"
@@ -84,8 +84,8 @@
 "$ref": "#/$defs/repository_rule"
 }
 },
-"prohibited_repository_policy": {
-"$ref": "#/$defs/prohibited_repository_policy"
+"role_exclusion_policy": {
+"$ref": "#/$defs/role_exclusion_policy"
 },
 "external_writes": {
 "$ref": "#/$defs/external_write_policy"
@@ -320,7 +320,7 @@
 "required": [
 "eligibility_does_not_authorize_execution",
 "authorized_owners",
-"prohibited_repository_policy_required"
+"role_exclusion_policy_required"
 ],
 "properties": {
 "eligibility_does_not_authorize_execution": {
@@ -345,7 +345,7 @@
 "$ref": "#/$defs/repository_selector"
 }
 },
-"prohibited_repository_policy_required": {
+"role_exclusion_policy_required": {
 "const": true
 },
 "current_phase_authorization_required": {
@@ -757,16 +757,16 @@
 }
 }
 },
-"prohibited_repository_policy": {
+"role_exclusion_policy": {
 "type": "object",
 "additionalProperties": false,
 "required": [
 "source",
 "precedence",
-"evaluate_before_content_access",
-"authorization_can_override",
-"minimum_metadata_only",
-"denied_operations",
+"decision_key",
+"authorization_can_override_permanent_denial",
+"implementation_access_may_continue_when_authorized",
+"excluded_roles",
 "audit_required"
 ],
 "properties": {
@@ -774,86 +774,38 @@
 "const": "codex/access/prohibited-repositories.yaml"
 },
 "precedence": {
-"const": "hard_deny"
+"const": "permanent_role_operation_deny"
 },
-"evaluate_before_content_access": {
-"const": true
+"decision_key": {
+"type": "array",
+"const": [
+"canonical_repository_identity",
+"repository_role",
+"requested_operation"
+]
 },
-"authorization_can_override": {
+"authorization_can_override_permanent_denial": {
 "const": false
 },
-"minimum_metadata_only": {
+"implementation_access_may_continue_when_authorized": {
 "const": true
 },
-"aliases_and_renames_included": {
-"type": "boolean",
-"default": true
-},
-"forks_and_mirrors_included": {
-"type": "boolean",
-"default": true
-},
-"submodules_included": {
-"type": "boolean",
-"default": true
-},
-"denied_operations": {
+"excluded_roles": {
 "type": "array",
 "uniqueItems": true,
 "items": {
-"$ref": "#/$defs/operation_id"
-},
-"allOf": [
-{
-"contains": {
-"const": "repository_metadata"
-}
-},
-{
-"contains": {
-"const": "clone"
-}
-},
-{
-"contains": {
-"const": "fetch"
-}
-},
-{
-"contains": {
-"const": "qualification"
-}
-},
-{
-"contains": {
-"const": "static_analysis"
-}
-},
-{
-"contains": {
-"const": "external_source_modification"
-}
-},
-{
-"contains": {
-"const": "external_branch_creation"
-}
-},
-{
-"contains": {
-"const": "draft_pull_request_creation"
-}
-}
+"enum": [
+"analysis_target",
+"test_fixture",
+"remediation_target",
+"publication_target",
+"cross_repository_graph_participant",
+"runtime_evidence_target"
 ]
+}
 },
 "audit_required": {
 "const": true
-},
-"denial_result": {
-"enum": [
-"prohibited",
-"deny"
-]
 }
 }
 },

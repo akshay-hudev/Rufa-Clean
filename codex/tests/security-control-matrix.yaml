@@ -230,11 +230,13 @@ controls:
           - p1-operation-permission-separation
           - p1-external-fixture-analysis
     failure_behavior: block_phase
-  - control_id: access-prohibited-repository
-    title: Deny prohibited repositories before content access
+  - control_id: access-repository-role-exclusion
+    title: Enforce repository target-role exclusions
     domain: repository-access
     objective: >-
-      Ensure that prohibited repositories are rejected using minimum canonical identity metadata before branches, commits, trees, files, packages, source, analysis, modification, or publication are accessed.
+      Ensure that repository access decisions bind identity, repository role,
+      and operation; permit explicitly authorized implementation work; and deny
+      excluded dead-code target operations before they begin.
     severity: critical
     applies_to:
       - all-phases
@@ -245,26 +247,28 @@ controls:
       - codex/access/prohibited-repositories.yaml
       - codex/core/03-safety-invariants.md
     threats:
-      - prohibited-source-access
-      - prohibited-analysis
-      - prohibited-modification
-      - prohibited-publication
+      - repository-role-confusion
+      - implementation-to-analysis-escalation
+      - excluded-target-analysis
+      - excluded-target-remediation
+      - excluded-target-publication
     control_requirements:
-      - Deny akshay-hudev/Rufa-Clean before content retrieval.
-      - Do not enumerate branches, commits, tags, or files after denial.
-      - Record only minimum identity metadata and a secret-free denial event.
-      - Apply denial to submodules, mirrors, aliases, and renamed identities.
+      - Recognize akshay-hudev/Rufa-Clean as the DCAv2 implementation repository.
+      - Require explicit authorization for local implementation inspection, modification, build, and test.
+      - Deny analysis, fixture, remediation, cross-repository, runtime-evidence, and automated remediation publication roles.
+      - Prevent read-to-write, implementation-to-analysis, and analysis-to-publication permission inheritance.
+      - Record canonical identity, role, operation, decision, and authorization identity.
     evidence_requirements:
-      - prohibited-repository-policy-decision
-      - minimum-identity-audit-event
-      - zero-content-request-record
+      - repository-role-operation-decision
+      - target-role-exclusion-audit-event
+      - permission-noninheritance-report
     validation_tests:
       - manifest_path: codex/tests/phase-0-tests.yaml
         test_ids:
-          - p0-prohibited-repository-preflight
+          - p0-repository-role-exclusion-matrix
       - manifest_path: codex/tests/phase-1-tests.yaml
         test_ids:
-          - p1-prohibited-repository-preflight
+          - p1-repository-role-exclusion-matrix
     failure_behavior: security_stop
   - control_id: scm-preserve-local-work
     title: Preserve pre-existing local work
@@ -2408,7 +2412,7 @@ phase_security_requirements:
       - gov-phase-authorization
       - gov-operation-permission-separation
       - access-repository-policy
-      - access-prohibited-repository
+      - access-repository-role-exclusion
       - scm-preserve-local-work
       - secret-minimization
       - secret-export-scanning
@@ -2433,7 +2437,7 @@ phase_security_requirements:
       - gov-phase-authorization
       - gov-operation-permission-separation
       - access-repository-policy
-      - access-prohibited-repository
+      - access-repository-role-exclusion
       - scm-preserve-local-work
       - scm-default-branch-protection
       - secret-minimization
