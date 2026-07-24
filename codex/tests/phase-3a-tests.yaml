@@ -1,0 +1,1617 @@
+$schema: ./phase-test-manifest.schema.json
+schema_version: "1.0.0"
+manifest_id: phase-3a-tests
+phase_id: phase-3a-npm-monorepos
+title: Phase 3A npm Monorepos Test Manifest
+purpose: >-
+  Defines the required governance, workspace discovery, package identity,
+  package graph, package-aware roots, toolchain and command routing, coverage,
+  cross-package evidence, baseline and remediation gates, security, persistence,
+  external-representative, reporting, and cleanup evidence for the bounded
+  Phase 3A npm-workspace capability. This manifest does not authorize
+  implementation, repository access, credentials, dependency installation,
+  remediation, publication, or destructive operations.
+document_status: active
+implementation_authorized_by_manifest: false
+capability_ids:
+  - repository.npm-workspace.qualify.v1
+  - workspace.npm.discover.v1
+  - workspace.npm.package-inventory.v1
+  - workspace.npm.package-graph.v1
+  - workspace.npm.package-roots.v1
+  - analysis.typescript.cross-workspace-references.v1
+  - analysis.typescript.package-exports.v1
+  - analysis.typescript.project-references.v1
+  - analysis.typescript.path-aliases.v1
+  - coverage.typescript.npm-workspace.v1
+  - verification.npm-workspace.package-gates.v1
+  - verification.npm-workspace.aggregate-gates.v1
+  - remediation.typescript.npm-workspace.private-function-delete.v1
+references:
+  - path: AGENTS.md
+    purpose: Defines repository-level operating instructions.
+  - path: codex/core/01-instruction-precedence.md
+    purpose: Defines instruction precedence and conflict handling.
+  - path: codex/core/03-safety-invariants.md
+    purpose: Defines permanent safety invariants.
+  - path: codex/core/04-accuracy-and-evidence-policy.md
+    purpose: Defines evidence and coverage accuracy requirements.
+  - path: codex/core/05-phase-authorization-protocol.md
+    purpose: Defines phase authorization requirements.
+  - path: codex/core/06-autonomy-and-stop-conditions.md
+    purpose: Defines bounded autonomy and mandatory stop behavior.
+  - path: codex/core/07-source-control-policy.md
+    purpose: Defines source-control boundaries.
+  - path: codex/core/08-secret-handling-policy.md
+    purpose: Defines secret-handling requirements.
+  - path: codex/core/09-prompt-injection-policy.md
+    purpose: Defines handling of untrusted repository content.
+  - path: codex/core/10-reporting-and-state-policy.md
+    purpose: Defines truthful reporting and execution-state requirements.
+  - path: codex/access/github-repository-policy.yaml
+    purpose: Defines identity-role-operation access decisions.
+  - path: codex/access/prohibited-repositories.yaml
+    purpose: Defines permanent repository-role exclusions.
+  - path: codex/engineering/database-evolution-policy.md
+    purpose: Defines additive migration requirements.
+  - path: codex/engineering/structured-command-policy.md
+    purpose: Defines approved structured-command execution.
+  - path: codex/engineering/runner-security-controls.md
+    purpose: Defines untrusted runner security controls.
+  - path: codex/engineering/testing-policy.md
+    purpose: Defines test execution and evidence requirements.
+  - path: codex/roadmap/phase-3a-npm-monorepos.md
+    purpose: Defines Phase 3A scope and completion criteria.
+  - path: codex/authorizations/current-phase-authorization.yaml
+    purpose: Identifies whether Phase 3A execution is currently authorized.
+defaults:
+  default_runner_profile: isolated-typescript-runner
+  default_network_profile: network-disabled
+  default_timeout_seconds: 1200
+  default_output_limit_bytes: 2097152
+  default_retry_policy: no_retry
+  unavailable_test_result: not_passed
+  skipped_test_result: not_passed
+  unexpected_error_result: failed
+  cleanup_required: true
+fixtures:
+  - fixture_id: phase-3a-local-dcav2
+    fixture_type: system_under_test
+    description: >-
+      The authorized local DCAv2 implementation repository under test. It is
+      never an analysis target, qualification target, or test-fixture
+      repository.
+    source_identity: akshay-hudev/Rufa-Clean
+    authorization_required: true
+    cleanup_required: false
+  - fixture_id: phase-3a-supported-npm-workspace
+    fixture_type: synthetic_repository
+    description: >-
+      A synthetic bounded npm workspace with a supported declaration, lockfile,
+      finite TypeScript packages, package graph, and available gates.
+    source_identity: synthetic-phase-3a-supported-npm-workspace
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-3a-tenant
+    cleanup_required: true
+  - fixture_id: phase-3a-workspace-variants
+    fixture_type: synthetic_repository
+    description: >-
+      Synthetic repositories covering nested workspaces, overlapping roots,
+      duplicate names, lockfile conflicts, pnpm and Yarn indicators, broken
+      baselines, path-alias ambiguity, export and project-reference edge cases,
+      and undeclared nested manifests.
+    source_identity: synthetic-phase-3a-workspace-variants
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-3a-tenant
+    cleanup_required: true
+  - fixture_id: phase-3a-hostile-content
+    fixture_type: synthetic_repository
+    description: >-
+      Synthetic malicious manifests, documentation, lifecycle scripts, symbolic
+      links, outputs, and secret canaries used to test containment.
+    source_identity: synthetic-phase-3a-hostile-content
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    contains_synthetic_secrets: true
+    tenant_scope: synthetic-phase-3a-tenant
+    cleanup_required: true
+  - fixture_id: phase-3a-database
+    fixture_type: database
+    description: >-
+      A disposable PostgreSQL-compatible fixture containing the Phase 2 schema,
+      multiple synthetic tenants, and room for additive Phase 3A workspace
+      tables and audit history.
+    source_identity: phase-3a-postgresql-fixture
+    immutable_revision: fixture-version-1
+    authorization_required: false
+    tenant_scope: synthetic-phase-3a-tenant
+    cleanup_required: true
+  - fixture_id: phase-3a-external-representative
+    fixture_type: external_repository
+    description: >-
+      A bounded representative sample of eligible akshay-hudev npm workspace
+      repositories at immutable revisions, excluding Rufa-Clean before target
+      metadata or content access. rufa-test-lib is optional smoke evidence only.
+    source_identity: dynamically-selected-eligible-akshay-hudev-repositories
+    authorization_required: true
+    tenant_scope: authorized-phase-3a-tenant
+    cleanup_required: true
+
+test_groups:
+
+  - group_id: phase-3a-authorization
+    title: Authorization and repository-role boundaries
+    purpose: >-
+      Verify exact Phase 3A activation, permission separation, permanent
+      Rufa-Clean exclusions, and the Phase 3B boundary.
+    execution_order: 10
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-current-phase-authorization
+        title: Validate current Phase 3A authorization
+        objective: >-
+          Require an active exact Phase 3A authorization bound to the required
+          implementation branch, workspace and package scope, operations,
+          manifest, credentials, tests, and stop conditions before any Phase 3A
+          implementation command.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [authorization.validate-phase-3a]
+        fixture_ids:
+          - phase-3a-local-dcav2
+        expected_results:
+          - result_id: exact-phase-3a-authorization
+            description: >-
+              Phase 3A runs only under a matching active human authorization.
+            status: passed
+            machine_assertion: unauthorized_phase_3a_execution_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: >-
+              Schema-valid exact Phase 3A authorization and activation decision.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-operation-permission-separation
+        title: Preserve operation permission separation
+        objective: >-
+          Prove discovery does not imply analysis, analysis does not imply
+          remediation, package-scoped authorization does not authorize other
+          packages, and no Phase 3A permission implies publication or Phase 3B.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [authorization.verify-operation-separation]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: operation-permissions-separated
+            description: >-
+              Every unauthorized successor operation is denied independently.
+            status: passed
+            machine_assertion: permission_inheritance_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: >-
+              Allow and deny decisions for each operation boundary.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-rufa-clean-target-exclusion
+        title: Enforce canonical Rufa-Clean target exclusions
+        objective: >-
+          Prove canonical identity blocks Rufa-Clean before qualification,
+          metadata expansion, content acquisition, fixture use, finding
+          generation, remediation, cross-repository participation, runtime,
+          contract, scale, branch, commit, push, pull-request, and publication
+          operations while authorized local implementation work remains valid.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [repository-access.verify-rufa-clean-exclusions]
+        fixture_ids:
+          - phase-3a-local-dcav2
+        expected_results:
+          - result_id: rufa-clean-denied-before-target-access
+            description: >-
+              All target and external-write operations are denied by exact
+              identity.
+            status: passed
+            machine_assertion: rufa_clean_target_content_access_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: >-
+              Secret-free identity, role, operation, authorization, and deny
+              decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-phase-3b-remains-unauthorized
+        title: Preserve the Phase 3B boundary
+        objective: >-
+          Verify completion or failure of Phase 3A never starts Phase 3B without
+          a separate exact human authorization.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [authorization.verify-phase-3b-inactive]
+        fixture_ids:
+          - phase-3a-local-dcav2
+        expected_results:
+          - result_id: phase-3b-inactive
+            description: >-
+              No automatic next-phase transition occurs.
+            status: passed
+            machine_assertion: implicit_phase_3b_transition_count == 0
+        evidence_requirements:
+          - evidence_type: authorization_record
+            description: >-
+              Phase handoff record showing Phase 3B inactive.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-workspace-discovery
+    title: npm workspace discovery
+    purpose: >-
+      Validate deterministic npm workspace declaration discovery and
+      explicit unsupported workspace shapes.
+    execution_order: 20
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-supported-workspace-declaration
+        title: Discover supported npm workspace declarations
+        objective: >-
+          Discover supported npm workspace declaration forms with provenance
+          including location, patterns, package set, and digest for the bounded
+          single-root npm workspace profile.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.discover.v1, repository.npm-workspace.qualify.v1]
+        command_ids: [workspace.test-supported-declaration]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: supported-workspace-discovered
+            description: >-
+              Supported workspace declaration is deterministic and digest-bound.
+            status: passed
+            machine_assertion: workspace_declaration_digest_missing_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Workspace declaration identity, patterns, and digest.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-workspace-pattern-safety
+        title: Reject unsafe workspace patterns
+        objective: >-
+          Reject absolute paths, parent-directory escapes, symbolic-link
+          escapes, dependency directories, and unbounded globs during workspace
+          discovery.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.discover.v1]
+        command_ids: [workspace.test-pattern-safety]
+        fixture_ids:
+          - phase-3a-workspace-variants
+          - phase-3a-hostile-content
+        expected_results:
+          - result_id: unsafe-patterns-rejected
+            description: >-
+              Unsafe patterns never enlarge the authorized package set.
+            status: passed
+            machine_assertion: unsafe_workspace_pattern_accept_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Rejected pattern cases and confinement decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-unsupported-workspace-shapes
+        title: Detect unsupported workspace shapes
+        objective: >-
+          Detect nested independent workspaces, overlapping roots, conflicting
+          lockfiles, pnpm indicators, Yarn indicators, and ambiguous
+          declarations as configuration_required or unsupported without silent
+          flattening or readiness claims.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.discover.v1, repository.npm-workspace.qualify.v1]
+        command_ids: [workspace.test-unsupported-shapes]
+        fixture_ids:
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: unsupported-shapes-explicit
+            description: >-
+              Unsupported shapes never report ready.
+            status: passed
+            machine_assertion: unsupported_workspace_reported_ready_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Explicit unsupported or configuration-required outcomes for each
+              shape.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-package-identity-graph
+    title: Package identity and dependency graph
+    purpose: >-
+      Validate canonical package identity, duplicate-name safety,
+      deterministic package graphs, and lockfile consistency.
+    execution_order: 30
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-canonical-package-identity
+        title: Bind canonical package identity
+        objective: >-
+          Bind package identity to repository, immutable commit, package root,
+          manifest digest, and package name so same-name packages in different
+          roots remain distinct.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-inventory.v1]
+        command_ids: [workspace.test-package-identity]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: package-identity-deterministic
+            description: >-
+              Package identities are unambiguous and stable across reruns.
+            status: passed
+            machine_assertion: ambiguous_package_identity_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Canonical package identity records and digests.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-duplicate-package-names
+        title: Fail safely on duplicate package names
+        objective: >-
+          Detect duplicate package names and fail safely without collapsing
+          distinct roots into one graph node.
+        category: failure
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-inventory.v1, workspace.npm.package-graph.v1]
+        command_ids: [workspace.test-duplicate-package-names]
+        fixture_ids:
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: duplicate-names-rejected
+            description: >-
+              Duplicate names never silently merge package nodes.
+            status: passed
+            machine_assertion: duplicate_package_name_collapse_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Duplicate-name rejection and graph isolation evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-package-graph-construction
+        title: Construct deterministic package graphs
+        objective: >-
+          Construct deterministic package graph nodes and edges for runtime,
+          development, peer, and optional dependencies including root edges,
+          with order-independent digests and explicit unresolved edges.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-graph.v1]
+        command_ids: [workspace.test-package-graph]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: package-graph-deterministic
+            description: >-
+              Graph digests are stable under file-order variation.
+            status: passed
+            machine_assertion: package_graph_nondeterminism_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Package graph nodes, edges, unresolved edges, and digest.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-lockfile-manifest-consistency
+        title: Evaluate lockfile and manifest consistency
+        objective: >-
+          Detect missing packages, version or root mismatches, stale lockfiles,
+          and lockfile-manifest disagreement without automatic repair.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-graph.v1, repository.npm-workspace.qualify.v1]
+        command_ids: [workspace.test-lockfile-consistency]
+        fixture_ids:
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: lockfile-consistency-explicit
+            description: >-
+              Inconsistencies are explicit and never auto-repaired.
+            status: passed
+            machine_assertion: lockfile_auto_repair_count == 0 && unresolved_required_edge_hidden_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Lockfile consistency findings and status.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-package-roots
+    title: Package-level source, test, generated, and excluded roots
+    purpose: >-
+      Validate per-package root discovery and handling of undeclared nested
+      manifests.
+    execution_order: 40
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-package-source-test-generated-roots
+        title: Discover package-aware roots
+        objective: >-
+          Discover source, test, generated, and excluded roots per package with
+          package binding and reject ambiguous shared ownership across packages.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-roots.v1]
+        command_ids: [workspace.test-package-roots]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: package-roots-bound
+            description: >-
+              Every discovered root is bound to exactly one package identity.
+            status: passed
+            machine_assertion: ambiguous_shared_root_ownership_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Per-package root inventories and bindings.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-undeclared-nested-manifests
+        title: Handle undeclared nested manifests
+        objective: >-
+          Treat nested fixture, example, and vendor manifests as non-members
+          unless declared; if they may contain relevant evidence, coverage
+          remains incomplete rather than silently ignored.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-inventory.v1, coverage.typescript.npm-workspace.v1]
+        command_ids: [workspace.test-undeclared-manifests]
+        fixture_ids:
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: undeclared-manifests-explicit
+            description: >-
+              Undeclared manifests never become silent workspace members.
+            status: passed
+            machine_assertion: undeclared_manifest_auto_member_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Membership decisions and coverage impact records.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-toolchain-commands
+    title: Workspace command and toolchain resolution
+    purpose: >-
+      Validate package-aware structured commands, toolchain binding, and
+      install lifecycle boundaries.
+    execution_order: 50
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-workspace-command-routing
+        title: Route workspace and package commands
+        objective: >-
+          Map root, package, and aggregate typecheck, build, and test commands
+          to approved structured commands with working directory, npm mode,
+          limits, and expected artifacts.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [verification.npm-workspace.package-gates.v1, verification.npm-workspace.aggregate-gates.v1]
+        command_ids: [workspace.test-command-routing]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: commands-structured-and-scoped
+            description: >-
+              Discovered repository scripts never execute directly.
+            status: passed
+            machine_assertion: direct_discovered_command_execution_count == 0
+        evidence_requirements:
+          - evidence_type: command_record
+            description: >-
+              Structured command mappings and scopes.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-package-command-identity-binding
+        title: Bind commands to package identity
+        objective: >-
+          Bind commands to canonical package identity and reject duplicate
+          names, wrong roots, and unauthorized package scopes.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-inventory.v1, verification.npm-workspace.package-gates.v1]
+        command_ids: [workspace.test-command-identity-binding]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: command-identity-bound
+            description: >-
+              Commands cannot target an unauthorized or ambiguous package.
+            status: passed
+            machine_assertion: unauthorized_package_command_accept_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: >-
+              Command-to-package binding decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-root-install-and-lifecycle
+        title: Install at workspace root without host fallback
+        objective: >-
+          Perform deterministic root dependency installation with lifecycle
+          scripts attributable and disabled or isolated; never fall back to
+          host-global Node, npm, or TypeScript tools.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1, verification.npm-workspace.aggregate-gates.v1]
+        command_ids: [workspace.test-root-install-lifecycle]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-hostile-content
+        expected_results:
+          - result_id: root-install-isolated
+            description: >-
+              Host-global toolchain fallback never occurs.
+            status: passed
+            machine_assertion: host_global_toolchain_fallback_count == 0
+        evidence_requirements:
+          - evidence_type: command_record
+            description: >-
+              Install command, network profile, and toolchain identities.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-coverage
+    title: Partial and complete workspace coverage
+    purpose: >-
+      Validate package-level and aggregate coverage semantics including
+      partial failure and unsupported exclusions.
+    execution_order: 60
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-workspace-coverage-complete
+        title: Require complete workspace coverage
+        objective: >-
+          Aggregate coverage is complete only when every required package has
+          complete supported coverage and the aggregate digest is retained.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [coverage.typescript.npm-workspace.v1]
+        command_ids: [workspace.test-coverage-complete]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: workspace-coverage-complete
+            description: >-
+              Complete coverage requires all required packages complete.
+            status: passed
+            machine_assertion: complete_coverage_with_incomplete_required_package_count == 0
+        evidence_requirements:
+          - evidence_type: coverage_record
+            description: >-
+              Package and aggregate coverage digests.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-partial-and-failed-package-coverage
+        title: Preserve uncertainty for partial packages
+        objective: >-
+          Partial, failed, stale, or unavailable required packages block
+          complete coverage and are never interpreted as zero references.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [coverage.typescript.npm-workspace.v1]
+        command_ids: [workspace.test-partial-coverage]
+        fixture_ids:
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: partial-coverage-blocks-complete
+            description: >-
+              Failed analyzer or partial package never yields complete coverage.
+            status: passed
+            machine_assertion: failed_package_treated_as_zero_refs_count == 0
+        evidence_requirements:
+          - evidence_type: coverage_record
+            description: >-
+              Partial and failed package coverage statuses.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-excluded-vs-relevant-unsupported
+        title: Distinguish irrelevant and relevant unsupported packages
+        objective: >-
+          Provably irrelevant unsupported packages may be excluded under
+          ready_with_limited_packages; possibly relevant unsupported packages
+          keep findings inconclusive.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [coverage.typescript.npm-workspace.v1, repository.npm-workspace.qualify.v1]
+        command_ids: [workspace.test-excluded-unsupported]
+        fixture_ids:
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: relevant-unsupported-inconclusive
+            description: >-
+              Possibly relevant unsupported packages never claim complete
+              coverage.
+            status: passed
+            machine_assertion: relevant_unsupported_complete_coverage_count == 0
+        evidence_requirements:
+          - evidence_type: coverage_record
+            description: >-
+              Exclusion rationale and coverage outcomes.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-cross-package-evidence
+    title: Cross-package liveness evidence inside one repository
+    purpose: >-
+      Validate cross-workspace references, path aliases, package exports,
+      project references, and conservative classification within one
+      repository.
+    execution_order: 70
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-cross-workspace-references
+        title: Normalize cross-workspace references
+        objective: >-
+          Retain source and target package identity for package-name, subpath,
+          relative cross-root, and test imports within the authorized
+          repository.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [analysis.typescript.cross-workspace-references.v1]
+        command_ids: [workspace.test-cross-workspace-references]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: cross-workspace-refs-package-aware
+            description: >-
+              Every retained reference binds source and target packages.
+            status: passed
+            machine_assertion: cross_workspace_ref_missing_package_context_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Cross-workspace reference records with package context.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-path-aliases-and-ambiguity
+        title: Resolve path aliases conservatively
+        objective: >-
+          Resolve same-package and cross-package path aliases for the supported
+          profile; ambiguous, missing, or generated-only targets reduce
+          coverage.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [analysis.typescript.path-aliases.v1, coverage.typescript.npm-workspace.v1]
+        command_ids: [workspace.test-path-aliases]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: alias-ambiguity-reduces-coverage
+            description: >-
+              Ambiguous aliases never produce candidate_dead.
+            status: passed
+            machine_assertion: ambiguous_alias_candidate_dead_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Alias resolution and coverage impact.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-package-exports-and-reexports
+        title: Resolve package exports and re-exports
+        objective: >-
+          Resolve root, subpath, and re-export liveness within the repository;
+          unknown public external consumers block public-API remediation
+          readiness.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [analysis.typescript.package-exports.v1]
+        command_ids: [workspace.test-package-exports]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: exports-resolved-or-reduced
+            description: >-
+              Unsupported export conditions reduce coverage rather than inventing
+              absence.
+            status: passed
+            machine_assertion: unsupported_export_treated_as_unused_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Export and re-export evidence records.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-project-references
+        title: Handle TypeScript project references
+        objective: >-
+          Resolve direct and transitive project references in the supported
+          profile; cycles, missing projects, or out-of-repository references
+          reduce coverage or block remediation readiness.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [analysis.typescript.project-references.v1]
+        command_ids: [workspace.test-project-references]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: project-refs-bounded
+            description: >-
+              Unsupported project-reference forms never claim complete coverage.
+            status: passed
+            machine_assertion: unsupported_project_ref_complete_coverage_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Project-reference graph and status.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-classification-conservatism
+        title: Classify only with complete required coverage
+        objective: >-
+          Emit candidate_dead only when package and workspace coverage are
+          complete for the supported symbol shape; dynamic use, failed
+          consumers, or stale graphs block dead classification.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [coverage.typescript.npm-workspace.v1, analysis.typescript.cross-workspace-references.v1]
+        command_ids: [workspace.test-classification-conservatism]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: classification-conservative
+            description: >-
+              Incomplete coverage never yields candidate_dead.
+            status: passed
+            machine_assertion: candidate_dead_with_incomplete_coverage_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Classification decisions with coverage preconditions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-baseline-remediation-gates
+    title: Baseline and remediation gates
+    purpose: >-
+      Validate package and aggregate baselines, exact reproduction,
+      package-scoped transformation, and post-change gates. Default Phase 3A
+      authorization keeps remediation disabled; these tests define required
+      gate behavior when separately authorized.
+    execution_order: 80
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-package-and-aggregate-baselines
+        title: Evaluate package and aggregate baselines
+        objective: >-
+          Require package-specific and aggregate baseline gates;
+          dependent-package baseline failure blocks readiness even when the
+          target package passes.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [verification.npm-workspace.package-gates.v1, verification.npm-workspace.aggregate-gates.v1]
+        command_ids: [workspace.test-baselines]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+        expected_results:
+          - result_id: baselines-package-and-aggregate
+            description: >-
+              Broken baselines never convert to readiness.
+            status: passed
+            machine_assertion: baseline_broken_reported_ready_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Package and aggregate baseline results.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-exact-reproduction-and-scoped-transform
+        title: Require exact package-scoped reproduction
+        objective: >-
+          Reproduce the exact package, graph, and coverage digests before any
+          transformation; wrong package, moved package, or graph change blocks
+          transformation. Default authorization keeps remediation disabled.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [remediation.typescript.npm-workspace.private-function-delete.v1]
+        command_ids: [workspace.test-exact-reproduction]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: reproduction-package-scoped
+            description: >-
+              Transformation never proceeds without exact reproduction.
+            status: passed
+            machine_assertion: transform_without_exact_reproduction_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Reproduction and transform gate decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-changed-file-and-post-change-gates
+        title: Validate changed files and post-change gates
+        objective: >-
+          Validate repository-wide changed-file allowlists and dependent plus
+          aggregate post-change gates with deterministic patch identity when
+          remediation is separately authorized.
+        category: functional
+        requirement: required
+        execution_mode: automated
+        capability_ids: [verification.npm-workspace.package-gates.v1, verification.npm-workspace.aggregate-gates.v1, remediation.typescript.npm-workspace.private-function-delete.v1]
+        command_ids: [workspace.test-post-change-gates]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: post-change-gates-enforced
+            description: >-
+              Unexpected changed files block completion.
+            status: passed
+            machine_assertion: unexpected_changed_file_accept_count == 0
+        evidence_requirements:
+          - evidence_type: changed_file_record
+            description: >-
+              Changed-file allowlist and post-change gate results.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-publisher-workspace-guards
+        title: Guard publisher with workspace digests
+        objective: >-
+          When publication is separately authorized and activated, the trusted
+          draft publisher validates package, graph, and coverage digests and
+          rejects default-branch writes, merges, and unexpected files.
+        category: security
+        requirement: conditional
+        execution_mode: automated
+        activation:
+          default_active: false
+          all_of:
+            - phase-3a-publication-separately-authorized
+        capability_ids: [remediation.typescript.npm-workspace.private-function-delete.v1]
+        command_ids: [publisher.test-workspace-guards]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: publisher-workspace-guards
+            description: >-
+              Default-branch and merge publication paths remain denied.
+            status: passed
+            machine_assertion: default_branch_or_merge_publication_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: >-
+              Publisher guard decisions and digests.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-security-hostile
+    title: Security and hostile-repository controls
+    purpose: >-
+      Validate runner containment, symlink and lifecycle escapes,
+      prompt-injection resistance, and secret canaries for npm workspaces.
+    execution_order: 90
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-runner-workspace-containment
+        title: Contain untrusted workspace execution
+        objective: >-
+          Run workspace installs and gates without Docker socket, trusted or
+          publisher credentials, with sealed network profile after install,
+          process-tree cleanup, and bounded output.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [security.test-runner-workspace-containment]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-hostile-content
+        expected_results:
+          - result_id: runner-contained
+            description: >-
+              No trusted credential or Docker socket exposure occurs.
+            status: passed
+            machine_assertion: trusted_credential_or_docker_socket_exposure_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: >-
+              Runner containment evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-symlink-and-script-escape
+        title: Block symlink and lifecycle escapes
+        objective: >-
+          Reject symbolic-link package roots that escape the workspace and
+          ensure root or package lifecycle scripts cannot reach trusted
+          credentials.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.discover.v1, workspace.npm.package-roots.v1]
+        command_ids: [security.test-symlink-script-escape]
+        fixture_ids:
+          - phase-3a-hostile-content
+        expected_results:
+          - result_id: escapes-blocked
+            description: >-
+              Symlink and lifecycle escapes are denied before trusted access.
+            status: passed
+            machine_assertion: workspace_escape_success_count == 0
+        evidence_requirements:
+          - evidence_type: policy_decision
+            description: >-
+              Escape attempt and deny evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-prompt-injection-and-secrets
+        title: Resist prompt injection and retain secret canaries
+        objective: >-
+          Treat package manifests, documentation, scripts, and runner output as
+          untrusted data that cannot broaden phase scope; root and package
+          secret canaries remain redacted.
+        category: hostile
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [security.test-prompt-injection-secrets]
+        fixture_ids:
+          - phase-3a-hostile-content
+        expected_results:
+          - result_id: injection-and-secrets-contained
+            description: >-
+              Untrusted content never broadens authorization and canaries never
+              leak.
+            status: passed
+            machine_assertion: scope_broadening_or_secret_leak_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: >-
+              Injection resistance and redaction evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-evidence-finding-identity
+    title: Deterministic evidence and finding identity
+    purpose: >-
+      Validate package-aware evidence normalization and disposition identity
+      binding.
+    execution_order: 100
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-package-aware-evidence-normalization
+        title: Normalize package-aware evidence
+        objective: >-
+          Bind evidence to packages, graph digest, producer or adapter identity,
+          and polarity; mark evidence stale on material graph or configuration
+          change.
+        category: determinism
+        requirement: required
+        execution_mode: automated
+        capability_ids: [analysis.typescript.cross-workspace-references.v1, coverage.typescript.npm-workspace.v1]
+        command_ids: [workspace.test-evidence-normalization]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: evidence-package-aware
+            description: >-
+              Evidence digests change when the package graph materially changes.
+            status: passed
+            machine_assertion: stale_evidence_accepted_as_current_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Normalized evidence identities and digests.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-finding-disposition-identity
+        title: Bind finding and disposition identity
+        objective: >-
+          Bind findings and dispositions to repository, commit, package, symbol,
+          graph digest, and coverage digests; material graph change makes prior
+          dispositions stale.
+        category: determinism
+        requirement: required
+        execution_mode: automated
+        capability_ids: [remediation.typescript.npm-workspace.private-function-delete.v1]
+        command_ids: [workspace.test-finding-identity]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: finding-identity-bound
+            description: >-
+              Stale dispositions never authorize remediation.
+            status: passed
+            machine_assertion: stale_disposition_remediation_accept_count == 0
+        evidence_requirements:
+          - evidence_type: structured_result
+            description: >-
+              Finding and disposition identity records.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-persistence-audit
+    title: PostgreSQL persistence and audit requirements
+    purpose: >-
+      Validate additive migrations, workspace persistence shapes, tenant
+      isolation, and hash-linked audit events.
+    execution_order: 110
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-migrations-fresh-and-upgrade
+        title: Migrate fresh install and Phase 2 upgrade
+        objective: >-
+          Apply additive Phase 3A migrations on fresh install and upgrade from
+          the Phase 2 schema while preserving interpretable single-package
+          history.
+        category: migration
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [db.test-phase-3a-migrations]
+        fixture_ids:
+          - phase-3a-database
+        expected_results:
+          - result_id: migrations-additive
+            description: >-
+              Historical migrations remain unchanged and upgrade succeeds.
+            status: passed
+            machine_assertion: historical_migration_rewrite_count == 0 && upgrade_failure_count == 0
+        evidence_requirements:
+          - evidence_type: database_record
+            description: >-
+              Fresh-install and upgrade migration evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-workspace-persistence-shapes
+        title: Persist workspace qualification shapes
+        objective: >-
+          Persist packages, graph edges, partial coverage, duplicate names,
+          unresolved edges, and multi-tenant records immutably.
+        category: migration
+        requirement: required
+        execution_mode: automated
+        capability_ids: [workspace.npm.package-graph.v1, coverage.typescript.npm-workspace.v1]
+        command_ids: [db.test-workspace-persistence]
+        fixture_ids:
+          - phase-3a-database
+        expected_results:
+          - result_id: workspace-persistence-shapes
+            description: >-
+              Tenant isolation and immutability hold for workspace records.
+            status: passed
+            machine_assertion: tenant_leak_or_mutable_history_count == 0
+        evidence_requirements:
+          - evidence_type: database_record
+            description: >-
+              Persisted workspace shapes and isolation checks.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-audit-workspace-events
+        title: Emit hash-linked workspace audit events
+        objective: >-
+          Emit required workspace audit events that are tenant-scoped,
+          secret-free, append-only, and hash-linked.
+        category: security
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [audit.test-workspace-events]
+        fixture_ids:
+          - phase-3a-database
+          - phase-3a-supported-npm-workspace
+        expected_results:
+          - result_id: audit-workspace-complete
+            description: >-
+              Required audit events are present and tamper-evident.
+            status: passed
+            machine_assertion: missing_or_tampered_workspace_audit_event_count == 0
+        evidence_requirements:
+          - evidence_type: audit_event
+            description: >-
+              Workspace audit event chain evidence.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+  - group_id: phase-3a-external
+    title: Representative external npm workspace repositories
+    purpose: >-
+      Conditionally qualify eligible non-Rufa npm workspace repositories at
+      immutable revisions without writes.
+    execution_order: 120
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-external-representative-npm-workspaces
+        title: Qualify representative npm workspaces
+        objective: >-
+          When external representative testing is authorized and credentials are
+          available, qualify approximately three to five eligible non-Rufa npm
+          workspace repositories at immutable revisions. Keep rufa-test-lib
+          optional and non-primary. Deny Rufa-Clean before target metadata.
+          Perform no branch, commit, push, pull request, remediation, or
+          publication.
+        category: external
+        requirement: conditional
+        execution_mode: external
+        activation:
+          default_active: false
+          all_of:
+            - phase-3a-external-representative-testing-authorized
+            - github-app-credentials-available
+        capability_ids: [repository.npm-workspace.qualify.v1, workspace.npm.discover.v1, workspace.npm.package-graph.v1]
+        fixture_ids:
+          - phase-3a-external-representative
+        external_operations:
+          - system_type: source_provider
+            system_identity: github
+            operation: repository_discovery_and_qualification
+            authorization_required: true
+            production_access: denied
+            credential_capability: github-app-read
+            network_profile: github-readonly
+            cleanup_required: true
+        expected_results:
+          - result_id: external-representatives-bounded
+            description: >-
+              External sample is bounded, write-free, and Rufa-Clean-excluded.
+            status: passed
+            machine_assertion: external_write_or_rufa_clean_target_count == 0
+        evidence_requirements:
+          - evidence_type: external_operation_record
+            description: >-
+              Representative selection, qualification outcomes, and deny
+              decisions.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: >-
+              External workspace cleanup verification.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+  - group_id: phase-3a-cleanup
+    title: Cleanup requirements
+    purpose: >-
+      Verify Phase 3A-created resources are removed while preserving
+      pre-existing user work.
+    execution_order: 130
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-owned-resource-cleanup
+        title: Verify Phase 3A resource cleanup
+        objective: >-
+          Reconcile and remove only Phase 3A-created containers, networks,
+          processes, workspaces, generated dependency homes, disposable
+          databases, and temporary credential references while preserving
+          pre-existing resources and all user work.
+        category: integration
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [cleanup.verify-phase-3a]
+        fixture_ids:
+          - phase-3a-supported-npm-workspace
+          - phase-3a-workspace-variants
+          - phase-3a-hostile-content
+          - phase-3a-database
+          - phase-3a-external-representative
+        expected_results:
+          - result_id: phase-3a-cleanup-complete
+            description: >-
+              No owned temporary resource remains and no unowned resource is
+              altered.
+            status: passed
+            machine_assertion: owned_resource_leak_count == 0 && unowned_resource_mutation_count == 0
+        evidence_requirements:
+          - evidence_type: cleanup_record
+            description: >-
+              Resource inventory, ownership, cleanup action, and verified final
+              state.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: true
+        cleanup_evidence:
+          - evidence_type: cleanup_record
+            description: >-
+              Cleanup verification for p3a-owned-resource-cleanup.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+
+  - group_id: phase-3a-completion
+    title: Completion criteria and reporting
+    purpose: >-
+      Bind Phase 3A completion to truthful matrices, bounded reporting, and
+      a non-authorizing Phase 3B handoff.
+    execution_order: 140
+    stop_group_on_failure: true
+    tests:
+      - test_id: p3a-capability-security-matrix
+        title: Update capability and security matrices truthfully
+        objective: >-
+          Every Phase 3A capability and applicable security control cites real
+          test evidence with truthful support and validation statuses;
+          unavailable or skipped tests are not reported passed.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [reporting.validate-phase-3a-matrices]
+        fixture_ids:
+          - phase-3a-local-dcav2
+        expected_results:
+          - result_id: matrices-truthful
+            description: >-
+              No false-pass or unbounded monorepo claim appears in matrices.
+            status: passed
+            machine_assertion: false_pass_or_unbounded_monorepo_claim_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: >-
+              Capability and security matrix reconciliation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-completion-report-and-scale-boundary
+        title: Produce a bounded Phase 3A report
+        objective: >-
+          Produce a schema-valid Phase 3A report covering acceptance criteria,
+          package counts, graph support, coverage, gates, migrations, security,
+          cleanup, and scale limits without claiming enterprise-scale or
+          universal monorepo support.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [reporting.validate-phase-3a-report]
+        fixture_ids:
+          - phase-3a-local-dcav2
+        expected_results:
+          - result_id: phase-3a-report-bounded
+            description: >-
+              The report is evidence-backed, secret-free, and scale-bounded.
+            status: passed
+            machine_assertion: false_pass_or_enterprise_monorepo_claim_count == 0
+        evidence_requirements:
+          - evidence_type: test_report
+            description: >-
+              Phase report schema and evidence reconciliation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+      - test_id: p3a-execution-state-handoff
+        title: Record a reproducible Phase 3A handoff
+        objective: >-
+          Record authorization, branch, commits, worktree, governance hashes,
+          commands, tests, supported and unsupported workspace profiles,
+          migrations, external operations, cleanup, limitations, and the
+          smallest next human action. Phase 3B remains unauthorized.
+        category: governance
+        requirement: required
+        execution_mode: automated
+        capability_ids: [repository.npm-workspace.qualify.v1]
+        command_ids: [reporting.validate-phase-3a-state]
+        fixture_ids:
+          - phase-3a-local-dcav2
+        expected_results:
+          - result_id: phase-3a-state-reproducible
+            description: >-
+              Another authorized session can resume from retained evidence without
+              hidden context and without Phase 3B authority.
+            status: passed
+            machine_assertion: missing_required_handoff_field_count == 0 && implicit_phase_3b_authority_count == 0
+        evidence_requirements:
+          - evidence_type: changed_file_record
+            description: >-
+              Validated execution-state handoff and changed-file reconciliation.
+            required_for_pass: true
+            retention_required: true
+            secret_free: true
+        failure_behavior: block_phase
+        retry_policy: no_retry
+        cleanup_required: false
+
+
+completion_policy:
+  required_tests: all_active_required_tests_must_pass
+  conditional_tests: all_activated_conditional_tests_must_pass
+  informational_tests: do_not_block
+  unavailable_tests: block_phase
+  skipped_tests: block_phase
+  failed_cleanup: block_phase
+  unknown_external_state: block_retry_and_completion
+  security_failures: block_phase
+  phase_completion_requires_current_authorization: true
+  allow_completion_with_known_failures: false
+  required_capability_statuses:
+    - functional
+  notes: >-
+    Phase 3A is complete only when every active required test and every
+    activated conditional test passes. Detection of an unsupported workspace
+    shape is valid behavior, but no unsupported shape may be reported ready or
+    functional. Detection-only completion requires explicit authorization and
+    must not be reported as workspace remediation support. Remediation and
+    publication remain separately authorized.
+reporting:
+  record_each_test: true
+  record_unavailable_tests: true
+  record_skipped_tests: true
+  record_cleanup: true
+  record_external_operations: true
+  record_test_inputs: true
+  record_test_environment: true
+  redact_secrets: true
+  prohibit_false_pass: true
+  required_report_schema: codex/schemas/phase-report.schema.json
+  required_audit_event_types:
+    - phase-test-started
+    - phase-test-completed
+    - phase-test-failed
+    - phase-test-blocked
+    - phase-test-unavailable
+    - phase-test-skipped
+    - workspace-qualification-requested
+    - workspace-detected
+    - package-discovered
+    - duplicate-package-rejected
+    - package-graph-created
+    - graph-edge-unresolved
+    - package-qualification-completed
+    - workspace-coverage-completed
+    - package-gate-completed
+    - aggregate-gate-completed
+    - cross-workspace-reference-recorded
+    - finding-classified
+    - remediation-reproduced
+    - package-scoped-transformation-completed
+    - unexpected-file-rejected
+    - patch-created
+    - repository-access-denied
+    - repository-role-exclusion-enforced
+    - phase-cleanup-completed
+    - phase-cleanup-failed
+metadata:
+  owner: dcav2-governance
+  created_at: 2026-07-24T05:39:00Z
+  reviewers:
+    - human-phase-authorizer
+    - human-security-reviewer
+  notes: >-
+    This manifest is normative test configuration only. It does not activate
+    Phase 3A or grant repository, credential, dependency-installation,
+    external-operation, source-modification, remediation, publication, merge,
+    infrastructure, or destructive-operation authority.

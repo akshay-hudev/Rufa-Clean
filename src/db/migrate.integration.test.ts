@@ -34,6 +34,7 @@ describeDatabase("PostgreSQL migration controls", () => {
       "0004_publication_reconciliation",
       "0005_phase1_qualification",
       "0006_phase2_qualification",
+      "0007_phase3a_npm_workspace",
     ]);
 
     root = await mkdtemp(join(tmpdir(), "dcav2-migration-checksum-"));

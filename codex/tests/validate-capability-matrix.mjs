@@ -135,6 +135,10 @@ const phase2 = YAML.parse(
   readFileSync(join(root, "codex/tests/phase-2-tests.yaml"), "utf8"),
   { uniqueKeys: true },
 );
+const phase3a = YAML.parse(
+  readFileSync(join(root, "codex/tests/phase-3a-tests.yaml"), "utf8"),
+  { uniqueKeys: true },
+);
 const security = YAML.parse(
   readFileSync(join(root, "codex/tests/security-control-matrix.yaml"), "utf8"),
   { uniqueKeys: true },
@@ -143,10 +147,11 @@ const requiredCapabilityIds = new Set([
   ...phase0.capability_ids,
   ...phase1.capability_ids,
   ...phase2.capability_ids,
+  ...phase3a.capability_ids,
 ]);
 const matrixCapabilityIds = new Set(matrix.capabilities.map((capability) => capability.capability_id));
 const testIds = new Set(
-  [phase0, phase1, phase2].flatMap((manifest) =>
+  [phase0, phase1, phase2, phase3a].flatMap((manifest) =>
     manifest.test_groups.flatMap((group) => group.tests.map((test) => test.test_id))
   ),
 );

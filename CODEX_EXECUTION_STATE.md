@@ -1,5 +1,336 @@
 # DCAv2 Execution State
 
+## Completed Phase 3A validation completion
+
+This section records successful required Phase 3A validation completion under
+authorization `phase-3a-validation-completion-20260724-01`. Historical sections
+below remain unchanged and non-authorizing.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-3a-validation-completion-2026-07-24-01 |
+| Authorization ID | phase-3a-validation-completion-20260724-01 |
+| Authorized phase | phase-3a-npm-monorepos (validation completion only) |
+| Authorization status | completed; inactive |
+| Execution status | PHASE_3A_COMPLETE |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | cff25204c9f56621bdc5031712c295e201300a68 |
+| Started | 2026-07-24T07:00:00Z |
+| Completed | 2026-07-24T07:55:00Z |
+| Required skipped tests | 0 |
+| Phase 3B | unauthorized |
+
+### Validation result
+
+- Corrected the premature Phase 3A completion claim before validation.
+- Required PostgreSQL ledger tests passed on disposable `dcav2_phase3a_*` databases.
+- Required Docker-runner install/gate/containment/command-routing tests passed.
+- Hostile runner-profile suite passed under the same digest-pinned image.
+- Owned-resource cleanup produced non-vacuous created/removed/absent evidence.
+- Database-free suite: 244 passed, 19 accurately skipped.
+- Complete configured suite: 263 passed, 0 failed, 0 skipped.
+- Governance/capability validators, npm advisory audit, and `git diff --check` passed.
+- Capability statuses for qualify/package-gates/aggregate-gates restored to
+  functional/passed only after evidence; genuine partials retained.
+- No commit, push, PR, merge, or Phase 3B preparation occurred.
+
+### Completion artifacts
+
+- `codex/reports/phase-3a-validation-completion-report.md`
+- `codex/capability-matrix.yaml`
+- `codex/authorizations/current-phase-authorization.yaml`
+
+
+## Active Phase 3A validation completion and state correction
+
+This section records the human-authorized correction of a premature Phase 3A
+completion claim and the start of required validation completion work. It does
+not authorize Phase 3B. Historical sections below remain unchanged and
+non-authorizing.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-3a-validation-completion-2026-07-24-01 |
+| Authorization ID | phase-3a-validation-completion-20260724-01 |
+| Authorized phase | phase-3a-npm-monorepos (validation completion only) |
+| Authorization status | active |
+| Execution status | PHASE_3A_IMPLEMENTATION_COMPLETE; PHASE_3A_VALIDATION_BLOCKED |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | cff25204c9f56621bdc5031712c295e201300a68 |
+| Upstream | origin/codex/phase-0-prerequisite-readiness |
+| Started | 2026-07-24T07:00:00Z |
+| New branch or implementation commit permitted | no |
+| Rufa-Clean target or external-write operation permitted | no |
+| Remediation or publication permitted by default | no |
+| External representative testing activated | no |
+| Automatic Phase 3B continuation | prohibited |
+
+### Truthful correction of the earlier completion claim
+
+- Phase 3A **implementation** remains complete for the bounded local npm-workspace
+  qualification and analysis surfaces delivered under
+  `phase-3a-npm-monorepos-20260724-01`.
+- The earlier `PHASE_3A_COMPLETE` / authorization-completed statement was
+  **premature** and is **not governance-valid**.
+- Required PostgreSQL ledger evidence
+  (`p3a-migrations-fresh-and-upgrade`, `p3a-workspace-persistence-shapes`,
+  `p3a-audit-workspace-events`) was skipped when `DCA_TEST_DATABASE_URL` was
+  unset.
+- Required Docker-runner gate and containment evidence
+  (`p3a-root-install-and-lifecycle`, `p3a-package-and-aggregate-baselines`,
+  `p3a-runner-workspace-containment`, and activated runner-profile siblings)
+  was skipped when `DCA_RUNNER_IMAGE` / Docker were unavailable.
+- Required owned-resource cleanup evidence (`p3a-owned-resource-cleanup`) was
+  not retained as a non-vacuous created/removed/absent inventory.
+- Overstated capability statuses for
+  `repository.npm-workspace.qualify.v1`,
+  `verification.npm-workspace.package-gates.v1`, and
+  `verification.npm-workspace.aggregate-gates.v1` were temporarily corrected to
+  partial / validation-incomplete pending required evidence.
+- Phase 3B remains unauthorized.
+
+### Environment readiness (status only; no secret values)
+
+- `DCA_TEST_DATABASE_URL`: SET
+- `DCA_RUNNER_IMAGE`: SET (digest-pinned)
+- Docker: available
+- Digest-pinned runner image: resolved
+- Disposable database naming: will use newly created `dcav2_phase3a_*` databases
+  (prepared env URL pointed at a non-prefixed local admin database and must not
+  be used as the Phase 3A disposable test database itself)
+
+
+## Completed Phase 3A npm-monorepos execution
+
+This section records the completed Phase 3A implementation.
+Historical sections below remain unchanged and non-authorizing.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-3a-npm-monorepos-2026-07-24-01 |
+| Authorization ID | phase-3a-npm-monorepos-20260724-01 |
+| Authorized phase | phase-3a-npm-monorepos |
+| Authorization status | completed; inactive |
+| Execution status | complete |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | cff25204c9f56621bdc5031712c295e201300a68 |
+| Upstream | origin/codex/phase-0-prerequisite-readiness |
+| Started | 2026-07-24T06:01:26Z |
+| Completed | 2026-07-24T06:15:00Z |
+| New branch or implementation commit permitted | no |
+| Rufa-Clean target or external-write operation permitted | no |
+| Remediation or publication permitted by default | no |
+| Automatic Phase 3B continuation | prohibited |
+
+### Completion result
+
+- Implemented bounded npm workspace discovery, package identity/inventory,
+  deterministic package graphs, package-aware roots, cross-package references,
+  coverage aggregation, capability routing with remediation disabled by
+  default, additive migration `0007_phase3a_npm_workspace`, store persistence,
+  and `dcav2 qualify` workspace routing after role authorization.
+- Database-free suite: 33 files and 243 tests passed; 9 files and 15
+  integration tests accurately skipped when database/runner inputs were absent.
+- Focused Phase 3A suite: one file and seven tests passed.
+- Capability matrix: 56 capabilities, 51 functional, five partially supported.
+- Security matrix: 60 controls retained; later-phase controls remain `not_run`.
+- Docker runner image and disposable PostgreSQL credentials were unset; those
+  integration paths were skipped truthfully rather than reported passed.
+- No analysis publication, remediation transformation, branch, commit, push,
+  pull request, or external write occurred.
+- No paid or metered service was used beyond the Cursor development assistant.
+
+### Completion artifacts
+
+- `codex/reports/phase-3a-npm-monorepos-report.md`
+- `codex/capability-matrix.yaml`
+- `src/workspace/`
+- `src/db/migrations/0007_phase3a_npm_workspace.sql`
+
+### Phase boundary
+
+Phase 3A is complete for the bounded npm-workspace qualification and analysis
+scope. The current authorization is inactive. Phase 3B remains unauthorized and
+no Phase 3B implementation has begun.
+
+## Active Phase 3A npm-monorepos execution
+
+This section is retained as the activation record for the completed Phase 3A
+execution above. It does not authorize further work.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-3a-npm-monorepos-2026-07-24-01 |
+| Authorization ID | phase-3a-npm-monorepos-20260724-01 |
+| Authorized phase | phase-3a-npm-monorepos |
+| Authorization status | superseded by completion record |
+| Execution status | completed |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting commit | cff25204c9f56621bdc5031712c295e201300a68 |
+| Upstream | origin/codex/phase-0-prerequisite-readiness |
+| Started | 2026-07-24T06:01:26Z |
+| New branch or implementation commit permitted | no |
+| Rufa-Clean target or external-write operation permitted | no |
+| Remediation or publication permitted by default | no |
+| Automatic Phase 3B continuation | prohibited |
+
+### Starting repository and preservation record
+
+- Repository root: `/Users/apple/Desktop/Akshay@goAI/DCAv2`
+- Canonical identity: `akshay-hudev/Rufa-Clean`
+- Repository role: `implementation_repository`
+- Starting/current branch: `codex/phase-0-prerequisite-readiness`
+- Starting commit: `cff25204c9f56621bdc5031712c295e201300a68`
+- Pre-existing modified paths from completed Phase 3A governance preparation:
+  `CODEX_EXECUTION_STATE.md`,
+  `codex/authorizations/current-phase-authorization.yaml`,
+  `codex/capability-matrix.yaml`, and
+  `codex/tests/validate-repository-role-governance.mjs`.
+- Pre-existing untracked paths from completed Phase 3A governance preparation:
+  `codex/tests/phase-3a-tests.yaml` and
+  `codex/authorizations/phase-3a-npm-monorepos-authorization-request.yaml`.
+- Those paths are approved Phase 3A governance inputs and must be preserved.
+- All Phase 0, Phase 1, and Phase 2 implementation, reports, authorization
+  history, and historical execution-state sections remain preserved.
+- No staged paths were present at Phase 3A activation beyond the preserved
+  governance-preparation worktree.
+- No branch, commit, push, pull request, or external write was created during
+  activation.
+
+### Governing-file SHA-256 baseline
+
+| File | SHA-256 |
+| --- | --- |
+| `AGENTS.md` | `3f4a36ec5da7f6b464cc9b5865fef9a0cee4c63f9ae962aade5c14bf99d085df` |
+| `codex/core/01-instruction-precedence.md` | `606cbac5a6dca581cc66a7230fb4497eeecbd6bf381a9c4f971d0a726ab98d9b` |
+| `codex/core/03-safety-invariants.md` | `a2786ee9291ff56e929e197940bd39d6e8a46e719490636477d7901c7fc5e844` |
+| `codex/core/05-phase-authorization-protocol.md` | `685d9d16ae9c843fedbf2dbf0615d75bb41f844c8e9460841664896d4c0d3bda` |
+| `codex/core/06-autonomy-and-stop-conditions.md` | `96741da1b0ed7059a60faf23ad78fe0bdc0ac3e741cc12616055873dd351b9d9` |
+| `codex/core/07-source-control-policy.md` | `4a8f25a62e21eff79038fbdb453872dc530cc477d7b2f4310f86327458a54c9a` |
+| `codex/core/08-secret-handling-policy.md` | `e4a55cbcbe18ed1b76d68c4ccbfa9cc28bc568dd5d23a3d653f587302d21f366` |
+| `codex/core/09-prompt-injection-policy.md` | `399dfcdd11378b15c7294aa4e417f134931e7c7beb0a38ecee80cf2f7d622f98` |
+| `codex/core/10-reporting-and-state-policy.md` | `d98330e1efe04f648846feb51a75a5938fb859cd497dbc109b091af604e19b3b` |
+| `codex/access/github-repository-policy.yaml` | `328fee1d610ea96227d73704bf91e50bd7f093cc3ef66a72ba0aa6dd4b686beb` |
+| `codex/access/prohibited-repositories.yaml` | `a5033750a185644e509a751b1b27fc1ec54bc0d3812289d010d372da3a043954` |
+| `codex/roadmap/phase-3a-npm-monorepos.md` | `2f70f187da6434002933fa5e9e324094543ddf6f4082ff92357e91277f96bc5b` |
+| `codex/tests/phase-3a-tests.yaml` | `4d456b58c87786dd2a8f0aa3ec11dffb2d998fa4548989c1e003d0309cd54d58` |
+| `codex/authorizations/phase-3a-npm-monorepos-authorization-request.yaml` | `97c7638ffa08c5554dd43708f4153b4507bf6974d7768347a34b144270d0cfa6` |
+
+The current authorization was activated from the exact approved request and is
+the only expected Phase 3A governing-file change at activation. The Phase 3A
+roadmap and test manifest remain immutable.
+
+## Completed Phase 3A governance preparation
+
+This section records governance-only preparation authorized by the human
+operator. It does not authorize Phase 3A implementation.
+
+| Field | Value |
+| --- | --- |
+| State ID | dcav2-phase-3a-governance-preparation-2026-07-24-01 |
+| Authorization ID | phase-3a-governance-preparation-20260724-01 |
+| Authorization status | completed; inactive |
+| Roadmap phase activated | none |
+| Objective | Reconcile post-Phase-2 repository state; create and validate the Phase 3A test manifest and bounded authorization request |
+| Required branch | codex/phase-0-prerequisite-readiness |
+| Starting/current commit | cff25204c9f56621bdc5031712c295e201300a68 |
+| Upstream | origin/codex/phase-0-prerequisite-readiness |
+| Upstream sync | commit already present on origin; ahead 0 / behind 0 |
+| Starting worktree | clean |
+| Started | 2026-07-24T05:39:00Z |
+| Completed | 2026-07-24T05:55:00Z |
+| Preparation result | complete |
+| External operations permitted | no |
+| Source implementation permitted | no |
+| Commits or branch changes permitted | no |
+| Automatic Phase 3A continuation | prohibited |
+
+### Post-Phase-2 commit reconciliation
+
+- Phase 2 implementation completed under authorization
+  `phase-2-qualification-and-configuration-20260723-01` while the worktree was
+  still modified relative to starting commit
+  `a2f75fbdcbb82c13e3724405cabceab5c6c56efb`.
+- A human subsequently committed and pushed the Phase 2 implementation as
+  `cff25204c9f56621bdc5031712c295e201300a68` on
+  `codex/phase-0-prerequisite-readiness`.
+- That commit message says `Phase 3a governance complete`, but its contents are
+  the Phase 2 implementation (qualification code, migration `0006`, Phase 2
+  tests/schemas/reports, and related governance updates). The commit must not be
+  rewritten solely to correct the message.
+- Current state metadata therefore records HEAD as
+  `cff25204c9f56621bdc5031712c295e201300a68`, worktree clean, and the commit
+  already present on `origin/codex/phase-0-prerequisite-readiness`.
+- Do not claim in current state that Phase 2 created no commit or push.
+- Historical Phase 2 reports remain unchanged immutable evidence.
+
+### Scope and preservation
+
+- Canonical implementation repository: `akshay-hudev/Rufa-Clean`.
+- Repository role: `implementation_repository`.
+- Sanitized origin: `github.com/akshay-hudev/Rufa-Clean.git`.
+- Required branch preserved: `codex/phase-0-prerequisite-readiness`.
+- Historical Phase 2 authorization request remains preserved and non-active:
+  `codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml`.
+- Historical Phase 2 reports remain immutable.
+- Writable governance artifacts for this preparation: this state file, the
+  current preparation authorization, the Phase 3A authorization request, the
+  Phase 3A test manifest, current capability-matrix source-revision fields, and
+  governance validators as needed for indexing.
+- Application source, dependencies, migrations, Docker, PostgreSQL, external
+  repositories, credentials, commits, pushes, and pull requests remain outside
+  this preparation.
+
+### Governing-file SHA-256 baseline
+
+| File | SHA-256 |
+| --- | --- |
+| `AGENTS.md` | `3f4a36ec5da7f6b464cc9b5865fef9a0cee4c63f9ae962aade5c14bf99d085df` |
+| `codex/core/01-instruction-precedence.md` | `606cbac5a6dca581cc66a7230fb4497eeecbd6bf381a9c4f971d0a726ab98d9b` |
+| `codex/core/03-safety-invariants.md` | `a2786ee9291ff56e929e197940bd39d6e8a46e719490636477d7901c7fc5e844` |
+| `codex/core/05-phase-authorization-protocol.md` | `685d9d16ae9c843fedbf2dbf0615d75bb41f844c8e9460841664896d4c0d3bda` |
+| `codex/core/06-autonomy-and-stop-conditions.md` | `96741da1b0ed7059a60faf23ad78fe0bdc0ac3e741cc12616055873dd351b9d9` |
+| `codex/core/07-source-control-policy.md` | `4a8f25a62e21eff79038fbdb453872dc530cc477d7b2f4310f86327458a54c9a` |
+| `codex/core/08-secret-handling-policy.md` | `e4a55cbcbe18ed1b76d68c4ccbfa9cc28bc568dd5d23a3d653f587302d21f366` |
+| `codex/core/09-prompt-injection-policy.md` | `399dfcdd11378b15c7294aa4e417f134931e7c7beb0a38ecee80cf2f7d622f98` |
+| `codex/core/10-reporting-and-state-policy.md` | `d98330e1efe04f648846feb51a75a5938fb859cd497dbc109b091af604e19b3b` |
+| `codex/access/github-repository-policy.yaml` | `328fee1d610ea96227d73704bf91e50bd7f093cc3ef66a72ba0aa6dd4b686beb` |
+| `codex/access/prohibited-repositories.yaml` | `a5033750a185644e509a751b1b27fc1ec54bc0d3812289d010d372da3a043954` |
+| `codex/roadmap/phase-3a-npm-monorepos.md` | `2f70f187da6434002933fa5e9e324094543ddf6f4082ff92357e91277f96bc5b` |
+| `codex/tests/phase-test-manifest.schema.json` | `516f437a248ec219b61415339eb01a3c4f281816b1a709efd29848b49169d7dd` |
+
+The current authorization change is expected and scoped to the explicit human
+governance-preparation instruction. The Phase 3A roadmap remains immutable.
+
+### Prepared artifacts
+
+- `codex/tests/phase-3a-tests.yaml`
+  (`4d456b58c87786dd2a8f0aa3ec11dffb2d998fa4548989c1e003d0309cd54d58`)
+- `codex/authorizations/phase-3a-npm-monorepos-authorization-request.yaml`
+  (`97c7638ffa08c5554dd43708f4153b4507bf6974d7768347a34b144270d0cfa6`)
+- Updated `codex/authorizations/current-phase-authorization.yaml`
+- Updated current `source_revision` fields in `codex/capability-matrix.yaml`
+  (historical Phase 2 evidence revisions intentionally retained)
+- Updated `codex/tests/validate-repository-role-governance.mjs` to index
+  Phase 3A tests and validate the Phase 3A request
+
+### Next authorization state
+
+The governance-preparation authorization is complete and no longer authorizes
+work. Phase 2 remains completed. No roadmap phase is active. Phase 3A remains
+unauthorized.
+
+The proposed request is:
+
+`phase-3a-npm-monorepos-20260724-01`
+
+It remains `requested` and non-authorizing until the human operator replies
+exactly:
+
+`APPROVED`
+
+Do not begin Phase 3A before that approval.
+
 ## Completed Phase 2 qualification-and-configuration execution
 
 This section records the completed Phase 2 implementation.

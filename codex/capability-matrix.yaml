@@ -1,19 +1,19 @@
 $schema: ./schemas/capability-matrix.schema.json
 schema_version: "1.0.0"
-matrix_id: dcav2-phase-2-qualification-and-configuration-capabilities
-title: DCAv2 Phase 2 Qualification and Configuration Capability Matrix
+matrix_id: dcav2-phase-3a-npm-monorepos-capabilities
+title: DCAv2 Phase 3A npm Monorepos Capability Matrix
 purpose: >-
   Records evidence-backed capability status at the Phase 2 qualification and
   configuration boundary. This matrix is descriptive and grants no execution
   authority.
 document_status: active
 implementation_authorized_by_matrix: false
-generated_at: "2026-07-23T18:00:00Z"
+generated_at: "2026-07-24T07:55:00Z"
 source_revision:
   repository: akshay-hudev/Rufa-Clean
-  commit: a2f75fbdcbb82c13e3724405cabceab5c6c56efb
+  commit: cff25204c9f56621bdc5031712c295e201300a68
   worktree_status: modified
-  captured_at: "2026-07-23T18:00:00Z"
+  captured_at: "2026-07-24T07:00:00Z"
 references:
   - path: codex/tests/phase-0-tests.yaml
     purpose: Phase 0 test identities and acceptance evidence.
@@ -1188,18 +1188,288 @@ capabilities:
         status: passed
         executed_at: "2026-07-23T18:00:00Z"
         environment_identity: local-unit-and-representative-runner
+
+  - &phase3a_capability
+    capability_id: repository.npm-workspace.qualify.v1
+    title: Qualify bounded npm workspace repositories
+    description: >-
+      Deterministically qualifies an npm workspace repository for the versioned
+      typescript-npm-workspace-v1 profile with explicit unsupported outcomes.
+    domain: qualification
+    version: 1
+    lifecycle_status: active
+    support_status: functional
+    implementation_status: implemented
+    validation_status: passed
+    introduced_in_phase: phase-3a-npm-monorepos
+    last_validated_in_phase: phase-3a-npm-monorepos
+    authorization_required: true
+    trust_boundary: &phase3a_boundary
+      execution_zone: trusted_controller
+      repository_content_trusted: false
+      structured_output_validation_required: true
+      prohibited_credentials:
+        - github-app-private-key
+        - github-installation-token
+        - database-url
+        - publisher-credential
+      network_profiles:
+        - network-disabled
+        - registry-proxy-then-network-none
+      runner_profiles:
+        - digest-pinned-docker-runner
+    scope: &phase3a_scope
+      scope_type: monorepo
+      bounded: true
+      open_world_behavior: preserve_unknown_scope
+      languages:
+        - TypeScript
+      package_managers:
+        - npm
+      target_shapes:
+        - npm-workspace-typescript
+      excluded_shapes:
+        - pnpm
+        - yarn
+        - nested-independent-workspace
+        - python
+        - cross-repository
+      maximum_tested_scope:
+        repositories: 1
+        notes: Synthetic npm workspace fixtures and unsupported pnpm/Yarn detection.
+    operations: &phase3a_operations
+      detection_supported: true
+      classification_supported: true
+      human_review_supported: false
+      remediation_supported: false
+      publication_supported: false
+      deployment_supported: false
+      infrastructure_modification_supported: false
+      destructive_operations_supported: false
+      external_reads_supported: true
+      external_writes_supported: false
+    security_control_ids:
+      - access-repository-policy
+      - access-repository-role-exclusion
+      - gov-operation-permission-separation
+      - reporting-truthfulness
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids:
+          - p3a-current-phase-authorization
+          - p3a-rufa-clean-target-exclusion
+          - p3a-supported-workspace-declaration
+          - p3a-migrations-fresh-and-upgrade
+          - p3a-workspace-persistence-shapes
+          - p3a-audit-workspace-events
+          - p3a-owned-resource-cleanup
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-postgres-docker-runner
+    evidence: &phase3a_evidence
+      evidence_required: true
+      current_evidence_available: true
+      evidence_status: current
+      evidence_identities:
+        - evidence_id: phase3a-workspace-unit-suite
+          evidence_type: test_report
+          description: Phase 3A workspace unit qualification suite.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+        - evidence_id: phase3a-postgres-docker-validation
+          evidence_type: test_report
+          description: Required PostgreSQL ledger, Docker gate, and cleanup validation.
+          required_for_status: true
+          secret_free: true
+          retained: true
+          current: true
+      implementation_revision:
+        repository: akshay-hudev/Rufa-Clean
+        commit: cff25204c9f56621bdc5031712c295e201300a68
+        worktree_status: modified
+    limitations:
+      - limitation_id: remediation-disabled-by-default
+        description: Remediation and publication remain separately authorized and disabled by default.
+        effect: other
+        affects_support_status: false
+        reported_to_users: true
+    scale_validation:
+      status: not_validated
+    reporting: &phase3a_reporting
+      limitations_visible: true
+      unsupported_scope_visible: true
+      failed_tests_visible: true
+      unavailable_tests_visible: true
+      fixture_only_behavior_labeled: true
+      perfect_detection_claimed: false
+  - <<: *phase3a_capability
+    capability_id: workspace.npm.discover.v1
+    title: Discover npm workspace declarations
+    domain: inventory
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-supported-workspace-declaration, p3a-workspace-pattern-safety, p3a-unsupported-workspace-shapes]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: workspace.npm.package-inventory.v1
+    title: Inventory workspace packages with canonical identity
+    domain: inventory
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-canonical-package-identity, p3a-duplicate-package-names]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: workspace.npm.package-graph.v1
+    title: Construct deterministic workspace package graphs
+    domain: inventory
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-package-graph-construction, p3a-lockfile-manifest-consistency]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: workspace.npm.package-roots.v1
+    title: Discover package-level source test and generated roots
+    domain: inventory
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-package-source-test-generated-roots, p3a-undeclared-nested-manifests]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: analysis.typescript.cross-workspace-references.v1
+    title: Analyze cross-workspace TypeScript references
+    domain: analysis
+    operations:
+      <<: *phase3a_operations
+      classification_supported: true
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-cross-workspace-references, p3a-classification-conservatism]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: analysis.typescript.package-exports.v1
+    title: Resolve package exports within a workspace
+    domain: analysis
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-package-exports-and-reexports]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: analysis.typescript.project-references.v1
+    title: Handle TypeScript project references in workspaces
+    domain: analysis
+    support_status: partially_supported
+    validation_status: partial
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-project-references]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+    limitations:
+      - limitation_id: project-references-bounded
+        description: Only a bounded subset of project-reference graphs is claimed.
+        effect: partial_coverage
+        affects_support_status: true
+        reported_to_users: true
+  - <<: *phase3a_capability
+    capability_id: analysis.typescript.path-aliases.v1
+    title: Resolve path aliases conservatively
+    domain: analysis
+    support_status: partially_supported
+    validation_status: partial
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-path-aliases-and-ambiguity]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+    limitations:
+      - limitation_id: path-aliases-conservative
+        description: Path aliases are resolved conservatively; ambiguous aliases remain unresolved.
+        effect: partial_coverage
+        affects_support_status: true
+        reported_to_users: true
+  - <<: *phase3a_capability
+    capability_id: coverage.typescript.npm-workspace.v1
+    title: Evaluate package and workspace coverage
+    domain: coverage
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-workspace-coverage-complete, p3a-partial-and-failed-package-coverage, p3a-excluded-vs-relevant-unsupported]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+  - <<: *phase3a_capability
+    capability_id: verification.npm-workspace.package-gates.v1
+    title: Evaluate package-specific baseline and post-change gates
+    domain: verification
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-package-and-aggregate-baselines, p3a-changed-file-and-post-change-gates, p3a-workspace-command-routing, p3a-package-command-identity-binding, p3a-root-install-and-lifecycle]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase3a_capability
+    capability_id: verification.npm-workspace.aggregate-gates.v1
+    title: Evaluate aggregate workspace gates
+    domain: verification
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-package-and-aggregate-baselines, p3a-runner-workspace-containment]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: digest-pinned-docker-runner
+  - <<: *phase3a_capability
+    capability_id: remediation.typescript.npm-workspace.private-function-delete.v1
+    title: Package-scoped private-function remediation gates
+    description: >-
+      Defines package-scoped reproduction and transformation gates. Default
+      Phase 3A authorization keeps remediation disabled.
+    domain: remediation
+    support_status: partially_supported
+    validation_status: partial
+    operations:
+      <<: *phase3a_operations
+      remediation_supported: false
+    test_references:
+      - manifest_path: codex/tests/phase-3a-tests.yaml
+        test_ids: [p3a-exact-reproduction-and-scoped-transform]
+        status: passed
+        executed_at: "2026-07-24T07:30:00Z"
+        environment_identity: local-unit-runner
+    limitations:
+      - limitation_id: remediation-requires-separate-authorization
+        description: Transformation remains disabled until finding-specific remediation authorization.
+        effect: external_operations_blocked
+        affects_support_status: true
+        reported_to_users: true
+
 matrix_summary:
-  total_capabilities: 43
+  total_capabilities: 56
   planned: 0
   experimental: 0
   detection_only: 0
-  partially_supported: 2
-  functional: 41
+  partially_supported: 5
+  functional: 51
   blocked: 0
   unsupported: 0
   deprecated: 0
   superseded: 0
-  validation_passed: 42
+  validation_passed: 53
   validation_failed: 0
   validation_not_run: 0
   scale_validated: 0

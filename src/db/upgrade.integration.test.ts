@@ -38,6 +38,7 @@ describeDatabase("PostgreSQL representative upgrade", () => {
         "0004_publication_reconciliation",
         "0005_phase1_qualification",
         "0006_phase2_qualification",
+        "0007_phase3a_npm_workspace",
       ]);
     } finally {
       await database.end();

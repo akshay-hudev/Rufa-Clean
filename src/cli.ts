@@ -36,6 +36,13 @@ import {
   type ConfigurationSource,
   type ToolRequirement,
 } from "./qualification/types";
+import { discoverNpmWorkspace } from "./workspace/discover";
+import {
+  createWorkspaceQualificationRequest,
+  qualifyNpmWorkspace,
+} from "./workspace/qualify";
+import { Phase3aWorkspaceStore } from "./workspace/store";
+import { PHASE_3A_CAPABILITY_IDS } from "./workspace/types";
 
 interface Arguments {
   positionals: string[];
@@ -221,6 +228,54 @@ async function qualify(
     ),
   });
   try {
+    const discovery = await discoverNpmWorkspace(source.path);
+    if (discovery.declaration || discovery.matchedRoots.length > 0 || discovery.packageManagerSignals.length > 0) {
+      const request = createWorkspaceQualificationRequest({
+        requestId: `workspace-qualification-${source.commitSha}`,
+        accountScopeId: account,
+        authorizationId: "phase-3a-npm-monorepos-20260724-01",
+        repository: {
+          provider: "github",
+          owner: identity.owner,
+          name: identity.name,
+          fullName: `${identity.owner}/${identity.name}`,
+        },
+        requestedRevision: revision,
+        resolvedCommit: source.commitSha,
+        sourceSnapshotId: digestCanonical({
+          provider: "github",
+          owner: identity.owner.toLowerCase(),
+          repository: identity.name.toLowerCase(),
+          commitSha: source.commitSha,
+        }),
+        requestedAt: new Date().toISOString(),
+      });
+      const result = await qualifyNpmWorkspace({
+        root: source.path,
+        requestId: request.requestId,
+        requestDigest: request.requestDigest,
+        repository: request.repository,
+        resolvedCommit: source.commitSha,
+        sourceSnapshotId: request.sourceSnapshotId,
+        authorizationActive: true,
+        targetAccessAllowed: true,
+      });
+      const store = new Phase3aWorkspaceStore(account, pool);
+      const record = await store.persistQualification({
+        authorizationId: "phase-3a-npm-monorepos-20260724-01",
+        actorIdentity: actor,
+        requestDigest: request.requestDigest,
+        result,
+      });
+      print({
+        profile: "typescript-npm-workspace-v1",
+        capabilities: [...PHASE_3A_CAPABILITY_IDS],
+        ...record,
+        result,
+      });
+      return;
+    }
+
     const lock = JSON.parse(
       await readFile(join(source.path, "package-lock.json"), "utf8"),
     ) as { packages?: Record<string, { version?: unknown }> };

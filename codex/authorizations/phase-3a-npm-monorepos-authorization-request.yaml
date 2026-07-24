@@ -1,49 +1,54 @@
 $schema: ../schemas/phase-authorization-v2.schema.json
 schema_version: 2
-record_type: phase_authorization
+record_type: phase_authorization_request
 
 authorization:
-  id: phase-3a-validation-completion-20260724-01
+  id: phase-3a-npm-monorepos-20260724-01
   kind: roadmap_phase
   phase: phase-3a-npm-monorepos
-  status: completed
+  status: requested
   objective: >-
-    Complete missing required Phase 3A PostgreSQL, Docker-runner, and
-    owned-resource-cleanup validation; correct overstated capability and
-    completion records; produce truthful final Phase 3A evidence. Does not
-    authorize Phase 3B, remediation, publication, or external representative
-    activation.
-  granted_by: human-operator
-  granted_at: 2026-07-24T07:00:00Z
-  completed_at: 2026-07-24T07:55:00Z
-  supersedes_authorization_id: phase-3a-npm-monorepos-20260724-01
+    Implement bounded npm workspace discovery, package identity and graph
+    construction, package-aware coverage and gates, and related Phase 3A
+    capabilities for eligible non-Rufa repositories while preserving permanent
+    Rufa-Clean target exclusions.
+  granted_by: null
+  granted_at: null
+  completed_at: null
+  supersedes_authorization_id: phase-3a-governance-preparation-20260724-01
   notes:
-    - The earlier PHASE_3A_COMPLETE claim under phase-3a-npm-monorepos-20260724-01 was premature and is not governance-valid.
-    - Required PostgreSQL, Docker-runner, and owned-resource-cleanup evidence has now passed.
-    - Phase 3A is complete; the current authorization is inactive.
-    - Phase 3B remains unauthorized.
-    - External representative and publisher conditional tests remained inactive.
-    - Pre-existing Phase 0-3A worktree changes were preserved.
+    - This request does not authorize itself.
+    - Phase 3A must not begin until the human approves this exact request by replying exactly APPROVED.
+    - The validated Phase 3A test manifest is codex/tests/phase-3a-tests.yaml.
+    - Autonomous debugging of ordinary implementation, test, Docker, PostgreSQL, fixture, and dependency failures is requested after approval.
+    - Paid or metered tools and services remain prohibited, except Cursor as the human-operated development assistant.
+    - The existing codex/phase-0-prerequisite-readiness implementation branch must be preserved and reused.
+    - No implementation checkpoint commit is authorized.
+    - No new local or remote implementation branch is authorized.
+    - Rufa-Clean external branch, commit, push, pull-request, update, and publication operations are denied by canonical identity.
+    - Remediation and publication are prohibited by default and require separate finding-specific or publication authorization.
+    - Phase 3B requires a separate exact human authorization after Phase 3A completes.
+    - pnpm, Yarn, Python, cross-repository, runtime, contract, microservice, control-plane, and scale work are prohibited except as explicit unsupported-detection cases required by Phase 3A tests.
 
 human_instruction:
   summary: >-
-    AUTHORIZE PHASE 3A VALIDATION COMPLETION AND STATE CORRECTION ONLY.
-    Complete missing required PostgreSQL, Docker-runner, and cleanup validation;
-    correct overstated records; do not prepare or begin Phase 3B.
-  conversation_reference: current-conversation-validation-completion-authorization
-  captured_at: 2026-07-24T07:00:00Z
+    Proposed bounded Phase 3A npm-monorepos implementation authorization,
+    prepared under the human-approved governance-preparation instruction and
+    awaiting separate exact approval.
+  conversation_reference: phase-3a-governance-preparation-request
+  captured_at: 2026-07-24T05:39:00Z
   exact_scope_confirmed: true
 
 validity:
-  starts_at: 2026-07-24T07:00:00Z
+  starts_at: null
   expires_at: null
   expires_when:
-    - phase_3a_required_validation_complete
+    - phase_3a_acceptance_criteria_complete
     - phase_stops_for_human_review
     - human_operator_revokes_authorization
     - repository_scope_changes
     - governing_policy_changes
-  maximum_external_operations: 0
+  maximum_external_operations: 100
   maximum_external_writes: 0
   continuation_requires_new_authorization: true
 
@@ -130,17 +135,77 @@ repository_access:
     - scale_test_subject
 
 external_operations:
-  allowed: false
-  permitted_providers: []
-  permitted_operations: []
+  allowed: true
+  permitted_providers:
+    - github
+    - npmjs-public-registry
+  permitted_operations:
+    - repository_discovery
+    - metadata_read
+    - clone
+    - fetch
+    - qualification
+    - analysis
+    - isolated_build_and_test
+    - public_package_metadata_read
+    - public_dependency_download
   github:
-    allowed_owners: []
+    allowed_owners:
+      - akshay-hudev
     repository_selection:
-      mode: none
-    canonical_repository_rules: []
+      mode: all_owned_visible_repositories
+    canonical_repository_rules:
+      - canonical_repository_identity: akshay-hudev/Rufa-Clean
+        match: exact_case_normalized
+        repository_role: implementation_repository
+        decision_precedence: identity_specific_deny_over_account_permission
+        operations:
+          branch_creation: denied
+          commit_creation: denied
+          push_non_default_branch: denied
+          pull_request_creation: denied
+          pull_request_update: denied
+          publication: denied
+          direct_default_branch_commit: denied
+          direct_default_branch_push: denied
+          force_push: denied
+          merge: denied
+          enable_auto_merge: denied
+          automatic_ready_for_review: denied
+        target_roles:
+          qualification_target: permanently_denied
+          analysis_target: permanently_denied
+          test_fixture: permanently_denied
+          finding_target: permanently_denied
+          remediation_target: permanently_denied
+          publication_target: permanently_denied
+          cross_repository_participant: permanently_denied
+          runtime_evidence_target: permanently_denied
+          contract_or_microservice_target: permanently_denied
+          scale_test_subject: permanently_denied
+      - canonical_repository_identity: akshay-hudev/*
+        match: owner_scope_excluding_explicit_identity_rules
+        repository_role: eligible_phase_relevant_repository
+        decision_precedence: after_exact_identity_rules
+        operations:
+          qualification: allowed_when_phase_relevant
+          analysis: allowed_when_phase_relevant
+          isolated_build_and_test: allowed_when_phase_relevant
+          branch_creation: denied
+          commit_creation: denied
+          push_non_default_branch: denied
+          pull_request_creation: denied
+          pull_request_update: denied
+          publication: denied
+          direct_default_branch_commit: denied
+          direct_default_branch_push: denied
+          force_push: denied
+          merge: denied
+          enable_auto_merge: denied
+          automatic_ready_for_review: denied
     representative_sample:
-      preferred_size: 0
-      rufa_test_lib_role: none
+      preferred_size: 3_to_5
+      rufa_test_lib_role: optional_smoke_only
       force_unsuitable_repository_selection: false
   npm_registry:
     allowed_registry: registry.npmjs.org
@@ -154,7 +219,7 @@ external_operations:
 
 credentials:
   use_existing_configured_credentials: true
-  github_app_credentials_allowed: false
+  github_app_credentials_allowed: true
   private_package_registry_credentials_allowed: false
   production_credentials_allowed: false
   secret_values_may_be_recorded: false
@@ -198,7 +263,7 @@ analysis:
   repository_qualification: true
   evidence_collection: true
   machine_classification: true
-  external_repository_execution: false
+  external_repository_execution: true
   requested_qualification_scope:
     repository_identity: true
     immutable_revision: true
@@ -241,7 +306,7 @@ testing:
   local_docker_allowed: true
   local_postgresql_allowed: true
   synthetic_fixtures_allowed: true
-  eligible_external_representative_testing_allowed: false
+  eligible_external_representative_testing_allowed: true
   rufa_test_lib_primary_evidence: false
   unavailable_required_tests_block_completion: true
   autonomous_failure_correction: true
@@ -279,11 +344,11 @@ validation:
   validated: true
   validation_errors: []
   validation_warnings:
+    - This request remains non-authorizing until the human replies exactly APPROVED.
     - Remediation and publication remain prohibited by default.
-    - External representative testing remains inactive.
     - Phase 3B requires a separate authorization.
 
 human_approval:
-  approved: true
-  approval_reference: current-conversation-validation-completion-authorization
-  approved_at: 2026-07-24T07:00:00Z
+  approved: false
+  approval_reference: null
+  approved_at: null

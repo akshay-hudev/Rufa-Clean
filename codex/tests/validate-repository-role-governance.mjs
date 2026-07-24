@@ -142,6 +142,10 @@ validateDocument(
   "codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml",
   "codex/schemas/phase-authorization-v2.schema.json",
 );
+const phase3aAuthorizationRequest = validateDocument(
+  "codex/authorizations/phase-3a-npm-monorepos-authorization-request.yaml",
+  "codex/schemas/phase-authorization-v2.schema.json",
+);
 
 const phase1LocalRepository = phase1AuthorizationRequest.local_repository;
 if (phase1LocalRepository?.identity !== "akshay-hudev/Rufa-Clean") {
@@ -208,12 +212,90 @@ if (!phase1RufaRule) {
   }
 }
 
+const phase3aLocalRepository = phase3aAuthorizationRequest.local_repository;
+if (phase3aLocalRepository?.identity !== "akshay-hudev/Rufa-Clean") {
+  failures.push("phase 3a request: local repository must use canonical Rufa-Clean identity");
+}
+if (
+  phase3aLocalRepository?.required_branch !==
+  "codex/phase-0-prerequisite-readiness"
+) {
+  failures.push("phase 3a request: required implementation branch is not preserved");
+}
+for (const operation of ["create_local_branch", "create_local_commits"]) {
+  if (phase3aLocalRepository?.operations?.[operation] !== false) {
+    failures.push(`phase 3a request: ${operation} must be denied`);
+  }
+}
+if (phase3aAuthorizationRequest.authorization?.status !== "requested") {
+  failures.push("phase 3a request: status must remain requested until human approval");
+}
+if (phase3aAuthorizationRequest.human_approval?.approved !== false) {
+  failures.push("phase 3a request: human_approval.approved must be false");
+}
+if (phase3aAuthorizationRequest.remediation?.enabled !== false) {
+  failures.push("phase 3a request: remediation must be disabled by default");
+}
+if (phase3aAuthorizationRequest.publication?.enabled !== false) {
+  failures.push("phase 3a request: publication must be disabled by default");
+}
+
+const phase3aRufaRule =
+  phase3aAuthorizationRequest.external_operations?.github?.canonical_repository_rules?.find(
+    (entry) =>
+      entry.canonical_repository_identity === "akshay-hudev/Rufa-Clean" &&
+      entry.match === "exact_case_normalized",
+  );
+if (!phase3aRufaRule) {
+  failures.push("phase 3a request: missing exact canonical Rufa-Clean operation rule");
+} else {
+  for (const operation of [
+    "branch_creation",
+    "commit_creation",
+    "push_non_default_branch",
+    "pull_request_creation",
+    "pull_request_update",
+    "publication",
+    "direct_default_branch_commit",
+    "direct_default_branch_push",
+    "force_push",
+    "merge",
+    "enable_auto_merge",
+    "automatic_ready_for_review",
+  ]) {
+    if (phase3aRufaRule.operations?.[operation] !== "denied") {
+      failures.push(
+        `phase 3a request: Rufa-Clean ${operation} must be identity-denied`,
+      );
+    }
+  }
+  for (const role of [
+    "qualification_target",
+    "analysis_target",
+    "test_fixture",
+    "finding_target",
+    "remediation_target",
+    "publication_target",
+    "cross_repository_participant",
+    "runtime_evidence_target",
+    "contract_or_microservice_target",
+    "scale_test_subject",
+  ]) {
+    if (phase3aRufaRule.target_roles?.[role] !== "permanently_denied") {
+      failures.push(
+        `phase 3a request: Rufa-Clean target role ${role} must remain permanently denied`,
+      );
+    }
+  }
+}
+
 const phase0 = parseYaml("codex/tests/phase-0-tests.yaml");
 const phase1 = parseYaml("codex/tests/phase-1-tests.yaml");
 const phase2 = parseYaml("codex/tests/phase-2-tests.yaml");
+const phase3a = parseYaml("codex/tests/phase-3a-tests.yaml");
 const security = parseYaml("codex/tests/security-control-matrix.yaml");
 
-for (const manifest of [phase0, phase1, phase2]) {
+for (const manifest of [phase0, phase1, phase2, phase3a]) {
   for (const reference of manifest.references ?? []) {
     if (!fs.existsSync(path.join(root, reference.path))) {
       failures.push(`${manifest.manifest_id}: missing referenced path ${reference.path}`);
@@ -307,6 +389,7 @@ const manifests = new Map([
   ["codex/tests/phase-0-tests.yaml", testsById(phase0)],
   ["codex/tests/phase-1-tests.yaml", testsById(phase1)],
   ["codex/tests/phase-2-tests.yaml", testsById(phase2)],
+  ["codex/tests/phase-3a-tests.yaml", testsById(phase3a)],
 ]);
 
 const expectedAssertions = {
@@ -416,6 +499,10 @@ for (const [documentPath, schemaPath] of [
   ],
   [
     "codex/authorizations/phase-2-qualification-and-configuration-authorization-request.yaml",
+    "codex/schemas/phase-authorization-v2.schema.json",
+  ],
+  [
+    "codex/authorizations/phase-3a-npm-monorepos-authorization-request.yaml",
     "codex/schemas/phase-authorization-v2.schema.json",
   ],
 ]) {
@@ -569,6 +656,7 @@ for (const [manifest, fixtureId] of [
   [phase0, "phase-0-local-repository"],
   [phase1, "phase-1-local-dcav2"],
   [phase2, "phase-2-local-dcav2"],
+  [phase3a, "phase-3a-local-dcav2"],
 ]) {
   const implementationSubject = (manifest.fixtures ?? []).find(
     (fixture) => fixture.fixture_id === fixtureId,
@@ -593,4 +681,5 @@ console.log(`roles validated: ${requiredRoles.length}`);
 console.log(`phase-0 tests indexed: ${manifests.get("codex/tests/phase-0-tests.yaml").size}`);
 console.log(`phase-1 tests indexed: ${manifests.get("codex/tests/phase-1-tests.yaml").size}`);
 console.log(`phase-2 tests indexed: ${manifests.get("codex/tests/phase-2-tests.yaml").size}`);
+console.log(`phase-3a tests indexed: ${manifests.get("codex/tests/phase-3a-tests.yaml").size}`);
 console.log(`security controls indexed: ${(security.controls ?? []).length}`);
